@@ -81,7 +81,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Stanoviště 1–7, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
+      <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
       <button class="vrbtn" id="vrBtn" type="button">Vstoupit do VR</button>
@@ -105,12 +105,15 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
           <button type="button" data-m="H">Vysoká</button><button type="button" data-m="L">Nízká</button><button type="button" data-m="D">Dvojice</button>
         </div>
         <div class="seg"><button type="button" id="pullBtn">Terč (Pull)</button></div>
-        <div class="seg"><button type="button" id="bigBtn" aria-pressed="true">Zvýraznit terč</button></div>
+        <div class="seg"><button type="button" id="bigBtn" aria-pressed="false">Zvýraznit terč</button></div>
+        <div class="seg" id="windSeg" aria-label="Vítr"><button type="button" data-w="0">Bez větru</button><button type="button" data-w="1">Slabý vítr</button><button type="button" data-w="2">Střední vítr</button></div>
         <div class="seg" id="speedSeg" aria-label="Rychlost"><button type="button" data-v="0.5">50 %</button><button type="button" data-v="0.75">75 %</button><button type="button" data-v="1">100 %</button></div>
       </div>
       <dl class="keys">
-        <dt>Quest · spoušť</dt><dd>výstřel (2 náboje na terč nebo dvojici)</dd>
-        <dt>Quest · grip / A / X</dt><dd>„Pull“ – vypuštění terče (zpoždění 0–1 s)</dd>
+        <dt>Quest · spoušť</dt><dd>výstřel z ruky s brokovnicí (2 náboje na terč nebo dvojici)</dd>
+        <dt>Druhá ruka · spoušť</dt><dd>„Pull“ – vypuštění terče</dd>
+        <dt>Stisk páčky</dt><dd>přehodit brokovnici do druhé ruky (výchozí pravá)</dd>
+        <dt>Quest · grip / A / X</dt><dd>„Pull“ – vypuštění terče (náhodné zpoždění 0,2–3 s podle ISSF)</dd>
         <dt>Páčka ← →</dt><dd>předchozí / další stanoviště</dd>
         <dt>Páčka ↑ ↓</dt><dd>vysoká / nízká / dvojice</dd>
         <dt>B / Y</dt><dd>laserový paprsek zap/vyp (jen pro kontrolu míření)</dd>
@@ -156,15 +159,22 @@ const $=id=>document.getElementById(id);
 const V=THREE.Vector3;
 
 /* ---------- Geometrie skeetové střelnice (metry) ---------- */
-const HOUSE_H={mouth:new V(-18.4,3.05,0)};   // vysoká věž (vlevo)
-const HOUSE_L={mouth:new V(18.4,1.07,0)};    // nízká věž (vpravo)
-const CROSS=new V(0,4.6,5.5);                // bod křížení 5,5 m před stan. 8
-const R=19.2;                                // poloměr oblouku stanovišť
+/* Rozměry podle pravidel ISSF (skeet):
+   oblouk stanovišť r = 19,20 m, tětiva 1–7 = 36,80 m, stanoviště 8 uprostřed tětivy,
+   středový kolík 5,50 m od tětivy (směrem do pole), bod křížení 4,60 m nad ním,
+   vyhazovací otvor vysoké věže 0,90 m za stan. 1 na prodloužené tětivě ve výšce 3,05 m,
+   nízké věže 0,90 m za stan. 7, 0,75 m do pole, ve výšce 1,05 m; dolet terče 68 m. */
+const R=19.2, STAKE=new V(0,0,-5.5);
+const CROSS=new V(0,4.6,-5.5);
+const HOUSE_H={mouth:new V(-19.3,3.05,0)};
+const HOUSE_L={mouth:new V(19.3,1.05,-0.75)};
 const STATIONS=[];
-for(let i=0;i<7;i++){const a=Math.PI-0.33-i*(Math.PI-0.66)/6;STATIONS.push(new V(R*Math.cos(a),0,R*Math.sin(a)));}
+{const a1=Math.atan2(5.5,-18.4), a7=Math.atan2(5.5,18.4);
+ for(let i=0;i<7;i++){const a=a1-i*(a1-a7)/6; STATIONS.push(new V(R*Math.cos(a),0,-5.5+R*Math.sin(a)));}
+ STATIONS.push(new V(0,0,0));}   // stanoviště 8
 
 /* fyzika terče: vztlak snižuje efektivní gravitaci, kvadratický odpor */
-const T_V0=22, T_G=3.2, T_K=0.0035, T_AIMUP={H:1.25,L:2.0};
+const T_V0=32, T_K=0.0075, T_G={H:3.05,L:4.8}, T_AIMUP={H:0.6,L:1.1};  // dolet ~68 m, k bodu křížení ~0,7 s
 /* broky: kvadratický odpor, hranička roste se vzdáleností (skeetový čok) */
 /* čoky: průměr hraničky (75 % broků) na 1 m vzdálenosti */
 const CHOKES={SK2:{n:'SK2 · skeet 2 (otevřenější než válec)',rate:0.058},CL:{n:'C · válec',rate:0.052},SK1:{n:'SK1 · skeet 1',rate:0.047},
@@ -188,8 +198,8 @@ function expPellets(a,rate,d,off){const R=patternR(rate,a.steel,d), sg=R/1.665;
 function poisson(l){const L=Math.exp(-l);let k=0,p=1;do{k++;p*=Math.random();}while(p>L&&k<200);return k-1;}
 
 /* ---------- Stav ---------- */
-const st={big:true,speed:1,station:3,mode:'H',shells:2,targets:[],shots:[],fx:[],pending:[],laser:false,inXR:false,
-  stats:[...Array(7)].map(()=>({H:[0,0],L:[0,0],D:[0,0],lead:[],})),lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H'};
+const st={hand:'right',wind:1,big:false,speed:1,station:3,mode:'H',shells:2,targets:[],shots:[],fx:[],pending:[],laser:false,inXR:false,
+  stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],lead:[],})),lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H'};
 
 /* ---------- Renderer & scéna ---------- */
 const stage=$('stage');
@@ -197,6 +207,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.xr.enabled=true;
 renderer.xr.setReferenceSpaceType('local-floor');
+if(renderer.xr.setFramebufferScaleFactor)renderer.xr.setFramebufferScaleFactor(1);
 stage.insertBefore(renderer.domElement,stage.firstChild);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9cc3dd);
@@ -210,24 +221,24 @@ const mat=c=>new THREE.MeshLambertMaterial({color:c});
 // tráva
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),mat(0x6f9a4c)); ground.rotation.x=-Math.PI/2; scene.add(ground);
 // posečená plocha střelnice
-const field=new THREE.Mesh(new THREE.CircleGeometry(75,64,0,Math.PI),mat(0x7aa956)); field.rotation.x=-Math.PI/2; field.rotation.z=Math.PI; field.position.y=0.01; scene.add(field);
+const field=new THREE.Mesh(new THREE.CircleGeometry(75,64,0,Math.PI),mat(0x7aa956)); field.rotation.x=-Math.PI/2; field.position.y=0.01; scene.add(field);
 // chodník po oblouku
-const path=new THREE.Mesh(new THREE.RingGeometry(R-0.7,R+0.7,64,1,0.25,Math.PI-0.5),mat(0xb8b0a0)); path.rotation.x=-Math.PI/2; path.rotation.z=Math.PI; path.position.y=0.02; scene.add(path);
+const path=new THREE.Mesh(new THREE.RingGeometry(R-0.7,R+0.7,64,1,Math.atan2(5.5,18.4),Math.PI-2*Math.atan2(5.5,18.4)),mat(0xb8b0a0)); path.rotation.x=-Math.PI/2; path.rotation.z=Math.PI; path.position.set(0,0.02,-5.5); scene.add(path);
 // věže
-function house(x,h,w){const g=new THREE.Group();
+function house(x,z,h){const g=new THREE.Group(), w=2.6;
   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,2.6),mat(0xe9e4d8)); b.position.y=h/2; g.add(b);
   const roof=new THREE.Mesh(new THREE.BoxGeometry(w+0.4,0.25,3.0),mat(0x3a4a40)); roof.position.y=h+0.12; g.add(roof);
-  g.position.set(x,0,-0.6); scene.add(g); return g;}
-house(-19.6,3.9,2.6); house(19.6,1.6,2.6);
-function mouth(p){const m=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.35,0.1),mat(0x111111)); m.position.copy(p); m.position.z+=0.75; m.position.x+=p.x<0?1.25:-1.25; scene.add(m);}
+  g.position.set(x,0,z); scene.add(g); return g;}
+house(-19.3-1.3,0,3.9); house(19.3+1.3,-0.75,1.6);
+function mouth(p){const m=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.35,0.6),mat(0x111111)); m.position.copy(p); m.position.x+=p.x<0?-0.04:0.04; scene.add(m);}
 mouth(HOUSE_H.mouth); mouth(HOUSE_L.mouth);
 // stanoviště + čísla
 function label(txt,size){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
   x.fillStyle='#fff';x.beginPath();x.arc(64,64,58,0,7);x.fill();x.fillStyle='#1f4a37';x.font='700 76px Barlow Condensed, Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,64,68);
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),fog:false})); s.scale.set(size,size,1); return s;}
 STATIONS.forEach((p,i)=>{const pad=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.06,24),mat(0xd8d3c7)); pad.position.set(p.x,0.03,p.z); scene.add(pad);
-  const l=label(String(i+1),0.8); l.position.set(p.x*1.09,1.3,p.z*1.09); scene.add(l);});
-const p8=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.06,24),mat(0xd8d3c7)); p8.position.set(0,0.03,0); scene.add(p8);
+  const out=i<7?p.clone().sub(STAKE).setY(0).normalize().multiplyScalar(1.4):new V(0,0,1.4);
+  const l=label(String(i+1),0.7); l.position.set(p.x+out.x,1.2,p.z+out.z); scene.add(l);});
 // stromy
 {const tg=new THREE.ConeGeometry(2.6,9,7), tm=mat(0x2f5134), n=140, inst=new THREE.InstancedMesh(tg,tm,n), m4=new THREE.Matrix4();
   let s=7; const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};
@@ -246,18 +257,21 @@ function makeLaser(){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.0015,0.
   l.rotation.x=Math.PI/2; l.position.z=-30.76; l.visible=false; return l;}
 
 const controllers=[0,1].map(i=>{const c=renderer.xr.getController(i);
-  c.add(makeGun()); const las=makeLaser(); c.add(las); c.userData.laser=las;
-  c.addEventListener('connected',e=>{c.userData.src=e.data;});
-  c.addEventListener('disconnected',()=>{c.userData.src=null;});
-  c.addEventListener('selectstart',()=>fire(c));
+  const gunM=makeGun(); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); c.add(las); c.userData.laser=las;
+  c.addEventListener('connected',e=>{c.userData.src=e.data; syncHands();});
+  c.addEventListener('disconnected',()=>{c.userData.src=null; syncHands();});
+  c.addEventListener('selectstart',()=>{if(isGun(c))fire(c); else pull();});
   c.addEventListener('squeezestart',()=>pull());
   dolly.add(c); return c;});
+
+function isGun(c){const h=c.userData.src&&c.userData.src.handedness; return h?h===st.hand:false;}
+function syncHands(){controllers.forEach(c=>{const g=isGun(c); c.userData.gun.visible=g; c.userData.laser.visible=g&&st.laser;});}
 
 /* ---------- HUD ve VR ---------- */
 const hudCanvas=document.createElement('canvas'); hudCanvas.width=768; hudCanvas.height=288;
 const hudTex=new THREE.CanvasTexture(hudCanvas);
-const hudMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.6),new THREE.MeshBasicMaterial({map:hudTex,transparent:true,fog:false,depthTest:false}));
-hudMesh.renderOrder=10; hudMesh.position.set(-1.9,1.9,-2.8); hudMesh.rotation.y=0.45; dolly.add(hudMesh); hudMesh.visible=false;
+const hudMesh=new THREE.Mesh(new THREE.PlaneGeometry(0.64,0.24),new THREE.MeshBasicMaterial({map:hudTex,transparent:true,fog:false}));
+hudMesh.position.set(0,0.75,-0.75); hudMesh.rotation.x=-1.0;   // nízko před střelcem, mimo dráhy terčů dolly.add(hudMesh); hudMesh.visible=false;
 
 /* ---------- Zvuk ---------- */
 let ac=null;
@@ -276,15 +290,18 @@ function makeClay(){const g=new THREE.Group();
   halo.scale.set(0.035,0.035,1); halo.renderOrder=7; halo.visible=st.big; g.userData.halo=halo; g.add(halo); g.add(new THREE.Mesh(clayGeo,clayMat)); const r=new THREE.Mesh(new THREE.TorusGeometry(0.054,0.004,4,20),clayRim); r.rotation.x=Math.PI/2; g.add(r); return g;}
 function applyBig(m){const k=st.big?2.5:1; m.children.forEach(c=>{if(c!==m.userData.halo)c.scale.setScalar(k);}); m.userData.halo.visible=st.big;}
 function launch(which){const house=which==='H'?HOUSE_H:HOUSE_L, p=house.mouth.clone();
-  p.z+=0.8; const aim=CROSS.clone(); aim.y+=T_AIMUP[which];
+  const aim=CROSS.clone(); aim.y+=T_AIMUP[which];
   const v=aim.sub(p).normalize().multiplyScalar(T_V0*(0.97+Math.random()*0.06));
   const m=makeClay(); m.position.copy(p); applyBig(m); scene.add(m);
-  st.targets.push({m,p,v,alive:true,house:which,spin:Math.random()*6}); sThrow();}
+  // vítr: boční složka kolmo na let terče + změna vztlaku (terč jde výš nebo níž), s poryvy během letu
+  const W=[0,2.5,5][st.wind], Lf=[0,0.7,1.4][st.wind], side=new V(-v.z,0,v.x).normalize();
+  const wind=side.multiplyScalar((Math.random()*2-1)*W), lift=(Math.random()*2-1)*Lf;
+  st.targets.push({G:T_G[which],m,p,v,alive:true,house:which,spin:Math.random()*6,wind,lift,ph:Math.random()*6,age:0}); sThrow();}
 
 function pull(){
   if(st.targets.some(t=>t.alive)||st.pending.length) return;
   st.shells=2; st.pullMode=st.mode; st.pullHits=0; st.pullCount=st.mode==='D'?2:1;
-  const delay=0.15+Math.random()*1.0;
+  const delay=0.2+Math.random()*2.8;   // ISSF: náhodné zpoždění 0,2–3,0 s
   if(st.mode==='D') st.pending.push({t:delay,w:'H'},{t:delay,w:'L'}); else st.pending.push({t:delay,w:st.mode});
   say('Pull!');
 }
@@ -312,9 +329,9 @@ function shatter(t){scene.remove(t.m); sBreak();
   const puff=new THREE.Mesh(new THREE.SphereGeometry(0.35,10,8),new THREE.MeshBasicMaterial({color:0xd9773f,transparent:true,opacity:0.55}));
   puff.position.copy(t.p); scene.add(puff); st.fx.push({m:puff,v:t.v.clone().multiplyScalar(0.25),life:0.8,grow:true});}
 function missMark(center,d,r,tp){
-  const ring=new THREE.Mesh(new THREE.RingGeometry(r*0.93,r,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthTest:false}));
+  const ring=new THREE.Mesh(new THREE.RingGeometry(r*0.97,r,40),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55,side:THREE.DoubleSide,depthTest:false}));
   ring.position.copy(center); ring.lookAt(center.clone().sub(d)); ring.renderOrder=5; scene.add(ring); st.fx.push({m:ring,v:new V(),life:1.6,fade:true});
-  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),new THREE.MeshBasicMaterial({color:0xff6a2a,transparent:true,opacity:0.9,depthTest:false}));
+  const dot=new THREE.Mesh(new THREE.CylinderGeometry(0.054,0.054,0.02,20),new THREE.MeshBasicMaterial({color:0xff6a2a,transparent:true,opacity:0.9,depthTest:false}));
   dot.position.copy(tp); dot.renderOrder=6; scene.add(dot); st.fx.push({m:dot,v:new V(),life:1.6,fade:true});}
 
 /* ---------- Vyhodnocení ---------- */
@@ -382,13 +399,15 @@ function syncSeg(){
   document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===st.mode));
 }
 function clearField(){st.targets.forEach(t=>scene.remove(t.m)); st.targets=[]; st.pending=[]; st.pullCount=0;}
-function setStation(i){st.station=(i+7)%7; clearField(); placeDolly(); syncSeg(); renderScore(); say(`Stanoviště ${st.station+1}`);}
-function setMode(m){st.mode=m; clearField(); syncSeg(); drawHud(); say(MODE[m]);}
+function setStation(i){st.station=(i+8)%8; clearField(); placeDolly(); syncSeg(); renderScore(); say(`Stanoviště ${st.station+1}`);}
+function setMode(m){st.mode=m; clearField(); if(st.station===7)placeDolly(); syncSeg(); drawHud(); say(MODE[m]);}
 
 /* ---------- Pozice střelce ---------- */
 let yaw=0,pitch=0.12;
 function placeDolly(){
-  const p=STATIONS[st.station], d=new V(CROSS.x-p.x,0,CROSS.z-p.z);
+  const p=STATIONS[st.station];
+  const look=st.station===7?(st.mode==='H'?HOUSE_H.mouth:st.mode==='L'?HOUSE_L.mouth:CROSS):CROSS;
+  const d=new V(look.x-p.x,0,look.z-p.z);
   dolly.position.set(p.x,0,p.z); dolly.rotation.set(0,Math.atan2(-d.x,-d.z),0);
   if(!st.inXR){camera.position.set(0,1.65,0); yaw=0; pitch=0.12; applyLook();}
 }
@@ -428,7 +447,7 @@ vrBtn.onclick=async()=>{
   try{
     const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
     camera.position.set(0,0,0); camera.rotation.set(0,0,0);
-    await renderer.xr.setSession(s); st.inXR=true; hudMesh.visible=true; vrBtn.textContent='Ukončit VR';
+    await renderer.xr.setSession(s); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent='Ukončit VR';
     s.addEventListener('end',()=>{st.inXR=false; hudMesh.visible=false; vrBtn.textContent='Vstoupit do VR'; resize(); placeDolly();});
     placeDolly(); say('Grip nebo A = terč');
   }catch(e){vrNote.textContent='VR se nespustilo ('+(e&&e.message?e.message:'neznámá chyba')+'). Zkuste stránku otevřít přímo v Meta Quest Browser.';}
@@ -445,7 +464,8 @@ function pollPads(){
     const b=gp.buttons, pb=prevBtn.get(key)||[];
     const pressed=i=>b[i]&&b[i].pressed&&!pb[i];
     if(pressed(4))pull();
-    if(pressed(5)){st.laser=!st.laser; controllers.forEach(c=>c.userData.laser.visible=st.laser);}
+    if(pressed(5)){st.laser=!st.laser; syncHands();}
+    if(pressed(3)){st.hand=st.hand==='right'?'left':'right'; syncHands(); say(st.hand==='right'?'Brokovnice v pravé ruce':'Brokovnice v levé ruce');}
     prevBtn.set(key,b.map(x=>x.pressed));
   }
 }
@@ -456,8 +476,10 @@ function step(dt){
   // čekající terče
   for(const p of st.pending){p.t-=dt; if(p.t<=0)launch(p.w);} st.pending=st.pending.filter(p=>p.t>0);
   // terče
-  for(const t of st.targets){if(!t.alive)continue; const s=t.v.length();
-    t.v.x+=-T_K*s*t.v.x*dt; t.v.z+=-T_K*s*t.v.z*dt; t.v.y+=(-T_K*s*t.v.y-T_G)*dt;
+  for(const t of st.targets){if(!t.alive)continue; t.age+=dt;
+    const g=0.7+0.3*Math.sin(t.age*2.3+t.ph);                 // poryvy
+    const rx=t.v.x-t.wind.x*g, rz=t.v.z-t.wind.z*g, ry=t.v.y, s=Math.hypot(rx,ry,rz);
+    t.v.x+=-T_K*s*rx*dt; t.v.z+=-T_K*s*rz*dt; t.v.y+=(-T_K*s*ry-t.G+t.lift*g)*dt;
     t.p.addScaledVector(t.v,dt); if(t.p.y<0.05){t.alive=false; scene.remove(t.m);} }
   // broky
   for(const sh of st.shots){ sh.t+=dt; const D=Math.log(1+sh.a.k*sh.a.v0*sh.t)/sh.a.k;
@@ -511,6 +533,9 @@ $('ammo').onchange=e=>{gun.ammo=e.target.value;renderPattern();};
 renderPattern();
 $('bigBtn').onclick=()=>{st.big=!st.big; $('bigBtn').setAttribute('aria-pressed',st.big); st.targets.forEach(t=>applyBig(t.m)); say(st.big?'Zvýraznění zapnuto':'Zvýraznění vypnuto');};
 $('speedSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.speed=+b.dataset.v; syncSpeed(); say('Rychlost '+Math.round(st.speed*100)+' %');};
+$('windSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.wind=+b.dataset.w; syncWind(); say(b.textContent);};
+function syncWind(){document.querySelectorAll('#windSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.w===st.wind));}
+syncWind();
 function syncSpeed(){document.querySelectorAll('#speedSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===st.speed));}
 syncSpeed();
 buildSeg(); syncSeg(); placeDolly(); renderScore(); resize(); initVR();
