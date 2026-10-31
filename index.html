@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skeet trenažér</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: střelnicová tabule – hlavička, 3D scéna, ovládání a výsledková karta pod sebou */
+:root{
+  --bg:#eef1ec; --surface:#ffffff; --fg:#17231d; --muted:#5b6a61; --line:#d3dbd4;
+  --spruce:#1f4a37; --clay:#d9561f; --clay-ink:#b0420f; --ok:#2f7d4a; --warn:#b0420f;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1713; --surface:#16211b; --fg:#e4ebe6; --muted:#97a69c; --line:#2a3a31;
+  --spruce:#7fc39c; --clay:#f07a43; --clay-ink:#f59a6c; --ok:#6fcf8f; --warn:#f59a6c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1713; --surface:#16211b; --fg:#e4ebe6; --muted:#97a69c; --line:#2a3a31;
+  --spruce:#7fc39c; --clay:#f07a43; --clay-ink:#f59a6c; --ok:#6fcf8f; --warn:#f59a6c; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:grid;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:.95;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 span{color:var(--clay)}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.vrbtn{font:600 17px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;
+  background:var(--clay);color:#fff;border:0;border-radius:6px;padding:14px 22px;cursor:pointer}
+.vrbtn:hover{filter:brightness(1.08)}
+.vrbtn:focus-visible,button:focus-visible{outline:3px solid var(--spruce);outline-offset:2px}
+.vrbtn[disabled]{opacity:.55;cursor:not-allowed}
+.vrnote{font-size:13px;color:var(--muted);margin-top:6px;max-width:40ch}
+.stage{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;border-radius:8px;overflow:hidden;background:#9cc3dd;
+  border:1px solid var(--line);touch-action:none}
+.stage canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:12px;top:10px;right:12px;display:flex;justify-content:space-between;gap:10px;pointer-events:none;
+  font:500 13px/1.3 var(--mono);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.hud b{font-family:var(--display);font-size:20px;letter-spacing:.04em}
+.feedback{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);pointer-events:none;
+  font:700 22px/1.1 var(--display);letter-spacing:.03em;color:#fff;background:rgba(15,23,19,.62);padding:8px 14px;border-radius:6px;white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis}
+.cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.5);pointer-events:none}
+.tap{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,23,19,.35);color:#fff;font:600 20px var(--display);letter-spacing:.05em;cursor:pointer;border:0;width:100%}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.panel h2{font:700 20px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;margin:0 0 12px;color:var(--spruce)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.keys dt{font:500 12.5px/1.6 var(--mono);color:var(--clay-ink);white-space:nowrap}
+.keys dd{margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:600 15px var(--display);letter-spacing:.04em;background:transparent;color:var(--fg);border:0;padding:8px 11px;cursor:pointer;min-width:36px}
+.seg button[aria-pressed="true"]{background:var(--spruce);color:var(--surface)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font:600 13px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
+.lead-ahead{color:var(--ok)} .lead-behind{color:var(--warn)}
+.field{display:grid;gap:4px;margin-bottom:10px}
+.field label{font:600 13px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field select{font:500 15px var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;max-width:100%}
+.field select:focus-visible{outline:3px solid var(--spruce);outline-offset:1px}
+.small{font-size:13px;color:var(--muted);margin:10px 0 0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Skeet <span>trenažér</span></h1>
+      <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Stanoviště 1–7, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
+    </div>
+    <div>
+      <button class="vrbtn" id="vrBtn" type="button">Vstoupit do VR</button>
+      <div class="vrnote" id="vrNote">Otevřete tuto stránku v prohlížeči v Questu.</div>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="hud"><div id="hudL"></div><div id="hudR" style="text-align:right"></div></div>
+    <div class="cross" id="cross"></div>
+    <div class="feedback" id="fb">Mezerník = terč, klik = výstřel</div>
+    <button class="tap" id="tap" type="button">Klikněte pro zaměřování myší</button>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Ovládání</h2>
+      <div class="controls">
+        <div class="seg" id="stSeg" aria-label="Stanoviště"></div>
+        <div class="seg" id="modeSeg" aria-label="Druh terče">
+          <button type="button" data-m="H">Vysoká</button><button type="button" data-m="L">Nízká</button><button type="button" data-m="D">Dvojice</button>
+        </div>
+        <div class="seg"><button type="button" id="pullBtn">Terč (Pull)</button></div>
+        <div class="seg"><button type="button" id="bigBtn" aria-pressed="true">Zvýraznit terč</button></div>
+        <div class="seg" id="speedSeg" aria-label="Rychlost"><button type="button" data-v="0.5">50 %</button><button type="button" data-v="0.75">75 %</button><button type="button" data-v="1">100 %</button></div>
+      </div>
+      <dl class="keys">
+        <dt>Quest · spoušť</dt><dd>výstřel (2 náboje na terč nebo dvojici)</dd>
+        <dt>Quest · grip / A / X</dt><dd>„Pull“ – vypuštění terče (zpoždění 0–1 s)</dd>
+        <dt>Páčka ← →</dt><dd>předchozí / další stanoviště</dd>
+        <dt>Páčka ↑ ↓</dt><dd>vysoká / nízká / dvojice</dd>
+        <dt>B / Y</dt><dd>laserový paprsek zap/vyp (jen pro kontrolu míření)</dd>
+        <dt>Počítač</dt><dd>myš míří, klik střílí, mezerník = terč, šipky = stanoviště, M = druh terče, Z = zvýraznění</dd>
+        <dt>Zvýraznění</dt><dd>terč 2,5× větší s oranžovou září, pomůcka pro začátek a pro malou obrazovku; zásah se počítá podle skutečné velikosti</dd>
+      </dl>
+      <p class="small">Míří se podle hlavní zobrazené na ovladači. Nejlépe s ovladačem v pažbě (GAIM nebo levná skořepina z AliExpressu).</p>
+    </section>
+
+    <section class="panel">
+      <h2>Zbraň a náboj</h2>
+      <div class="field"><label for="ch1">Čok 1. rána (spodní hlaveň)</label><select id="ch1"></select></div>
+      <div class="field"><label for="ch2">Čok 2. rána (horní hlaveň)</label><select id="ch2"></select></div>
+      <div class="field"><label for="ammo">Náboj</label><select id="ammo"></select></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Vzdálenost</th><th>15 m</th><th>20 m</th><th>25 m</th><th>30 m</th></tr></thead>
+          <tbody id="patBody"></tbody>
+        </table>
+      </div>
+      <p class="small">Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. K rozbití jsou potřeba aspoň 2 broky s dostatečnou energií.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Výsledky</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Stan.</th><th>Vysoká</th><th>Nízká</th><th>Dvojice</th><th>Chyba předstihu</th></tr></thead>
+          <tbody id="scoreBody"></tbody>
+          <tfoot><tr><th>Celkem</th><td colspan="3" id="totHits"></td><td id="totLead"></td></tr></tfoot>
+        </table>
+      </div>
+      <p class="small">Chyba předstihu = průměr u minutých terčů. <span class="lead-behind">Za terčem</span> znamená malý předstih, <span class="lead-ahead">před terčem</span> příliš velký.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const V=THREE.Vector3;
+
+/* ---------- Geometrie skeetové střelnice (metry) ---------- */
+const HOUSE_H={mouth:new V(-18.4,3.05,0)};   // vysoká věž (vlevo)
+const HOUSE_L={mouth:new V(18.4,1.07,0)};    // nízká věž (vpravo)
+const CROSS=new V(0,4.6,5.5);                // bod křížení 5,5 m před stan. 8
+const R=19.2;                                // poloměr oblouku stanovišť
+const STATIONS=[];
+for(let i=0;i<7;i++){const a=Math.PI-0.33-i*(Math.PI-0.66)/6;STATIONS.push(new V(R*Math.cos(a),0,R*Math.sin(a)));}
+
+/* fyzika terče: vztlak snižuje efektivní gravitaci, kvadratický odpor */
+const T_V0=22, T_G=3.2, T_K=0.0035, T_AIMUP={H:1.25,L:2.0};
+/* broky: kvadratický odpor, hranička roste se vzdáleností (skeetový čok) */
+/* čoky: průměr hraničky (75 % broků) na 1 m vzdálenosti */
+const CHOKES={SK2:{n:'SK2 · skeet 2 (otevřenější než válec)',rate:0.058},CL:{n:'C · válec',rate:0.052},SK1:{n:'SK1 · skeet 1',rate:0.047},
+  IC:{n:'IC · 1/4',rate:0.042},M:{n:'M · 1/2',rate:0.035},IM:{n:'IM · 3/4',rate:0.030},F:{n:'F · plný',rate:0.026}};
+/* náboje: hmotnost [g], průměr broku [mm], hustota [g/cm3], úsťová rychlost [m/s] */
+const AMMO={
+  pb24_95:{n:'Olovo 24 g · č. 9½ (≈1,9 mm), např. Fiocchi',g:24,dmm:1.9,rho:11.35,v0:390},
+  pb24_9:{n:'Olovo 24 g · č. 9 (≈2,0 mm)',g:24,dmm:2.0,rho:11.35,v0:390},
+  pb28_9:{n:'Olovo 28 g · č. 9 (≈2,0 mm)',g:28,dmm:2.0,rho:11.35,v0:375},
+  fe24_24:{n:'Ocel 24 g · 2,4 mm',g:24,dmm:2.4,rho:7.85,v0:430,steel:true},
+  fe24_22:{n:'Ocel 24 g · 2,2 mm',g:24,dmm:2.2,rho:7.85,v0:430,steel:true}};
+function ammoInfo(a){const r=a.dmm/2000, m=4/3*Math.PI*Math.pow(a.dmm/20,3)*a.rho/1000; // kg
+  return {...a, mass:m, count:Math.round(a.g/1000/m), k:1.2*0.5*3/(8*r*a.rho*1000)};}
+const CLAY_AREA=0.0065, E_MIN=0.6;
+const gun={ch:['SK2','CL'],ammo:'pb24_95'};
+try{const sv=JSON.parse(localStorage.getItem('skeet-gun')||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo])Object.assign(gun,sv);}catch(e){}
+function patternR(rate,steel,d){return 0.009+(steel?rate*0.85:rate)*d/2;}
+function pelletV(a,d){return a.v0*Math.exp(-a.k*d);}
+function expPellets(a,rate,d,off){const R=patternR(rate,a.steel,d), sg=R/1.665;
+  return a.count*0.95/(2*Math.PI*sg*sg)*Math.exp(-off*off/(2*sg*sg))*CLAY_AREA;}
+function poisson(l){const L=Math.exp(-l);let k=0,p=1;do{k++;p*=Math.random();}while(p>L&&k<200);return k-1;}
+
+/* ---------- Stav ---------- */
+const st={big:true,speed:1,station:3,mode:'H',shells:2,targets:[],shots:[],fx:[],pending:[],laser:false,inXR:false,
+  stats:[...Array(7)].map(()=>({H:[0,0],L:[0,0],D:[0,0],lead:[],})),lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H'};
+
+/* ---------- Renderer & scéna ---------- */
+const stage=$('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.xr.enabled=true;
+renderer.xr.setReferenceSpaceType('local-floor');
+stage.insertBefore(renderer.domElement,stage.firstChild);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9cc3dd);
+scene.fog=new THREE.Fog(0xb9d3e3,90,260);
+const camera=new THREE.PerspectiveCamera(55,16/9,0.05,500);
+const dolly=new THREE.Group(); dolly.add(camera); scene.add(dolly);
+scene.add(new THREE.HemisphereLight(0xdfeeff,0x4d6b3a,1.0));
+const sun=new THREE.DirectionalLight(0xfff3dc,0.75); sun.position.set(-30,60,40); scene.add(sun);
+
+const mat=c=>new THREE.MeshLambertMaterial({color:c});
+// tráva
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),mat(0x6f9a4c)); ground.rotation.x=-Math.PI/2; scene.add(ground);
+// posečená plocha střelnice
+const field=new THREE.Mesh(new THREE.CircleGeometry(75,64,0,Math.PI),mat(0x7aa956)); field.rotation.x=-Math.PI/2; field.rotation.z=Math.PI; field.position.y=0.01; scene.add(field);
+// chodník po oblouku
+const path=new THREE.Mesh(new THREE.RingGeometry(R-0.7,R+0.7,64,1,0.25,Math.PI-0.5),mat(0xb8b0a0)); path.rotation.x=-Math.PI/2; path.rotation.z=Math.PI; path.position.y=0.02; scene.add(path);
+// věže
+function house(x,h,w){const g=new THREE.Group();
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,2.6),mat(0xe9e4d8)); b.position.y=h/2; g.add(b);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(w+0.4,0.25,3.0),mat(0x3a4a40)); roof.position.y=h+0.12; g.add(roof);
+  g.position.set(x,0,-0.6); scene.add(g); return g;}
+house(-19.6,3.9,2.6); house(19.6,1.6,2.6);
+function mouth(p){const m=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.35,0.1),mat(0x111111)); m.position.copy(p); m.position.z+=0.75; m.position.x+=p.x<0?1.25:-1.25; scene.add(m);}
+mouth(HOUSE_H.mouth); mouth(HOUSE_L.mouth);
+// stanoviště + čísla
+function label(txt,size){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  x.fillStyle='#fff';x.beginPath();x.arc(64,64,58,0,7);x.fill();x.fillStyle='#1f4a37';x.font='700 76px Barlow Condensed, Arial';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,64,68);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),fog:false})); s.scale.set(size,size,1); return s;}
+STATIONS.forEach((p,i)=>{const pad=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.06,24),mat(0xd8d3c7)); pad.position.set(p.x,0.03,p.z); scene.add(pad);
+  const l=label(String(i+1),0.8); l.position.set(p.x*1.09,1.3,p.z*1.09); scene.add(l);});
+const p8=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.06,24),mat(0xd8d3c7)); p8.position.set(0,0.03,0); scene.add(p8);
+// stromy
+{const tg=new THREE.ConeGeometry(2.6,9,7), tm=mat(0x2f5134), n=140, inst=new THREE.InstancedMesh(tg,tm,n), m4=new THREE.Matrix4();
+  let s=7; const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  for(let i=0;i<n;i++){const a=rnd()*Math.PI*2, r=95+rnd()*60, sc=0.7+rnd()*0.9; m4.compose(new V(Math.cos(a)*r,4.5*sc,Math.sin(a)*r),new THREE.Quaternion(),new V(sc,sc,sc)); inst.setMatrixAt(i,m4);}
+  scene.add(inst);}
+
+/* ---------- Brokovnice na ovladači ---------- */
+function makeGun(){const g=new THREE.Group(), steel=mat(0x262a2c), wood=mat(0x6b3f22);
+  for(const y of [0.012,-0.008]){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.0095,0.0105,0.72,10),steel); b.rotation.x=Math.PI/2; b.position.set(0,y,-0.40); g.add(b);}
+  const rib=new THREE.Mesh(new THREE.BoxGeometry(0.008,0.004,0.72),steel); rib.position.set(0,0.024,-0.40); g.add(rib);
+  const bead=new THREE.Mesh(new THREE.SphereGeometry(0.0035,8,6),mat(0xf2f2f2)); bead.position.set(0,0.029,-0.755); g.add(bead);
+  const fore=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.035,0.22),wood); fore.position.set(0,-0.022,-0.22); g.add(fore);
+  const rec=new THREE.Mesh(new THREE.BoxGeometry(0.042,0.06,0.10),steel); rec.position.set(0,-0.005,-0.02); g.add(rec);
+  return g;}
+function makeLaser(){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.0015,0.0015,60,4),new THREE.MeshBasicMaterial({color:0xff3b2f,transparent:true,opacity:0.5}));
+  l.rotation.x=Math.PI/2; l.position.z=-30.76; l.visible=false; return l;}
+
+const controllers=[0,1].map(i=>{const c=renderer.xr.getController(i);
+  c.add(makeGun()); const las=makeLaser(); c.add(las); c.userData.laser=las;
+  c.addEventListener('connected',e=>{c.userData.src=e.data;});
+  c.addEventListener('disconnected',()=>{c.userData.src=null;});
+  c.addEventListener('selectstart',()=>fire(c));
+  c.addEventListener('squeezestart',()=>pull());
+  dolly.add(c); return c;});
+
+/* ---------- HUD ve VR ---------- */
+const hudCanvas=document.createElement('canvas'); hudCanvas.width=768; hudCanvas.height=288;
+const hudTex=new THREE.CanvasTexture(hudCanvas);
+const hudMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.6),new THREE.MeshBasicMaterial({map:hudTex,transparent:true,fog:false,depthTest:false}));
+hudMesh.renderOrder=10; hudMesh.position.set(-1.9,1.9,-2.8); hudMesh.rotation.y=0.45; dolly.add(hudMesh); hudMesh.visible=false;
+
+/* ---------- Zvuk ---------- */
+let ac=null;
+function audio(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(ac&&ac.state==='suspended')ac.resume(); return ac;}
+function noise(dur,freq,vol,decay){const a=audio(); if(!a)return; const n=Math.floor(a.sampleRate*dur), buf=a.createBuffer(1,n,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*decay));
+  const src=a.createBufferSource(); src.buffer=buf; const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq; const g=a.createGain(); g.gain.value=vol;
+  src.connect(f).connect(g).connect(a.destination); src.start();}
+const sShot=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>noise(0.25,300,0.6,0.05), sClick=()=>noise(0.03,8000,0.2,0.004);
+
+/* ---------- Terče ---------- */
+const clayGeo=new THREE.CylinderGeometry(0.054,0.054,0.026,20), clayMat=mat(0xe8662a), clayRim=mat(0x1b1b1b);
+const haloTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,4,32,32,30);g.addColorStop(0,'rgba(255,120,40,1)');g.addColorStop(0.5,'rgba(255,120,40,0.55)');g.addColorStop(1,'rgba(255,120,40,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+function makeClay(){const g=new THREE.Group();
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:haloTex,sizeAttenuation:false,depthTest:false,fog:false,transparent:true}));
+  halo.scale.set(0.035,0.035,1); halo.renderOrder=7; halo.visible=st.big; g.userData.halo=halo; g.add(halo); g.add(new THREE.Mesh(clayGeo,clayMat)); const r=new THREE.Mesh(new THREE.TorusGeometry(0.054,0.004,4,20),clayRim); r.rotation.x=Math.PI/2; g.add(r); return g;}
+function applyBig(m){const k=st.big?2.5:1; m.children.forEach(c=>{if(c!==m.userData.halo)c.scale.setScalar(k);}); m.userData.halo.visible=st.big;}
+function launch(which){const house=which==='H'?HOUSE_H:HOUSE_L, p=house.mouth.clone();
+  p.z+=0.8; const aim=CROSS.clone(); aim.y+=T_AIMUP[which];
+  const v=aim.sub(p).normalize().multiplyScalar(T_V0*(0.97+Math.random()*0.06));
+  const m=makeClay(); m.position.copy(p); applyBig(m); scene.add(m);
+  st.targets.push({m,p,v,alive:true,house:which,spin:Math.random()*6}); sThrow();}
+
+function pull(){
+  if(st.targets.some(t=>t.alive)||st.pending.length) return;
+  st.shells=2; st.pullMode=st.mode; st.pullHits=0; st.pullCount=st.mode==='D'?2:1;
+  const delay=0.15+Math.random()*1.0;
+  if(st.mode==='D') st.pending.push({t:delay,w:'H'},{t:delay,w:'L'}); else st.pending.push({t:delay,w:st.mode});
+  say('Pull!');
+}
+
+/* ---------- Výstřel ---------- */
+const tmpQ=new THREE.Quaternion();
+function fire(src){
+  audio();
+  if(st.shells<=0){sClick(); return;}
+  const barrel=2-st.shells; st.shells--; sShot();
+  const a=ammoInfo(AMMO[gun.ammo]), rate=CHOKES[gun.ch[barrel]].rate;
+  const o=new V(), d=new V(0,0,-1);
+  if(src){src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); d.applyQuaternion(tmpQ); o.addScaledVector(d,0.76);
+    const s=src.userData.src; const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0]; if(h&&h.pulse)h.pulse(1,70);}
+  else{camera.getWorldPosition(o); camera.getWorldDirection(d);}
+  st.shots.push({o,d:d.normalize(),t:0,prev:0,judged:new Set(),best:null,a,rate,barrel});
+}
+
+/* ---------- Efekty ---------- */
+const fragGeo=new THREE.BoxGeometry(0.035,0.012,0.03);
+function shatter(t){scene.remove(t.m); sBreak();
+  for(let i=0;i<9;i++){const f=new THREE.Mesh(fragGeo,clayMat); f.position.copy(t.p);
+    const v=t.v.clone().multiplyScalar(0.55).add(new V((Math.random()-.5)*9,(Math.random()-.2)*7,(Math.random()-.5)*9));
+    scene.add(f); st.fx.push({m:f,v,life:2.2,spin:new V(Math.random()*20,Math.random()*20,0)});}
+  const puff=new THREE.Mesh(new THREE.SphereGeometry(0.35,10,8),new THREE.MeshBasicMaterial({color:0xd9773f,transparent:true,opacity:0.55}));
+  puff.position.copy(t.p); scene.add(puff); st.fx.push({m:puff,v:t.v.clone().multiplyScalar(0.25),life:0.8,grow:true});}
+function missMark(center,d,r,tp){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(r*0.93,r,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthTest:false}));
+  ring.position.copy(center); ring.lookAt(center.clone().sub(d)); ring.renderOrder=5; scene.add(ring); st.fx.push({m:ring,v:new V(),life:1.6,fade:true});
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),new THREE.MeshBasicMaterial({color:0xff6a2a,transparent:true,opacity:0.9,depthTest:false}));
+  dot.position.copy(tp); dot.renderOrder=6; scene.add(dot); st.fx.push({m:dot,v:new V(),life:1.6,fade:true});}
+
+/* ---------- Vyhodnocení ---------- */
+function cm(x){return Math.round(Math.abs(x)*100);}
+function judge(shot,t,along,perpV,r){
+  // perpV = terč − střed hraničky (kolmo na ránu)
+  const off0=perpV.length(), a=shot.a, v=pelletV(a,along), E=0.5*a.mass*v*v;
+  const pellets=E>=E_MIN?poisson(expPellets(a,shot.rate,along,off0)):0;
+  const hit=pellets>=2||(pellets===1&&Math.random()<0.35);
+  const vt=t.v.clone().addScaledVector(shot.d,-t.v.dot(shot.d)); const vtn=vt.lengthSq()>1e-6?vt.normalize():new V(1,0,0);
+  const off=perpV.clone().negate();        // střed hraničky vůči terči
+  const lead=off.dot(vtn);                 // + = před terčem
+  const up=new V(0,1,0).addScaledVector(shot.d,-shot.d.y).normalize();
+  const vert=off.dot(up);
+  return {hit,lead,vert,along,r,pellets,E,barrel:shot.barrel};
+}
+function report(t,res){
+  const s=st.stats[st.station];
+  const b=`${res.barrel+1}. rána`;
+  if(res.hit){st.pullHits++; say(`Zásah · ${b} · ${res.pellets} ${res.pellets===1?'brok':res.pellets<5?'broky':'broků'} · ${Math.round(res.along)} m`);}
+  else{
+    s.lead.push(res.lead);
+    const h=res.lead>=0?`před terčem ${cm(res.lead)} cm`:`za terčem ${cm(res.lead)} cm`;
+    const v=Math.abs(res.vert)<0.1?'':(res.vert>0?`, nad ${cm(res.vert)} cm`:`, pod ${cm(res.vert)} cm`);
+    const pe=res.E<E_MIN?' · broky už nemají energii':(res.pellets===1?' · jen 1 brok':'');
+    say(`Vedle (${b}): ${h}${v}${pe}`);
+  }
+}
+function finishPull(){
+  const s=st.stats[st.station], k=st.pullMode;
+  s[k][0]+=st.pullHits; s[k][1]+=st.pullCount; st.pullCount=0; renderScore();
+}
+
+/* ---------- UI ---------- */
+function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud();}
+const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice'};
+function drawHud(){
+  $('hudL').innerHTML=`<b>Stanoviště ${st.station+1}</b><br>${MODE[st.mode]}`;
+  $('hudR').innerHTML=`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}`;
+  const x=hudCanvas.getContext('2d'); x.clearRect(0,0,768,288);
+  x.fillStyle='rgba(15,23,19,0.72)'; x.fillRect(0,0,768,288);
+  x.fillStyle='#e8662a'; x.fillRect(0,0,10,288);
+  x.fillStyle='#fff'; x.font='700 64px Barlow Condensed, Arial'; x.fillText(`STANOVIŠTĚ ${st.station+1} · ${MODE[st.mode].toUpperCase()}`,34,78);
+  x.font='500 38px IBM Plex Mono, monospace'; x.fillStyle='#cfe3d6'; x.fillText(`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}  ${gun.ch[0]}/${gun.ch[1]}  ${totals()}`,34,140);
+  x.font='700 52px Barlow Condensed, Arial'; x.fillStyle=st.lastMsg.startsWith('Zásah')?'#7fe0a0':(st.lastMsg.startsWith('Vedle')?'#ffb08a':'#ffffff'); x.fillText(st.lastMsg,34,226);
+  hudTex.needsUpdate=true;
+}
+function totals(){let h=0,n=0;st.stats.forEach(s=>['H','L','D'].forEach(k=>{h+=s[k][0];n+=s[k][1];}));return `${h}/${n}`;}
+function leadTxt(arr){if(!arr.length)return '–';const m=arr.reduce((a,b)=>a+b,0)/arr.length;
+  return `<span class="${m>=0?'lead-ahead':'lead-behind'}">${m>=0?'před':'za'} ${cm(m)} cm</span>`;}
+function renderScore(){
+  const f=a=>a[1]?`${a[0]}/${a[1]}`:'–';
+  $('scoreBody').innerHTML=st.stats.map((s,i)=>`<tr class="${i===st.station?'cur':''}"><td>${i+1}</td><td>${f(s.H)}</td><td>${f(s.L)}</td><td>${f(s.D)}</td><td>${leadTxt(s.lead)}</td></tr>`).join('');
+  $('totHits').textContent=`zásahy ${totals()}`;
+  $('totLead').innerHTML=leadTxt(st.stats.flatMap(s=>s.lead));
+  drawHud();
+}
+function buildSeg(){
+  $('stSeg').innerHTML=STATIONS.map((_,i)=>`<button type="button" data-s="${i}">${i+1}</button>`).join('');
+  $('stSeg').onclick=e=>{const b=e.target.closest('button');if(b)setStation(+b.dataset.s);};
+  $('modeSeg').onclick=e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m);};
+}
+function syncSeg(){
+  document.querySelectorAll('#stSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.s===st.station));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===st.mode));
+}
+function clearField(){st.targets.forEach(t=>scene.remove(t.m)); st.targets=[]; st.pending=[]; st.pullCount=0;}
+function setStation(i){st.station=(i+7)%7; clearField(); placeDolly(); syncSeg(); renderScore(); say(`Stanoviště ${st.station+1}`);}
+function setMode(m){st.mode=m; clearField(); syncSeg(); drawHud(); say(MODE[m]);}
+
+/* ---------- Pozice střelce ---------- */
+let yaw=0,pitch=0.12;
+function placeDolly(){
+  const p=STATIONS[st.station], d=new V(CROSS.x-p.x,0,CROSS.z-p.z);
+  dolly.position.set(p.x,0,p.z); dolly.rotation.set(0,Math.atan2(-d.x,-d.z),0);
+  if(!st.inXR){camera.position.set(0,1.65,0); yaw=0; pitch=0.12; applyLook();}
+}
+function applyLook(){camera.rotation.set(pitch,yaw,0,'YXZ');}
+
+/* ---------- Myš (počítač) ---------- */
+const tap=$('tap'); let locked=false, dragging=false, lx=0, ly=0;
+tap.onclick=()=>{audio(); tap.hidden=true; try{const r=renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); if(r&&r.catch)r.catch(()=>{});}catch(e){}};
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===renderer.domElement;});
+renderer.domElement.addEventListener('pointerdown',e=>{if(st.inXR)return; audio();
+  if(locked){fire(null);return;} dragging=true; lx=e.clientX; ly=e.clientY; renderer.domElement.setPointerCapture(e.pointerId); downAt=performance.now();});
+let downAt=0;
+renderer.domElement.addEventListener('pointerup',e=>{if(!dragging)return; dragging=false; if(performance.now()-downAt<180&&Math.hypot(e.clientX-lx,e.clientY-ly)<6)fire(null);});
+renderer.domElement.addEventListener('pointermove',e=>{if(st.inXR)return;
+  let dx=0,dy=0; if(locked){dx=e.movementX;dy=e.movementY;} else if(dragging){dx=e.clientX-lx;dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;} else return;
+  yaw-=dx*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch-dy*0.0022)); applyLook();});
+document.addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
+  if(e.key===' '){e.preventDefault();audio();pull();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}
+  else if(e.key==='ArrowRight'){e.preventDefault();setStation(st.station+1);}
+  else if(e.key==='z'||e.key==='Z'){$('bigBtn').click();}
+  else if(e.key==='m'||e.key==='M'){setMode({H:'L',L:'D',D:'H'}[st.mode]);}
+});
+
+/* ---------- VR ---------- */
+const vrBtn=$('vrBtn'), vrNote=$('vrNote');
+async function initVR(){
+  if(!navigator.xr){vrBtn.disabled=true; vrNote.textContent='Tento prohlížeč nepodporuje WebXR. Na počítači hrajte myší, ve VR otevřete stránku v Questu.'; return;}
+  let ok=false; try{ok=await navigator.xr.isSessionSupported('immersive-vr');}catch(e){}
+  if(!ok){vrBtn.disabled=true; vrNote.textContent='VR tu není k dispozici. V Questu otevřete stránku v Meta Quest Browser.'; return;}
+  vrNote.textContent='Připraveno. Postavte se do volného prostoru.';
+}
+vrBtn.onclick=async()=>{
+  audio();
+  const cur=renderer.xr.getSession(); if(cur){cur.end();return;}
+  try{
+    const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    camera.position.set(0,0,0); camera.rotation.set(0,0,0);
+    await renderer.xr.setSession(s); st.inXR=true; hudMesh.visible=true; vrBtn.textContent='Ukončit VR';
+    s.addEventListener('end',()=>{st.inXR=false; hudMesh.visible=false; vrBtn.textContent='Vstoupit do VR'; resize(); placeDolly();});
+    placeDolly(); say('Grip nebo A = terč');
+  }catch(e){vrNote.textContent='VR se nespustilo ('+(e&&e.message?e.message:'neznámá chyba')+'). Zkuste stránku otevřít přímo v Meta Quest Browser.';}
+};
+
+const prevAxes=new Map(), prevBtn=new Map();
+function pollPads(){
+  const s=renderer.xr.getSession(); if(!s)return;
+  for(const src of s.inputSources){const gp=src.gamepad; if(!gp)continue; const key=src.handedness;
+    const ax=gp.axes, x=ax[2]||0, y=ax[3]||0, pa=prevAxes.get(key)||{x:0,y:0};
+    if(x>0.7&&pa.x<=0.7)setStation(st.station+1); if(x<-0.7&&pa.x>=-0.7)setStation(st.station-1);
+    if(y<-0.7&&pa.y>=-0.7)setMode({H:'L',L:'D',D:'H'}[st.mode]); if(y>0.7&&pa.y<=0.7)setMode({H:'D',L:'H',D:'L'}[st.mode]);
+    prevAxes.set(key,{x,y});
+    const b=gp.buttons, pb=prevBtn.get(key)||[];
+    const pressed=i=>b[i]&&b[i].pressed&&!pb[i];
+    if(pressed(4))pull();
+    if(pressed(5)){st.laser=!st.laser; controllers.forEach(c=>c.userData.laser.visible=st.laser);}
+    prevBtn.set(key,b.map(x=>x.pressed));
+  }
+}
+
+/* ---------- Smyčka ---------- */
+const clock=new THREE.Clock();
+function step(dt){
+  // čekající terče
+  for(const p of st.pending){p.t-=dt; if(p.t<=0)launch(p.w);} st.pending=st.pending.filter(p=>p.t>0);
+  // terče
+  for(const t of st.targets){if(!t.alive)continue; const s=t.v.length();
+    t.v.x+=-T_K*s*t.v.x*dt; t.v.z+=-T_K*s*t.v.z*dt; t.v.y+=(-T_K*s*t.v.y-T_G)*dt;
+    t.p.addScaledVector(t.v,dt); if(t.p.y<0.05){t.alive=false; scene.remove(t.m);} }
+  // broky
+  for(const sh of st.shots){ sh.t+=dt; const D=Math.log(1+sh.a.k*sh.a.v0*sh.t)/sh.a.k;
+    for(const t of st.targets){ if(!t.alive||sh.judged.has(t))continue;
+      const rel=t.p.clone().sub(sh.o), along=rel.dot(sh.d);
+      if(along<=0){sh.judged.add(t);continue;}
+      if(along>sh.prev&&along<=D){ sh.judged.add(t);
+        const perp=rel.addScaledVector(sh.d,-along), r=patternR(sh.rate,sh.a.steel,along), res=judge(sh,t,along,perp,r);
+        if(res.hit){t.alive=false; shatter(t); report(t,res);}
+        else if(!sh.best||perp.length()<sh.best.dist){sh.best={dist:perp.length(),res,t,center:sh.o.clone().addScaledVector(sh.d,along),tp:t.p.clone()};}
+      }}
+    sh.prev=D;
+    if(D>70&&!sh.done){sh.done=true; if(sh.best&&sh.best.t.alive){report(sh.best.t,sh.best.res); missMark(sh.best.center,sh.d,sh.best.res.r,sh.best.tp);} }
+  }
+  st.shots=st.shots.filter(s=>!s.done);
+}
+function tick(){
+  const dt=Math.min(clock.getDelta(),0.05)*st.speed;
+  if(st.inXR)pollPads();
+  const n=Math.max(1,Math.ceil(dt/0.004)); for(let i=0;i<n;i++)step(dt/n);
+  for(const t of st.targets){if(!t.alive)continue; t.m.position.copy(t.p); t.spin+=dt*30; t.m.rotation.set(0.12,t.spin,0.05);}
+  // konec vypuštění
+  if(st.pullCount&&!st.pending.length&&!st.targets.some(t=>t.alive)&&!st.shots.length){
+    finishPull(); st.targets.forEach(t=>scene.remove(t.m)); st.targets=[];
+  }
+  // efekty
+  for(const f of st.fx){f.life-=dt; f.m.position.addScaledVector(f.v,dt);
+    if(f.grow){f.m.scale.multiplyScalar(1+dt*2.5); f.m.material.opacity=Math.max(0,f.life*0.7);}
+    else if(f.fade){f.m.material.opacity=Math.max(0,Math.min(0.9,f.life));}
+    else{f.v.y-=9.81*dt; f.m.rotation.x+=f.spin.x*dt; f.m.rotation.y+=f.spin.y*dt; if(f.m.position.y<0.02){f.m.position.y=0.02;f.v.set(0,0,0);f.spin.set(0,0,0);} }
+    if(f.life<=0){scene.remove(f.m); if(f.m.material!==clayMat)f.m.material.dispose();}}
+  st.fx=st.fx.filter(f=>f.life>0);
+  renderer.render(scene,camera);
+}
+
+function resize(){if(st.inXR)return; const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(stage);
+
+$('pullBtn').onclick=()=>{audio();pull();};
+function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${o.n}</option>`).join('');}
+fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo);
+function renderPattern(){const a=ammoInfo(AMMO[gun.ammo]);
+  $('patBody').innerHTML=[0,1].map(i=>{const rate=CHOKES[gun.ch[i]].rate;
+    return `<tr><td>${i+1}. ${gun.ch[i]}</td>`+[15,20,25,30].map(d=>{const v=pelletV(a,d),E=0.5*a.mass*v*v,n=E>=E_MIN?expPellets(a,rate,d,0):0;
+      return `<td>${(patternR(rate,a.steel,d)*200).toFixed(0)} cm · ${n.toFixed(1)}</td>`;}).join('')+'</tr>';}).join('')
+    +`<tr><td>Broků</td><td colspan="4">${a.count} ks · úsťová rychlost ${a.v0} m/s · na 25 m ${Math.round(pelletV(a,25))} m/s</td></tr>`;
+  try{localStorage.setItem('skeet-gun',JSON.stringify(gun));}catch(e){} drawHud();}
+$('ch1').onchange=e=>{gun.ch[0]=e.target.value;renderPattern();};
+$('ch2').onchange=e=>{gun.ch[1]=e.target.value;renderPattern();};
+$('ammo').onchange=e=>{gun.ammo=e.target.value;renderPattern();};
+renderPattern();
+$('bigBtn').onclick=()=>{st.big=!st.big; $('bigBtn').setAttribute('aria-pressed',st.big); st.targets.forEach(t=>applyBig(t.m)); say(st.big?'Zvýraznění zapnuto':'Zvýraznění vypnuto');};
+$('speedSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.speed=+b.dataset.v; syncSpeed(); say('Rychlost '+Math.round(st.speed*100)+' %');};
+function syncSpeed(){document.querySelectorAll('#speedSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===st.speed));}
+syncSpeed();
+buildSeg(); syncSeg(); placeDolly(); renderScore(); resize(); initVR();
+// ukázkový terč, aby scéna nebyla prázdná
+setTimeout(()=>{if(!st.targets.length){st.pending.push({t:0,w:'H'});}},600);
+renderer.setAnimationLoop(tick);
+})();
+</script>
+
+</body>
+</html>
