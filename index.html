@@ -444,14 +444,16 @@ function finishPull(){
 /* ---------- UI ---------- */
 function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud();}
 const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice'};
+let spoustTep=0; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
   $('hudL').innerHTML=`<b>Stanoviště ${st.station+1}</b><br>${MODE[st.mode]}`;
-  $('hudR').innerHTML=`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}`;
+  $('hudR').innerHTML=`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}<br>Spoušť ${spoustOK()?'● připojena':'○ nepřipojena'}`;
   const x=hudCanvas.getContext('2d'); x.clearRect(0,0,768,288);
   x.fillStyle='rgba(15,23,19,0.72)'; x.fillRect(0,0,768,288);
   x.fillStyle='#e8662a'; x.fillRect(0,0,10,288);
   x.fillStyle='#fff'; x.font='700 64px Barlow Condensed, Arial'; x.fillText(`STANOVIŠTĚ ${st.station+1} · ${MODE[st.mode].toUpperCase()}`,34,78);
   x.font='500 38px IBM Plex Mono, monospace'; x.fillStyle='#cfe3d6'; x.fillText(`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}  ${gun.ch[0]}/${gun.ch[1]}  ${totals()}`,34,140);
+  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?'#7fe0a0':'#ffb08a'; x.textAlign='right'; x.fillText(spoustOK()?'● SPOUŠŤ':'○ SPOUŠŤ',740,140); x.textAlign='left';
   x.font='700 52px Barlow Condensed, Arial'; x.fillStyle=st.lastMsg.startsWith('Zásah')?'#7fe0a0':(st.lastMsg.startsWith('Vedle')?'#ffb08a':'#ffffff'); x.fillText(st.lastMsg,34,226);
   hudTex.needsUpdate=true;
 }
@@ -502,7 +504,8 @@ renderer.domElement.addEventListener('pointermove',e=>{if(st.inXR)return;
   yaw-=dx*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch-dy*0.0022)); applyLook();});
 document.addEventListener('keydown',e=>{
   if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
-  if(e.key==='f'||e.key==='F'){e.preventDefault(); spoust();}
+  if(e.key==='F24'||e.code==='F24'){e.preventDefault(); const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} return;}
+  if(e.key==='f'||e.key==='F'){e.preventDefault(); spoustTep=performance.now(); spoust();}
   else if(e.key===' '){e.preventDefault();audio();pull();}
   else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}
   else if(e.key==='ArrowRight'){e.preventDefault();setStation(st.station+1);}
@@ -512,6 +515,7 @@ document.addEventListener('keydown',e=>{
 
 /* ---------- Bluetooth spoušť (Skeet Trigger posílá klávesu F) ---------- */
 let spoustPocet=0;
+setInterval(()=>{ const ok=spoustOK(); if(ok!==window._spOK){ window._spOK=ok; drawHud(); } },1000);
 function spoust(){
   spoustPocet++;
   if(st.inXR){ const g=controllers.find(c=>isGun(c)); if(g){ fire(g); } else say('Spoušť OK, ale ovladač s brokovnicí nenalezen'); }
