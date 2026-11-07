@@ -102,9 +102,10 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
       <div class="controls">
         <div class="seg" id="stSeg" aria-label="Stanoviště"></div>
         <div class="seg" id="modeSeg" aria-label="Druh terče">
-          <button type="button" data-m="H">Vysoká</button><button type="button" data-m="L">Nízká</button><button type="button" data-m="D">Dvojice</button>
+          <button type="button" data-m="H">Vysoká</button><button type="button" data-m="L">Nízká</button><button type="button" data-m="D">Dvojice</button><button type="button" data-m="N">Nástřel</button>
         </div>
         <div class="seg"><button type="button" id="pullBtn">Terč (Pull)</button></div>
+        <div class="seg" id="zeroSeg" hidden><button type="button" id="zeroSave">Uložit korekci</button><button type="button" id="zeroReset">Vynulovat korekci</button></div>
         <div class="seg"><button type="button" id="bigBtn" aria-pressed="false">Zvýraznit terč</button></div>
         <div class="seg" id="windSeg" aria-label="Vítr"><button type="button" data-w="0">Bez větru</button><button type="button" data-w="1">Slabý vítr</button><button type="button" data-w="2">Střední vítr</button></div>
         <div class="seg" id="speedSeg" aria-label="Rychlost"><button type="button" data-v="0.5">50 %</button><button type="button" data-v="0.75">75 %</button><button type="button" data-v="1">100 %</button></div>
@@ -118,6 +119,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <dt>Páčka ← →</dt><dd>předchozí / další stanoviště</dd>
         <dt>Páčka ↑ ↓</dt><dd>vysoká / nízká / dvojice</dd>
         <dt>B / Y</dt><dd>laserový paprsek zap/vyp (jen pro kontrolu míření)</dd>
+        <dt>Nástřel</dt><dd>druh terče „Nástřel“ (X / M): tabule na 16 m. Miřte na černý bod a vystřelte 3–5 ran. B / Y uloží korekci, grip / A smaže tabuli. Korekce srovná virtuální hlaveň se skutečnou.</dd>
         <dt>Bluetooth spoušť</dt><dd>deska Skeet Trigger (klávesa F) vystřelí z ruky s brokovnicí</dd>
         <dt>Počítač</dt><dd>myš míří, klik střílí, mezerník = terč, šipky = stanoviště, M = druh terče, Z = zvýraznění</dd>
         <dt>Zvýraznění</dt><dd>terč 2,5× větší s oranžovou září, pomůcka pro začátek a pro malou obrazovku; zásah se počítá podle skutečné velikosti</dd>
@@ -333,7 +335,7 @@ function makeLaser(){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.0015,0.
   l.rotation.x=Math.PI/2; l.position.z=-30.76; l.visible=false; return l;}
 
 const controllers=[0,1].map(i=>{const c=renderer.xr.getController(i);
-  const gunM=makeGun(); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); c.add(las); c.userData.laser=las;
+  const gunM=makeGun(); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); gunM.add(las); c.userData.laser=las;
   c.addEventListener('connected',e=>{c.userData.src=e.data; syncHands();});
   c.addEventListener('disconnected',()=>{c.userData.src=null; syncHands();});
   c.addEventListener('selectstart',()=>{if(isGun(c))fire(c); else pull();});
@@ -347,7 +349,8 @@ function syncHands(){controllers.forEach(c=>{const g=isGun(c); c.userData.gun.vi
 const hudCanvas=document.createElement('canvas'); hudCanvas.width=768; hudCanvas.height=288;
 const hudTex=new THREE.CanvasTexture(hudCanvas);
 const hudMesh=new THREE.Mesh(new THREE.PlaneGeometry(0.64,0.24),new THREE.MeshBasicMaterial({map:hudTex,transparent:true,fog:false}));
-hudMesh.position.set(0,0.75,-0.75); hudMesh.rotation.x=-1.0;   // nízko před střelcem, mimo dráhy terčů dolly.add(hudMesh); hudMesh.visible=false;
+hudMesh.position.set(0,0.75,-0.75); hudMesh.rotation.x=-1.0;   // nízko před střelcem, mimo dráhy terčů
+dolly.add(hudMesh); hudMesh.visible=false;
 
 /* ---------- Zvuk ---------- */
 let ac=null;
@@ -392,6 +395,7 @@ function launch(which){const house=which==='H'?HOUSE_H:HOUSE_L, p=house.mouth.cl
   st.targets.push({G:T_G[which],m,p,v,alive:true,house:which,spin:Math.random()*6,wind,lift,ph:Math.random()*6,age:0}); sThrow();}
 
 function pull(){
+  if(st.mode==='N'){ zClear(); return; }
   if(st.targets.some(t=>t.alive)||st.pending.length) return;
   st.shells=2; st.pullMode=st.mode; st.pullHits=0; st.pullCount=st.mode==='D'?2:1;
   const delay=0.2+Math.random()*2.8;   // ISSF: náhodné zpoždění 0,2–3,0 s
@@ -401,17 +405,71 @@ function pull(){
 
 /* ---------- Výstřel ---------- */
 const tmpQ=new THREE.Quaternion();
+const corr={yaw:0,pitch:0};
+try{const c=JSON.parse(localStorage.getItem('skeet-corr')||'null'); if(c&&isFinite(c.yaw)&&isFinite(c.pitch)){corr.yaw=c.yaw;corr.pitch=c.pitch;}}catch(e){}
+function applyCorr(){ controllers.forEach(c=>c.userData.gun.rotation.set(corr.pitch,corr.yaw,0,'YXZ')); }
+const corrEuler=()=>new THREE.Euler(corr.pitch,corr.yaw,0,'YXZ');
 function fire(src){
   audio();
   if(st.shells<=0){sClick(); say('Prázdná zbraň – nejdřív vypusťte terč (A / grip / mezerník)'); return;}
+  if(st.mode==='N') st.shells=2;
   const barrel=2-st.shells; st.shells--; sShot();
   const a=ammoInfo(AMMO[gun.ammo]), rate=CHOKES[gun.ch[barrel]].rate;
   const o=new V(), d=new V(0,0,-1);
-  if(src){src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); d.applyQuaternion(tmpQ); o.addScaledVector(d,0.76);
+  if(src){src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); d.applyEuler(corrEuler()).applyQuaternion(tmpQ); o.addScaledVector(d,0.76);
     const s=src.userData.src; const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0]; if(h&&h.pulse)h.pulse(1,70);}
   else{camera.getWorldPosition(o); camera.getWorldDirection(d);}
+  if(st.mode==='N'){ zeroShot(o,d.normalize(),a,rate,barrel); return; }
   st.shots.push({o,d:d.normalize(),t:0,prev:0,judged:new Set(),best:null,a,rate,barrel});
 }
+
+/* ---------- Nástřel – tabule na 16 m ---------- */
+const ZD=16, ZS=2.0;                         // vzdálenost a velikost tabule (m)
+const zCan=document.createElement('canvas'); zCan.width=zCan.height=1024;
+const zTex=new THREE.CanvasTexture(zCan);
+const zBoard=new THREE.Mesh(new THREE.PlaneGeometry(ZS,ZS),new THREE.MeshBasicMaterial({map:zTex,fog:false}));
+const zFrame=new THREE.Mesh(new THREE.BoxGeometry(ZS+0.12,ZS+0.12,0.05),mat(0x6b4a2e));
+const zLegs=new THREE.Group(); for(const sx of [-0.8,0.8]){const l=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.6,0.08),mat(0x6b4a2e)); l.position.set(sx,-1.6,-0.05); zLegs.add(l);}
+const zGroup=new THREE.Group(); zBoard.position.z=0.03; zGroup.add(zFrame,zBoard,zLegs); zGroup.visible=false; scene.add(zGroup);
+const zBasis={c:new V(),n:new V(),r:new V(),u:new V(0,1,0)};
+let zHits=[];
+const zpx=m=>512+m/ZS*1024;
+function zDrawBase(){ const x=zCan.getContext('2d'); x.fillStyle='#f4f1e8'; x.fillRect(0,0,1024,1024);
+  x.strokeStyle='rgba(30,60,45,0.18)'; x.lineWidth=1; for(let i=-10;i<=10;i++){ const p=zpx(i*0.1); x.beginPath(); x.moveTo(p,0); x.lineTo(p,1024); x.stroke(); x.beginPath(); x.moveTo(0,p); x.lineTo(1024,p); x.stroke(); }
+  x.strokeStyle='rgba(30,60,45,0.45)'; x.lineWidth=2; for(const r of [0.25,0.5,0.75]){ x.beginPath(); x.arc(512,512,r/ZS*1024,0,7); x.stroke(); }
+  x.fillStyle='#111'; x.beginPath(); x.arc(512,512,0.05/ZS*1024,0,7); x.fill();
+  x.fillStyle='#1f4a37'; x.font='600 30px IBM Plex Mono, monospace'; x.fillText('16 m · kruhy 25/50/75 cm · mřížka 10 cm',24,1000); zTex.needsUpdate=true; }
+function zClear(){ zHits=[]; zDrawBase(); say('Nástřel: miřte na černý bod a vystřelte 3–5 ran'); }
+function zPlace(){ const p=dolly.position.clone(), f=new V(0,0,-1).applyQuaternion(dolly.quaternion).setY(0).normalize();
+  zBasis.c.copy(p).addScaledVector(f,ZD).setY(1.55); zBasis.n.copy(f).negate(); zBasis.r.set(-f.z,0,f.x).normalize().negate().negate();
+  zBasis.r.copy(new V().crossVectors(f,new V(0,1,0)).normalize());
+  zGroup.position.copy(zBasis.c); zGroup.lookAt(zBasis.c.clone().add(zBasis.n)); }
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function zeroShot(o,d,a,rate,barrel){
+  const den=d.dot(zBasis.n); if(den>-1e-4){ say('Mimo tabuli – miřte na černý bod'); return; }
+  const t=zBasis.c.clone().sub(o).dot(zBasis.n)/den, P=o.clone().addScaledVector(d,t), rel=P.sub(zBasis.c);
+  const dx=rel.dot(zBasis.r), dy=rel.dot(zBasis.u), D=t;
+  const R=patternR(rate,a.steel,D), sg=R/1.665, x=zCan.getContext('2d');
+  x.fillStyle='rgba(20,20,20,0.85)';
+  for(let i=0;i<Math.min(a.count,400);i++){ const px=zpx(dx+gauss()*sg), py=zpx(-(dy+gauss()*sg)); x.fillRect(px-1.5,py-1.5,3,3); }
+  x.strokeStyle='#d9561f'; x.lineWidth=4; const cx=zpx(dx), cy=zpx(-dy); x.beginPath(); x.moveTo(cx-14,cy); x.lineTo(cx+14,cy); x.moveTo(cx,cy-14); x.lineTo(cx,cy+14); x.stroke();
+  zHits.push({dx,dy,D}); const n=zHits.length, ax=zHits.reduce((s,h)=>s+h.dx,0)/n, ay=zHits.reduce((s,h)=>s+h.dy,0)/n;
+  if(n>1){ x.strokeStyle='#2f7d4a'; x.lineWidth=5; const mx=zpx(ax), my=zpx(-ay); x.beginPath(); x.arc(mx,my,18,0,7); x.stroke(); }
+  zTex.needsUpdate=true;
+  const tx=(v,a,b)=>Math.abs(v)<0.02?'':(v>0?a:b)+' '+Math.round(Math.abs(v)*100)+' cm';
+  say(`Nástřel ${n}×: střed ${[tx(ax,'vpravo','vlevo'),tx(ay,'nahoře','dole')].filter(Boolean).join(', ')||'v bodě'}`);
+}
+function zSave(){
+  if(!st.inXR){ say('Korekce se ukládá jen ve VR – míří se ovladačem na zbrani'); return; }
+  if(!zHits.length){ say('Nejdřív vystřelte na tabuli'); return; }
+  const n=zHits.length, ax=zHits.reduce((s,h)=>s+h.dx,0)/n, ay=zHits.reduce((s,h)=>s+h.dy,0)/n, D=zHits.reduce((s,h)=>s+h.D,0)/n;
+  corr.yaw+=Math.atan2(ax,D); corr.pitch-=Math.atan2(ay,D);
+  try{localStorage.setItem('skeet-corr',JSON.stringify(corr));}catch(e){}
+  applyCorr(); zClear();
+  say(`Korekce uložena (${(corr.yaw*180/Math.PI).toFixed(1)}° / ${(corr.pitch*180/Math.PI).toFixed(1)}°) – vystřelte kontrolní ránu`);
+}
+function zReset(){ corr.yaw=0; corr.pitch=0; try{localStorage.removeItem('skeet-corr');}catch(e){} applyCorr(); zClear(); say('Korekce vynulována'); }
+zDrawBase();
 
 /* ---------- Efekty ---------- */
 const fragGeo=new THREE.BoxGeometry(0.035,0.012,0.03);
@@ -460,7 +518,7 @@ function finishPull(){
 
 /* ---------- UI ---------- */
 function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud();}
-const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice'};
+const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice',N:'Nástřel'};
 let spoustTep=0; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
   $('hudL').innerHTML=`<b>Stanoviště ${st.station+1}</b><br>${MODE[st.mode]}`;
@@ -494,8 +552,9 @@ function syncSeg(){
   document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===st.mode));
 }
 function clearField(){st.targets.forEach(t=>scene.remove(t.m)); st.targets=[]; st.pending=[]; st.pullCount=0;}
-function setStation(i){st.station=(i+8)%8; clearField(); placeDolly(); syncSeg(); renderScore(); say(`Stanoviště ${st.station+1}`);}
-function setMode(m){st.mode=m; clearField(); if(st.station===7)placeDolly(); syncSeg(); drawHud(); say(MODE[m]);}
+function setStation(i){st.station=(i+8)%8; clearField(); placeDolly(); if(st.mode==='N'){zPlace(); zClear();} syncSeg(); renderScore(); say(`Stanoviště ${st.station+1}`);}
+function setMode(m){st.mode=m; clearField(); if(st.station===7)placeDolly(); syncSeg(); drawHud();
+  zGroup.visible=(m==='N'); $('zeroSeg').hidden=(m!=='N'); if(m==='N'){ zPlace(); zClear(); } else say(MODE[m]);}
 
 /* ---------- Pozice střelce ---------- */
 let yaw=0,pitch=0.12;
@@ -528,7 +587,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}
   else if(e.key==='ArrowRight'){e.preventDefault();setStation(st.station+1);}
   else if(e.key==='z'||e.key==='Z'){$('bigBtn').click();}
-  else if(e.key==='m'||e.key==='M'){setMode({H:'L',L:'D',D:'H'}[st.mode]);}
+  else if(e.key==='m'||e.key==='M'){setMode({H:'L',L:'D',D:'N',N:'H'}[st.mode]);}
 });
 
 /* ---------- Bluetooth spoušť (Skeet Trigger posílá klávesu F) ---------- */
@@ -540,7 +599,7 @@ function spoust(){
   if(st.inXR){ const g=controllers.find(c=>isGun(c)); if(g){ fire(g); } else say('Spoušť OK, ale ovladač s brokovnicí nenalezen'); }
   else fire(null);
   $('spCnt').textContent=spoustPocet;
-  if(!st.targets.some(t=>t.alive) && st.lastMsg.indexOf('Prázdná')<0) say('Výstřel z desky č. '+spoustPocet+' – bez terče');
+  if(st.mode!=='N' && !st.targets.some(t=>t.alive) && st.lastMsg.indexOf('Prázdná')<0) say('Výstřel z desky č. '+spoustPocet+' – bez terče');
 }
 
 /* ---------- VR ---------- */
@@ -569,12 +628,12 @@ function pollPads(){
   for(const src of s.inputSources){const gp=src.gamepad; if(!gp)continue; const key=src.handedness;
     const ax=gp.axes, x=ax[2]||0, y=ax[3]||0, pa=prevAxes.get(key)||{x:0,y:0};
     if(x>0.7&&pa.x<=0.7)setStation(st.station+1); if(x<-0.7&&pa.x>=-0.7)setStation(st.station-1);
-    if(y<-0.7&&pa.y>=-0.7)setMode({H:'L',L:'D',D:'H'}[st.mode]); if(y>0.7&&pa.y<=0.7)setMode({H:'D',L:'H',D:'L'}[st.mode]);
+    if(y<-0.7&&pa.y>=-0.7)setMode({H:'L',L:'D',D:'N',N:'H'}[st.mode]); if(y>0.7&&pa.y<=0.7)setMode({H:'N',L:'H',D:'L',N:'D'}[st.mode]);
     prevAxes.set(key,{x,y});
     const b=gp.buttons, pb=prevBtn.get(key)||[];
     const pressed=i=>b[i]&&b[i].pressed&&!pb[i];
-    if(pressed(4)){ if(key==='left'){const nx={H:'L',L:'D',D:'H'}[st.mode]; setMode(nx);} else pull(); }
-    if(pressed(5)){st.laser=!st.laser; syncHands();}
+    if(pressed(4)){ if(key==='left'){const nx={H:'L',L:'D',D:'N',N:'H'}[st.mode]; setMode(nx);} else pull(); }
+    if(pressed(5)){ if(st.mode==='N') zSave(); else {st.laser=!st.laser; syncHands();} }
     if(pressed(3)){st.hand=st.hand==='right'?'left':'right'; syncHands(); say(st.hand==='right'?'Brokovnice v pravé ruce':'Brokovnice v levé ruce');}
     prevBtn.set(key,b.map(x=>x.pressed));
   }
@@ -635,6 +694,7 @@ function resize(){if(st.inXR)return; const w=stage.clientWidth,h=stage.clientHei
 new ResizeObserver(resize).observe(stage);
 
 $('pullBtn').onclick=()=>{audio();pull();};
+$('zeroSave').onclick=()=>zSave(); $('zeroReset').onclick=()=>zReset(); applyCorr();
 function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${o.n}</option>`).join('');}
 fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo);
 function renderPattern(){const a=ammoInfo(AMMO[gun.ammo]);
