@@ -90,7 +90,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   </header>
 
   <div class="stage" id="stage">
-    <div class="hud"><div id="hudL"></div><div id="hudR" style="text-align:right"></div></div>
+    <div class="hud"><div id="hudL"></div><div style="text-align:right"><div id="hudR"></div>Výstřelů z desky: <span id="spCnt">0</span></div></div>
     <div class="cross" id="cross"></div>
     <div class="feedback" id="fb">Mezerník = terč, klik = výstřel</div>
     <button class="tap" id="tap" type="button">Klikněte pro zaměřování myší</button>
@@ -386,7 +386,7 @@ function pull(){
 const tmpQ=new THREE.Quaternion();
 function fire(src){
   audio();
-  if(st.shells<=0){sClick(); return;}
+  if(st.shells<=0){sClick(); say('Prázdná zbraň – nejdřív vypusťte terč (A / grip / mezerník)'); return;}
   const barrel=2-st.shells; st.shells--; sShot();
   const a=ammoInfo(AMMO[gun.ammo]), rate=CHOKES[gun.ch[barrel]].rate;
   const o=new V(), d=new V(0,0,-1);
@@ -520,7 +520,8 @@ function spoust(){
   spoustPocet++;
   if(st.inXR){ const g=controllers.find(c=>isGun(c)); if(g){ fire(g); } else say('Spoušť OK, ale ovladač s brokovnicí nenalezen'); }
   else fire(null);
-  if(spoustPocet<=3) setTimeout(()=>{ if(!st.lastMsg.startsWith('Zásah')&&!st.lastMsg.startsWith('Vedle')) say('Spoušť přijata ('+spoustPocet+'×)'); },50);
+  $('spCnt').textContent=spoustPocet;
+  if(!st.targets.some(t=>t.alive) && st.lastMsg.indexOf('Prázdná')<0) say('Výstřel z desky č. '+spoustPocet+' – bez terče');
 }
 
 /* ---------- VR ---------- */
