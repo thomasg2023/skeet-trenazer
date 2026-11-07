@@ -90,7 +90,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   </header>
 
   <div class="stage" id="stage">
-    <div class="hud"><div id="hudL"></div><div style="text-align:right"><div id="hudR"></div>Výstřelů z desky: <span id="spCnt">0</span></div></div>
+    <div class="hud"><div id="hudL"></div><div style="text-align:right"><div id="hudR"></div>Výstřelů z desky: <span id="spCnt">0</span><br>Poslední klávesa: <span id="lastKey">–</span></div></div>
     <div class="cross" id="cross"></div>
     <div class="feedback" id="fb">Mezerník = terč, klik = výstřel</div>
     <button class="tap" id="tap" type="button">Klikněte pro zaměřování myší</button>
@@ -356,7 +356,24 @@ function noise(dur,freq,vol,decay){const a=audio(); if(!a)return; const n=Math.f
   for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*decay));
   const src=a.createBufferSource(); src.buffer=buf; const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq; const g=a.createGain(); g.gain.value=vol;
   src.connect(f).connect(g).connect(a.destination); src.start();}
-const sShot=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>noise(0.25,300,0.6,0.05), sClick=()=>noise(0.03,8000,0.2,0.004);
+let master=null;
+function out(){const a=audio(); if(!a)return null; if(!master){ const comp=a.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=6; comp.ratio.value=8; comp.attack.value=0.002; comp.release.value=0.25;
+  master=a.createGain(); master.gain.value=1.0; master.connect(comp).connect(a.destination);} return master;}
+function sShot(){ const a=audio(); if(!a)return; const o=out(), t=a.currentTime;
+  // ostrý třesk
+  const n=Math.floor(a.sampleRate*0.6), buf=a.createBuffer(1,n,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*0.09));
+  const src=a.createBufferSource(); src.buffer=buf; const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=3500;
+  const g=a.createGain(); g.gain.value=4.0; src.connect(f).connect(g).connect(o); src.start(t);
+  // basový úder
+  const osc=a.createOscillator(), og=a.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(110,t); osc.frequency.exponentialRampToValueAtTime(38,t+0.25);
+  og.gain.setValueAtTime(3.0,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.35); osc.connect(og).connect(o); osc.start(t); osc.stop(t+0.4);
+  // dozvuk po střelnici
+  const n2=Math.floor(a.sampleRate*1.2), b2=a.createBuffer(1,n2,a.sampleRate), d2=b2.getChannelData(0);
+  for(let i=0;i<n2;i++) d2[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*0.35))*0.25;
+  const s2=a.createBufferSource(); s2.buffer=b2; const f2=a.createBiquadFilter(); f2.type='lowpass'; f2.frequency.value=900; s2.connect(f2).connect(o); s2.start(t+0.03);
+}
+const _sShotOld=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>noise(0.25,300,0.6,0.05), sClick=()=>noise(0.03,8000,0.2,0.004);
 
 /* ---------- Terče ---------- */
 const clayGeo=new THREE.CylinderGeometry(0.054,0.054,0.026,20), clayMat=mat(0xe8662a), clayRim=mat(0x1b1b1b);
@@ -503,6 +520,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(st.inXR)return;
   let dx=0,dy=0; if(locked){dx=e.movementX;dy=e.movementY;} else if(dragging){dx=e.clientX-lx;dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;} else return;
   yaw-=dx*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch-dy*0.0022)); applyLook();});
 document.addEventListener('keydown',e=>{
+  try{ $('lastKey').textContent=(e.key||'?')+' / '+(e.code||'?')+' · '+new Date().toLocaleTimeString('cs-CZ'); }catch(_){}
   if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
   if(e.key==='F24'||e.code==='F24'){e.preventDefault(); const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} return;}
   if(e.key==='f'||e.key==='F'){e.preventDefault(); spoustTep=performance.now(); spoust();}
@@ -518,6 +536,7 @@ let spoustPocet=0;
 setInterval(()=>{ const ok=spoustOK(); if(ok!==window._spOK){ window._spOK=ok; drawHud(); } },1000);
 function spoust(){
   spoustPocet++;
+  if(st.shells<=0) st.shells=1;   // z desky střílí vždy – každé cvaknutí je výstřel
   if(st.inXR){ const g=controllers.find(c=>isGun(c)); if(g){ fire(g); } else say('Spoušť OK, ale ovladač s brokovnicí nenalezen'); }
   else fire(null);
   $('spCnt').textContent=spoustPocet;
