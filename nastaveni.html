@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nastavení spouště</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: přístrojová deska – připojení, dva živé grafy s prahem, nastavení a záznam výstřelů */
+:root{
+  --bg:#eef1ec; --surface:#fff; --fg:#17231d; --muted:#5b6a61; --line:#d3dbd4;
+  --spruce:#1f4a37; --clay:#d9561f; --ok:#2f7d4a; --chart:#f6f8f5;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root{--bg:#0f1713;--surface:#16211b;--fg:#e4ebe6;--muted:#97a69c;--line:#2a3a31;--spruce:#7fc39c;--clay:#f07a43;--ok:#6fcf8f;--chart:#101a15;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+h1{font:700 clamp(32px,6vw,46px)/.95 var(--display);margin:0} h1 span{color:var(--clay)}
+.lede{color:var(--muted);margin:6px 0 0;max-width:60ch}
+button{font:600 16px/1 var(--display);letter-spacing:.05em;text-transform:uppercase;border:0;border-radius:6px;padding:12px 18px;cursor:pointer;background:var(--clay);color:#fff}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--spruce);outline-offset:2px}
+.status{font:500 13px var(--mono);color:var(--muted)}
+.status b{color:var(--ok)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+.panel h2{font:700 19px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;color:var(--spruce)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.meter{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.meter .v{font:700 30px var(--display);font-variant-numeric:tabular-nums}
+.meter .pk{font:500 13px var(--mono);color:var(--muted)}
+canvas{width:100%;height:150px;display:block;background:var(--chart);border-radius:6px;border:1px solid var(--line)}
+.row{display:grid;grid-template-columns:150px 1fr 90px;gap:10px;align-items:center;margin:10px 0}
+.row label{font:600 13px var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row input[type=number],.row select{font:500 15px var(--mono);width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.row input[type=range]{width:100%;accent-color:var(--clay)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.log{font:500 13px/1.6 var(--mono);max-height:220px;overflow:auto;margin:0;padding:0;list-style:none}
+.log li.shot{color:var(--clay);font-weight:600}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+@media (max-width:520px){.row{grid-template-columns:1fr 80px}.row input[type=range]{grid-column:1/-1;order:3}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Nastavení <span>spouště</span></h1>
+      <p class="lede">Skeet Trigger (XIAO nRF52840 Sense) připojený USB kabelem. Živě ukazuje ráz z akcelerometru a hlasitost z mikrofonu, prahy se mění posuvníky a uloží do desky.</p>
+    </div>
+    <div>
+      <button id="conn" type="button">Připojit desku</button>
+      <div class="status" id="st">Nepřipojeno</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="meter"><h2>Ráz – náhlá změna zrychlení</h2><span class="pk" id="pkG">špička –</span></div>
+      <div class="meter"><span class="v" id="vG">0,00 g</span></div>
+      <canvas id="cG" width="900" height="300"></canvas>
+    </section>
+    <section class="panel">
+      <div class="meter"><h2>Zvuk – mikrofon</h2><span class="pk" id="pkM">špička –</span></div>
+      <div class="meter"><span class="v" id="vM">0</span></div>
+      <canvas id="cM" width="900" height="300"></canvas>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Prahy</h2>
+      <div class="row"><label for="prah_g">Práh rázu (g)</label><input type="range" id="prah_g_r" min="0.5" max="30" step="0.1"><input type="number" id="prah_g" min="0.5" max="30" step="0.1"></div>
+      <div class="row"><label for="prah_mic">Práh zvuku</label><input type="range" id="prah_mic_r" min="100" max="32767" step="100"><input type="number" id="prah_mic" min="100" max="32767" step="100"></div>
+      <div class="row"><label for="soubeh">Souběh (ms)</label><input type="range" id="soubeh_r" min="5" max="200" step="5"><input type="number" id="soubeh" min="5" max="500" step="5"></div>
+      <div class="row"><label for="blokace">Blokace (ms)</label><input type="range" id="blokace_r" min="50" max="1000" step="10"><input type="number" id="blokace" min="50" max="2000" step="10"></div>
+      <div class="row"><label for="rezim">Režim</label>
+        <select id="rezim" style="grid-column:2/-1"><option value="2">Ráz + cvaknutí současně</option><option value="0">Jen ráz</option><option value="1">Jen cvaknutí</option></select></div>
+      <div class="actions">
+        <button id="save" type="button" disabled>Uložit do desky</button>
+        <button id="defaults" type="button" class="sec" disabled>Výchozí hodnoty</button>
+      </div>
+      <p class="note">Změna platí hned. „Uložit do desky“ ji zapamatuje i po vypnutí. Souběh = jak blízko po sobě musí přijít ráz a cvaknutí. Blokace = doba po výstřelu, kdy se další rázy ignorují.</p>
+    </section>
+    <section class="panel">
+      <h2>Záznam</h2>
+      <ul class="log" id="log"><li>Připojte desku. Funguje v Chrome nebo Edge na Macu, Safari tuto funkci nemá.</li></ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let port=null, writer=null, buf='', cfg={};
+const N=250, dataG=new Array(N).fill(0), dataM=new Array(N).fill(0), shots=new Array(N).fill(0);
+let peakG=0, peakM=0;
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function log(t,shot){const li=document.createElement('li'); li.textContent=new Date().toLocaleTimeString('cs-CZ')+'  '+t; if(shot)li.className='shot'; $('log').prepend(li); while($('log').children.length>200)$('log').lastChild.remove();}
+async function send(cmd){ if(!writer)return; await writer.write(new TextEncoder().encode(cmd+'\n')); }
+
+function draw(cv,data,thr,max,fmt){
+  const c=cv.getContext('2d'), W=cv.width, H=cv.height, y=v=>H-6-(Math.min(v,max)/max)*(H-12);
+  c.clearRect(0,0,W,H);
+  c.strokeStyle=css('--line'); c.lineWidth=1; for(let i=1;i<4;i++){c.beginPath();c.moveTo(0,H*i/4);c.lineTo(W,H*i/4);c.stroke();}
+  c.fillStyle=css('--clay'); for(let i=0;i<N;i++) if(shots[i]) c.fillRect(i*W/N-1,0,3,H);
+  c.beginPath(); c.moveTo(0,H); data.forEach((v,i)=>c.lineTo(i*W/(N-1),y(v))); c.lineTo(W,H); c.closePath();
+  c.fillStyle=css('--spruce')+'33'; c.fill();
+  c.beginPath(); data.forEach((v,i)=>i?c.lineTo(i*W/(N-1),y(v)):c.moveTo(0,y(v))); c.strokeStyle=css('--spruce'); c.lineWidth=2.5; c.stroke();
+  if(thr!=null){ c.setLineDash([10,8]); c.strokeStyle=css('--clay'); c.lineWidth=2; c.beginPath(); c.moveTo(0,y(thr)); c.lineTo(W,y(thr)); c.stroke(); c.setLineDash([]);
+    c.fillStyle=css('--clay'); c.font='600 22px IBM Plex Mono, monospace'; c.fillText('práh '+fmt(thr),10,Math.max(24,y(thr)-8)); }
+}
+const fg=v=>v.toFixed(2).replace('.',',')+' g', fm=v=>String(Math.round(v));
+function redraw(){ draw($('cG'),dataG,cfg.prah_g,32,fg); draw($('cM'),dataM,cfg.prah_mic,32767,fm); }
+
+function onLine(l){
+  l=l.trim(); if(!l)return;
+  if(l.startsWith('D ')){ const [,g,m]=l.split(' '); const G=+g, Mv=+m;
+    dataG.push(G); dataG.shift(); dataM.push(Mv); dataM.shift(); shots.push(0); shots.shift();
+    peakG=Math.max(peakG,G); peakM=Math.max(peakM,Mv);
+    $('vG').textContent=fg(G); $('vM').textContent=fm(Mv);
+    $('pkG').textContent='špička '+fg(peakG); $('pkM').textContent='špička '+fm(peakM); return; }
+  if(l.startsWith('C ')){ l.slice(2).split(' ').forEach(kv=>{const [k,v]=kv.split('='); cfg[k]=+v;}); fill(); return; }
+  if(l.startsWith('E VYSTREL')){ shots[N-1]=1; log('Výstřel ('+l.slice(10)+')',true); peakG=0; peakM=0; return; }
+  log(l);
+}
+function fill(){ for(const k of ['prah_g','prah_mic','soubeh','blokace']){ if(cfg[k]==null)continue; $(k).value=cfg[k]; $(k+'_r').value=cfg[k]; } if(cfg.rezim!=null)$('rezim').value=cfg.rezim; }
+let tmr={};
+function bind(k){ const set=v=>{ $(k).value=v; $(k+'_r').value=v; cfg[k]=+v; clearTimeout(tmr[k]); tmr[k]=setTimeout(()=>send(k+' '+v),120); };
+  $(k).addEventListener('change',e=>set(e.target.value)); $(k+'_r').addEventListener('input',e=>set(e.target.value)); }
+['prah_g','prah_mic','soubeh','blokace'].forEach(bind);
+$('rezim').addEventListener('change',e=>send('rezim '+e.target.value));
+$('save').onclick=()=>send('ulozit'); $('defaults').onclick=()=>send('vychozi');
+
+$('conn').onclick=async()=>{
+  if(!('serial' in navigator)){ log('Tento prohlížeč neumí Web Serial. Otevřete stránku v Chrome nebo Edge.'); return; }
+  try{
+    port=await navigator.serial.requestPort(); await port.open({baudRate:115200});
+    writer=port.writable.getWriter(); $('st').innerHTML='<b>Připojeno</b>'; $('conn').disabled=true; $('save').disabled=false; $('defaults').disabled=false;
+    log('Deska připojena'); await send('info'); await send('stream 1');
+    const reader=port.readable.pipeThrough(new TextDecoderStream()).getReader();
+    while(true){ const {value,done}=await reader.read(); if(done)break; buf+=value; let i; while((i=buf.indexOf('\n'))>=0){ onLine(buf.slice(0,i)); buf=buf.slice(i+1);} }
+  }catch(e){ log('Chyba: '+e.message); $('st').textContent='Nepřipojeno'; $('conn').disabled=false; }
+};
+(function loop(){ redraw(); requestAnimationFrame(loop); })();
+fill();
+})();
+</script>
+</body>
+</html>

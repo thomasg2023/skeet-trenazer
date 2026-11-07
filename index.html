@@ -118,6 +118,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <dt>Páčka ← →</dt><dd>předchozí / další stanoviště</dd>
         <dt>Páčka ↑ ↓</dt><dd>vysoká / nízká / dvojice</dd>
         <dt>B / Y</dt><dd>laserový paprsek zap/vyp (jen pro kontrolu míření)</dd>
+        <dt>Bluetooth spoušť</dt><dd>deska Skeet Trigger (klávesa F) vystřelí z ruky s brokovnicí</dd>
         <dt>Počítač</dt><dd>myš míří, klik střílí, mezerník = terč, šipky = stanoviště, M = druh terče, Z = zvýraznění</dd>
         <dt>Zvýraznění</dt><dd>terč 2,5× větší s oranžovou září, pomůcka pro začátek a pro malou obrazovku; zásah se počítá podle skutečné velikosti</dd>
       </dl>
@@ -501,12 +502,22 @@ renderer.domElement.addEventListener('pointermove',e=>{if(st.inXR)return;
   yaw-=dx*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch-dy*0.0022)); applyLook();});
 document.addEventListener('keydown',e=>{
   if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
-  if(e.key===' '){e.preventDefault();audio();pull();}
+  if(e.key==='f'||e.key==='F'){e.preventDefault(); spoust();}
+  else if(e.key===' '){e.preventDefault();audio();pull();}
   else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}
   else if(e.key==='ArrowRight'){e.preventDefault();setStation(st.station+1);}
   else if(e.key==='z'||e.key==='Z'){$('bigBtn').click();}
   else if(e.key==='m'||e.key==='M'){setMode({H:'L',L:'D',D:'H'}[st.mode]);}
 });
+
+/* ---------- Bluetooth spoušť (Skeet Trigger posílá klávesu F) ---------- */
+let spoustPocet=0;
+function spoust(){
+  spoustPocet++;
+  if(st.inXR){ const g=controllers.find(c=>isGun(c)); if(g){ fire(g); } else say('Spoušť OK, ale ovladač s brokovnicí nenalezen'); }
+  else fire(null);
+  if(spoustPocet<=3) setTimeout(()=>{ if(!st.lastMsg.startsWith('Zásah')&&!st.lastMsg.startsWith('Vedle')) say('Spoušť přijata ('+spoustPocet+'×)'); },50);
+}
 
 /* ---------- VR ---------- */
 const vrBtn=$('vrBtn'), vrNote=$('vrNote');
