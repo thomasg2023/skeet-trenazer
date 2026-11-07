@@ -72,6 +72,8 @@ canvas{width:100%;height:150px;display:block;background:var(--chart);border-radi
   <div class="grid">
     <section class="panel">
       <h2>Prahy</h2>
+      <p class="note" id="cfgSt" style="margin:0 0 6px">Hodnoty se načtou z desky po připojení.</p>
+      <fieldset id="fs" disabled style="border:0;margin:0;padding:0;min-width:0">
       <div class="row"><label for="prah_g">Práh rázu (g)</label><input type="range" id="prah_g_r" min="0.5" max="30" step="0.1"><input type="number" id="prah_g" min="0.5" max="30" step="0.1"></div>
       <div class="row"><label for="prah_mic">Práh zvuku</label><input type="range" id="prah_mic_r" min="100" max="32767" step="100"><input type="number" id="prah_mic" min="100" max="32767" step="100"></div>
       <div class="row"><label for="soubeh">Souběh (ms)</label><input type="range" id="soubeh_r" min="5" max="200" step="5"><input type="number" id="soubeh" min="5" max="500" step="5"></div>
@@ -82,11 +84,12 @@ canvas{width:100%;height:150px;display:block;background:var(--chart);border-radi
         <button id="save" type="button" disabled>Uložit do desky</button>
         <button id="defaults" type="button" class="sec" disabled>Výchozí hodnoty</button>
       </div>
-      <p class="note">Změna platí hned. „Uložit do desky“ ji zapamatuje i po vypnutí. Souběh = jak blízko po sobě musí přijít ráz a cvaknutí. Blokace = doba po výstřelu, kdy se další rázy ignorují.</p>
+      </fieldset>
+      <p class="note">Změna platí hned a za vteřinu se sama uloží do desky, takže vydrží i vypnutí a znovunačtení stránky. Souběh = jak blízko po sobě musí přijít ráz a cvaknutí. Blokace = doba po výstřelu, kdy se další rázy ignorují.</p>
     </section>
     <section class="panel">
       <h2>Záznam</h2>
-      <ul class="log" id="log"><li>Připojte desku. Funguje v Chrome nebo Edge na Macu, Safari tuto funkci nemá.</li></ul>
+      <ul class="log" id="log"><li>Připojte desku USB kabelem a klikněte „Připojit desku“. V nabídce vyberte položku s „XIAO“ nebo „usbmodem“ (ne Bluetooth). Arduino IDE musí být zavřené. Funguje v Chrome nebo Edge.</li></ul>
     </section>
   </div>
 </div>
@@ -123,22 +126,26 @@ function onLine(l){
     peakG=Math.max(peakG,G); peakM=Math.max(peakM,Mv);
     $('vG').textContent=fg(G); $('vM').textContent=fm(Mv);
     $('pkG').textContent='špička '+fg(peakG); $('pkM').textContent='špička '+fm(peakM); return; }
-  if(l.startsWith('C ')){ l.slice(2).split(' ').forEach(kv=>{const [k,v]=kv.split('='); cfg[k]=+v;}); fill(); return; }
+  if(l.startsWith('C ')){ l.slice(2).split(' ').forEach(kv=>{const [k,v]=kv.split('='); cfg[k]=+v;}); fill(); $('fs').disabled=false;
+    if(!ulozCeka) $('cfgSt').textContent='Hodnoty načtené z desky.'; return; }
+  if(l.startsWith('OK ulozeno')){ ulozCeka=false; $('cfgSt').textContent='Uloženo do desky ✓'; log('Nastavení uloženo do desky'); return; }
   if(l.startsWith('E VYSTREL')){ shots[N-1]=1; log('Výstřel ('+l.slice(10)+')',true); peakG=0; peakM=0; return; }
   log(l);
 }
 function fill(){ for(const k of ['prah_g','prah_mic','soubeh','blokace']){ if(cfg[k]==null)continue; $(k).value=cfg[k]; $(k+'_r').value=cfg[k]; } if(cfg.rezim!=null)$('rezim').value=cfg.rezim; }
-let tmr={};
-function bind(k){ const set=v=>{ $(k).value=v; $(k+'_r').value=v; cfg[k]=+v; clearTimeout(tmr[k]); tmr[k]=setTimeout(()=>send(k+' '+v),120); };
+let tmr={}, ulozT=null, ulozCeka=false;
+function autoUloz(){ ulozCeka=true; $('cfgSt').textContent='Ukládám…'; clearTimeout(ulozT); ulozT=setTimeout(()=>send('ulozit'),900); }
+function bind(k){ const set=v=>{ $(k).value=v; $(k+'_r').value=v; cfg[k]=+v; clearTimeout(tmr[k]); tmr[k]=setTimeout(()=>{ send(k+' '+v); autoUloz(); },120); };
   $(k).addEventListener('change',e=>set(e.target.value)); $(k+'_r').addEventListener('input',e=>set(e.target.value)); }
 ['prah_g','prah_mic','soubeh','blokace'].forEach(bind);
-$('rezim').addEventListener('change',e=>send('rezim '+e.target.value));
-$('save').onclick=()=>send('ulozit'); $('defaults').onclick=()=>send('vychozi');
+$('rezim').addEventListener('change',e=>{ send('rezim '+e.target.value); autoUloz(); });
+$('save').onclick=()=>{ ulozCeka=true; send('ulozit'); }; $('defaults').onclick=()=>{ send('vychozi'); autoUloz(); };
 
 $('conn').onclick=async()=>{
   if(!('serial' in navigator)){ log('Tento prohlížeč neumí Web Serial. Otevřete stránku v Chrome nebo Edge.'); return; }
   try{
-    port=await navigator.serial.requestPort(); await port.open({baudRate:115200});
+    port=await navigator.serial.requestPort();
+    await port.open({baudRate:115200});
     writer=port.writable.getWriter(); $('st').innerHTML='<b>Připojeno</b>'; $('conn').disabled=true; $('save').disabled=false; $('defaults').disabled=false;
     log('Deska připojena'); await send('info'); await send('stream 1');
     const reader=port.readable.pipeThrough(new TextDecoderStream()).getReader();
