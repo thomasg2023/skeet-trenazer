@@ -139,6 +139,7 @@ fieldset:disabled{opacity:.5}
     <div class="tools">
       <button class="btn" id="syncBtn" disabled>Stáhnout nové</button>
       <button class="btn" id="newRoundBtn" disabled>Začít novou položku</button>
+      <button class="btn" id="testBtn" disabled>Zkušební záznam</button>
       <button class="btn danger" id="wipeBtn" disabled>Smazat záznamy ve spoušti</button>
       <button class="btn" id="demoBtn">Ukázková data</button>
       <span class="msg" id="zMsg"></span>
@@ -152,15 +153,15 @@ fieldset:disabled{opacity:.5}
       <div class="card fs">
         <h2>Co spoušť dělá</h2>
         <div class="row"><label for="zaznam">Režim</label>
-          <select id="zaznam"><option value="0">Jen VR spoušť (jako dosud)</option><option value="1">Jen záznam ze střelnice</option><option value="2">Obojí</option></select>
-          <span class="hint">Na střelnici dejte „Jen záznam“. Ve VR spoušť funguje i v režimu „Obojí“.</span></div>
+          <select id="zaznam"><option value="0">Jen VR spoušť (jako dosud)</option><option value="1">Jen záznam ze střelnice</option><option value="2">Obojí (zaznamená i výstřely z VR spouště)</option></select>
+          <span class="hint">Na střelnici „Jen záznam“. Doma na zkoušku „Obojí“: každé cvaknutí, které vystřelí ve VR, se uloží i jako záznam.</span></div>
         <div class="row"><label for="program">Program</label>
           <select id="program"><option value="0">Trénink 1 terč</option><option value="1">Trénink double</option><option value="2">Skeet (25)</option><option value="3">Lovecké kolo (20)</option></select>
           <span class="hint">Skeet a lovecké kolo: aplikace přiřadí každé ráně stanoviště podle pořadí. Před položkou dejte „Začít novou položku“.</span></div>
         <h2>Ostrá rána</h2>
-        <div class="row"><label for="prah_rana_g">Ráz (g)</label><div class="inl"><input type="range" id="prah_rana_g" min="2" max="16" step="0.5"><output id="o_prah_rana_g"></output></div>
+        <div class="row"><label for="prah_rana_g">Ráz (g)</label><div class="inl"><input type="range" id="prah_rana_g" min="0.5" max="16" step="0.5"><output id="o_prah_rana_g"></output></div>
           <span class="hint">Zpětný ráz 12/70 je nad 10 g. Cvaknutí naprázdno bývá do 3 g.</span></div>
-        <div class="row"><label for="prah_rana_mic">Hlasitost (0–32767)</label><div class="inl"><input type="range" id="prah_rana_mic" min="1000" max="32767" step="500"><output id="o_prah_rana_mic"></output></div>
+        <div class="row"><label for="prah_rana_mic">Hlasitost (0–32767)</label><div class="inl"><input type="range" id="prah_rana_mic" min="300" max="32767" step="100"><output id="o_prah_rana_mic"></output></div>
           <span class="hint">Rána musí splnit obojí naráz, takže sousedova rána ani úder o stůl záznam nespustí.</span></div>
       </div>
       <div class="card fs">
@@ -569,7 +570,7 @@ let stav = null; const cfg = {};
 function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
 function showConn() {
   const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
-  $('fsN').disabled = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn'].forEach(id => $(id).disabled = !on);
+  $('fsN').disabled = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
   if (!on) { connMsg('Spoušť nepřipojena'); return; }
   if (!stav) { connMsg('Připojeno'); return; }
   const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
@@ -610,17 +611,27 @@ let autoT = 0; function autoFetch() { if (!LS.get('autoSync', true)) return; cle
 
 /* ---------- nastavení ---------- */
 const NUMS = ['prah_rana_g', 'prah_rana_mic', 'prah_g', 'prah_mic', 'soubeh', 'blokace'], SELS = ['zaznam', 'program', 'rezim'];
-function fillForm() {
+let saving = false;
+function fillForm() { if (saving) return;
   NUMS.forEach(k => { if (cfg[k] != null && document.activeElement !== $(k)) { $(k).value = cfg[k]; $('o_' + k).textContent = cfg[k]; } });
   SELS.forEach(k => { if (cfg[k] != null && document.activeElement !== $(k)) $(k).value = cfg[k]; });
 }
 NUMS.forEach(k => $(k).addEventListener('input', () => $('o_' + k).textContent = $(k).value));
-async function sendForm() {
-  for (const k of [...SELS, ...NUMS]) await send(`${k} ${$(k).value}`);
+const formVals = () => Object.fromEntries([...SELS, ...NUMS].map(k => [k, $(k).value]));
+async function sendForm(vals) { for (const k of [...SELS, ...NUMS]) await ask(`${k} ${vals[k]}`, ['C ', 'X ', '?']); }
+let saveT = 0, saveRun = Promise.resolve();
+async function saveNow() {
+  clearTimeout(saveT); const vals = formVals(); saving = true; $('saveMsg').textContent = 'Ukládám…';
+  try {
+    await sendForm(vals); await ask('ulozit', ['OK ulozeno', 'CHYBA']); await ask('info', ['X ']); await ask('stav', ['S ']);
+    const spatne = [...SELS, ...NUMS].filter(k => cfg[k] != null && Math.abs(+cfg[k] - +vals[k]) > 0.051);
+    $('saveMsg').textContent = spatne.length ? 'Spoušť má jiné hodnoty: ' + spatne.map(k => `${k}=${cfg[k]}`).join(', ') : 'Uloženo ve spoušti ✓';
+  } catch (e) { $('saveMsg').textContent = 'Chyba: ' + e.message; }
+  saving = false; fillForm();
 }
-$('saveBtn').onclick = async () => { $('saveMsg').textContent = 'Ukládám…';
-  try { await sendForm(); await ask('ulozit', ['OK ulozeno', 'CHYBA']); await ask('stav', ['S ']); $('saveMsg').textContent = 'Uloženo ve spoušti ✓'; }
-  catch (e) { $('saveMsg').textContent = 'Chyba: ' + e.message; } };
+$('saveBtn').onclick = () => { saveRun = saveRun.then(saveNow); };
+[...SELS, ...NUMS].forEach(k => $(k).addEventListener('change', () => { $('saveMsg').textContent = 'Neuloženo – ukládám za chvíli…';
+  clearTimeout(saveT); saveT = setTimeout(() => { saveRun = saveRun.then(saveNow); }, 1200); }));
 let pv = [];
 async function loadPv() {
   const lines = await collect('predvolby', l => l.startsWith('P konec'), 5000);
@@ -645,7 +656,7 @@ $('pvList').onclick = async e => { const b = e.target.closest('button'); if (!b)
 $('pvSave').onclick = async () => {
   let n = $('pvName').value.trim().replace(/\|/g, '/'); if (!n) { $('pvName').focus(); return; }
   while (enc.encode(n).length > 15) n = n.slice(0, -1);
-  await sendForm(); await ask(`predvolba_uloz ${$('pvSlot').value} ${n}`, ['P ', '?', 'CHYBA']); await ask('stav', ['S ']); await loadPv(); $('pvName').value = '';
+  saving = true; try { await sendForm(formVals()); } finally { saving = false; } await ask(`predvolba_uloz ${$('pvSlot').value} ${n}`, ['P ', '?', 'CHYBA']); await ask('stav', ['S ']); await loadPv(); $('pvName').value = '';
 };
 $('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $('osa').value); render(); };
 
@@ -653,14 +664,19 @@ $('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $(
 $('connBtn').onclick = connect;
 $('syncBtn').onclick = sync;
 $('newRoundBtn').onclick = async () => { await ask('nova_polozka', ['S ']); zMsg(`Nová položka ${stav.polozka}. Další rána bude první terč programu.`); };
+$('testBtn').onclick = async () => { const l = await ask('test_rana', ['OK', '?']);
+  zMsg(l.startsWith('?') ? 'Zkušební záznam nejde: v Nastavení zapněte režim „Jen záznam“ nebo „Obojí“ a uložte.' : 'Zkušební záznam: spoušť uložila poslední 3 s pohybu, za chvíli se objeví karta.'); };
 $('wipeBtn').onclick = async e => { const b = e.currentTarget;
   if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu? Nestažené záznamy zmizí'; setTimeout(() => { delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti'; }, 5000); return; }
   delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti';
   await sync(); await ask('smazat_zaznamy', ['S '], 30000); zMsg('Záznamy ve spoušti smazány (v aplikaci zůstaly).'); };
-$('demoBtn').onclick = async () => { const recs = AN.demo();
+async function demoSync() { const has = (await DB.all()).some(o => o.demo); $('demoBtn').textContent = has ? 'Odebrat ukázková data' : 'Ukázková data'; return has; }
+$('demoBtn').onclick = async () => {
+  if (await demoSync()) { for (const o of await DB.all()) if (o.demo) await DB.del(o.key); await demoSync(); render(); zMsg('Ukázková data odebrána.'); return; }
+  const recs = AN.demo();
   const hits = [[true], [true, false], [false, true], [true, true], [false], [true]];
   for (const [i, r] of recs.entries()) await DB.put({ key: 'demo-' + i, bytes: AN.build({ ...r.h, ranaMs: r.h.ranaMs.slice(0, r.h.nRan) }, r.W, r.A, r.M), hits: hits[i], polozka: 'demo', krok: r.h.krok, program: 3, unix: r.h.unix0, up: r.h.up0, demo: true });
-  render(); zMsg('Přidána ukázková položka (lovecké kolo, 6 ran).'); };
+  await demoSync(); render(); zMsg('Přidána ukázková položka (lovecké kolo, 6 ran).'); };
 $('clearApp').onclick = async e => { const b = e.currentTarget;
   if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu smazat vše v aplikaci?'; return; }
   for (const o of await DB.all()) await DB.del(o.key); delete b.dataset.sure; b.textContent = 'Smazat všechny záznamy v aplikaci'; render(); };
@@ -814,7 +830,7 @@ $('list').onclick = async e => {
   h.querySelector('.y').setAttribute('aria-pressed', o.hits[i] === true); h.querySelector('.n').setAttribute('aria-pressed', o.hits[i] === false);
 };
 
-DB.open().then(render);
+DB.open().then(() => { demoSync(); render(); });
 showConn();
 if (!navigator.bluetooth) $('connTxt').innerHTML = '<b>Spoušť nepřipojena</b><br>Tento prohlížeč neumí Bluetooth: v iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.';
 })();
