@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skeet záznam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: telefon (Bluefy) – lišta se spouští nahoře, záložky Záznamy / Nastavení, karty ran pod sebou; na širokém displeji dvě vedle sebe */
+:root{
+  --bg:#F1F3F0; --card:#FFFFFF; --fg:#1A1F1C; --muted:#5D6761; --line:#D9DED9; --grid:#E8ECE8;
+  --pre:#2C6BD3; --tr:#17945A; --post:#E5651B; --acc:#E5651B;
+  --ok:#17945A; --warn:#C99700; --bad:#CF3A2C;
+  --f-disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111513; --card:#1A201C; --fg:#E7ECE8; --muted:#98A39C; --line:#2B3430; --grid:#222A26;
+  --pre:#6DA0FF; --tr:#3AC57E; --post:#FF8A3D; --acc:#FF8A3D; --ok:#3AC57E; --warn:#F0C232; --bad:#FF5B4B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513; --card:#1A201C; --fg:#E7ECE8; --muted:#98A39C; --line:#2B3430; --grid:#222A26;
+  --pre:#6DA0FF; --tr:#3AC57E; --post:#FF8A3D; --acc:#FF8A3D; --ok:#3AC57E; --warn:#F0C232; --bad:#FF5B4B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-disp);font-weight:700;font-size:32px;margin:0;line-height:1}
+h2{font-family:var(--f-disp);font-weight:700;font-size:22px;margin:0;line-height:1.1}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.conn{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--ok)}
+.conn .txt{font-size:13px;color:var(--muted);min-width:0;flex:1}
+.conn .txt b{color:var(--fg);font-weight:600}
+button{font:inherit;cursor:pointer}
+.btn{font-weight:600;font-size:14px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:8px 12px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--pre);outline-offset:2px}
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;width:max-content;max-width:100%}
+.tabs button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:7px;font-weight:600;font-size:14px}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.msg{font-size:13px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:16px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.chead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chead .st{font-family:var(--f-disp);font-weight:700;font-size:23px;line-height:1}
+.meta{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.verdict{display:flex;gap:12px;align-items:center;border-radius:10px;padding:12px 14px;background:color-mix(in srgb,var(--c) 13%,var(--card))}
+.lamp{width:22px;height:22px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 25%,transparent)}
+.verdict b{font-size:17px;display:block;line-height:1.2}
+.verdict span{color:var(--muted);font-size:13px}
+.verdict .num{margin-left:auto;white-space:nowrap;font-family:var(--f-disp);font-weight:700;font-size:30px;color:var(--c);line-height:1;text-align:right}
+.verdict .num small{display:block;font-family:var(--f-body);font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mini{border-radius:10px;padding:10px;background:color-mix(in srgb,var(--c) 13%,var(--card));display:flex;flex-direction:column;gap:4px;min-width:0}
+.mini .h{display:flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mini .h i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.mini b{font-size:14px;line-height:1.2}
+.mini span{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 6px;font-weight:600}
+.tlbar{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px}
+.tlbar div{height:100%}
+.tlmarks{position:relative;height:64px;margin-top:4px;font-size:11px}
+.tlmarks div{position:absolute;transform:translateX(-50%);text-align:center;white-space:nowrap;line-height:1.2}
+.tlmarks div b{display:block;font-family:var(--f-mono);font-weight:500;font-size:12px}
+.tlmarks div.first{transform:none;text-align:left}
+.tlmarks div.last{transform:translateX(-100%);text-align:right}
+.tlmarks div.low{top:28px}
+.tlmarks div.low::before{content:"";position:absolute;left:50%;top:-28px;height:26px;border-left:1px dotted var(--line)}
+.tllegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.tllegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg{display:block;width:100%;height:auto;max-width:100%}
+svg text{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;display:flex;align-items:center;gap:6px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.hitrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.hit{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hit button{font-weight:600;font-size:16px;padding:11px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--fg)}
+.hit button[aria-pressed="true"].y{background:var(--ok);border-color:var(--ok);color:#fff}
+.hit button[aria-pressed="true"].n{background:var(--bad);border-color:var(--bad);color:#fff}
+.explain{font-size:13px;color:var(--muted);margin:0}
+details summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.round{display:flex;flex-direction:column;gap:14px}
+.rhead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.rhead .shift{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.rhead .shift button{padding:3px 9px;font-size:13px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
+.gridst{display:grid;gap:4px;font-family:var(--f-mono);font-size:12px;align-items:center}
+.gridst .c{aspect-ratio:1;border-radius:6px;background:var(--c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;max-width:44px}
+.gridst .c.x{background:transparent;border:1px dashed var(--line)}
+.gridst .hd{text-align:center;color:var(--muted)}
+.facts{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.facts li{display:flex;gap:10px;align-items:baseline}
+.facts .big{white-space:nowrap;font-family:var(--f-disp);font-weight:700;font-size:26px;min-width:64px;line-height:1}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:14px}
+.empty b{display:block;color:var(--fg);font-size:16px;margin-bottom:4px}
+/* nastavení */
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.fs{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-direction:column;gap:4px}
+.row label{font-weight:600;font-size:14px}
+.row .hint{font-size:12.5px;color:var(--muted)}
+.row .inl{display:flex;gap:10px;align-items:center}
+.row input[type=range]{flex:1;min-width:0}
+.row output{font-family:var(--f-mono);font-size:13px;min-width:64px;text-align:right}
+select,input[type=text]{font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);max-width:100%}
+.pvlist{display:flex;flex-direction:column;gap:8px}
+.pv{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex-wrap:wrap}
+.pv b{flex:1;min-width:120px}
+.pv .meta{flex-basis:100%}
+.pv.cur{border:2px solid var(--fg)}
+.log{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);white-space:pre-wrap;max-height:160px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset:disabled{opacity:.5}
+@media (max-width:420px){.trio{grid-template-columns:1fr}.verdict .num{font-size:26px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="bar"><h1>Skeet záznam</h1>
+    <div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div>
+  <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
+    <button class="btn pri" id="connBtn">Připojit spoušť</button></div>
+
+  <section id="pZ" class="round">
+    <div class="tools">
+      <button class="btn" id="syncBtn" disabled>Stáhnout nové</button>
+      <button class="btn" id="newRoundBtn" disabled>Začít novou položku</button>
+      <button class="btn danger" id="wipeBtn" disabled>Smazat záznamy ve spoušti</button>
+      <button class="btn" id="demoBtn">Ukázková data</button>
+      <span class="msg" id="zMsg"></span>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <section id="pN" hidden>
+    <fieldset id="fsN" disabled>
+    <div class="form">
+      <div class="card fs">
+        <h2>Co spoušť dělá</h2>
+        <div class="row"><label for="zaznam">Režim</label>
+          <select id="zaznam"><option value="0">Jen VR spoušť (jako dosud)</option><option value="1">Jen záznam ze střelnice</option><option value="2">Obojí</option></select>
+          <span class="hint">Na střelnici dejte „Jen záznam“. Ve VR spoušť funguje i v režimu „Obojí“.</span></div>
+        <div class="row"><label for="program">Program</label>
+          <select id="program"><option value="0">Trénink 1 terč</option><option value="1">Trénink double</option><option value="2">Skeet (25)</option><option value="3">Lovecké kolo (20)</option></select>
+          <span class="hint">Skeet a lovecké kolo: aplikace přiřadí každé ráně stanoviště podle pořadí. Před položkou dejte „Začít novou položku“.</span></div>
+        <h2>Ostrá rána</h2>
+        <div class="row"><label for="prah_rana_g">Ráz (g)</label><div class="inl"><input type="range" id="prah_rana_g" min="2" max="16" step="0.5"><output id="o_prah_rana_g"></output></div>
+          <span class="hint">Zpětný ráz 12/70 je nad 10 g. Cvaknutí naprázdno bývá do 3 g.</span></div>
+        <div class="row"><label for="prah_rana_mic">Hlasitost (0–32767)</label><div class="inl"><input type="range" id="prah_rana_mic" min="1000" max="32767" step="500"><output id="o_prah_rana_mic"></output></div>
+          <span class="hint">Rána musí splnit obojí naráz, takže sousedova rána ani úder o stůl záznam nespustí.</span></div>
+      </div>
+      <div class="card fs">
+        <h2>VR spoušť</h2>
+        <p class="explain">Stejné hodnoty jako na stránce nastaveni.html. Měnit jen při ladění spouště.</p>
+        <div class="row"><label for="prah_g">Ráz (g)</label><div class="inl"><input type="range" id="prah_g" min="0.5" max="30" step="0.1"><output id="o_prah_g"></output></div></div>
+        <div class="row"><label for="prah_mic">Cvaknutí (0–32767)</label><div class="inl"><input type="range" id="prah_mic" min="100" max="32767" step="100"><output id="o_prah_mic"></output></div></div>
+        <div class="row"><label for="rezim">Co musí nastat</label><select id="rezim"><option value="0">Jen ráz</option><option value="1">Jen cvaknutí</option><option value="2">Ráz i cvaknutí</option></select></div>
+        <div class="row"><label for="soubeh">Souběh (ms)</label><div class="inl"><input type="range" id="soubeh" min="5" max="500" step="5"><output id="o_soubeh"></output></div></div>
+        <div class="row"><label for="blokace">Blokace po výstřelu (ms)</label><div class="inl"><input type="range" id="blokace" min="50" max="2000" step="10"><output id="o_blokace"></output></div></div>
+        <button class="btn pri" id="saveBtn">Uložit do spouště</button>
+        <span class="msg" id="saveMsg"></span>
+      </div>
+      <div class="card fs">
+        <h2>Předvolby</h2>
+        <p class="explain">Pojmenovaná sada všech hodnot výše, třeba „Chloumek“, „VR doma“, „Lovecké“. Načtení předvolby ji hned uloží do spouště.</p>
+        <div class="pvlist" id="pvList"></div>
+        <div class="row"><label for="pvName">Uložit současné hodnoty jako</label>
+          <div class="inl"><input type="text" id="pvName" maxlength="15" placeholder="Název" style="flex:1;min-width:0"><select id="pvSlot"></select></div>
+          <button class="btn" id="pvSave">Uložit předvolbu</button></div>
+      </div>
+    </div>
+    </fieldset>
+    <div class="form" style="margin-top:16px">
+      <div class="card fs">
+        <h2>Rozbor v aplikaci</h2>
+        <div class="row"><label for="osa">Osa hlavně v krabičce</label>
+          <select id="osa"><option value="">Zjistit z výstřelu (doporučeno)</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select>
+          <span class="hint">Aplikace pozná směr hlavně ze zdvihu ústí při ráně. Pevnou osu zvolte, jen když stopa hlavně vychází nesmyslně.</span></div>
+        <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
+      </div>
+      <div class="card fs">
+        <h2>Komunikace</h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===== Skeet záznam – rozbor dat ze spouště (čisté funkce, bez DOM) ===== */
+const AN = (() => {
+const DEG = 180 / Math.PI;
+const add = (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
+const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+const mul = (a, k) => [a[0]*k, a[1]*k, a[2]*k];
+const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const len = a => Math.hypot(a[0], a[1], a[2]);
+const norm = a => { const l = len(a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+const clampI = (i, n) => Math.max(0, Math.min(n - 1, i));
+const mean = (arr, a, b) => { let s = 0, n = 0; for (let i = Math.max(0, a); i <= Math.min(arr.length - 1, b); i++) { s += arr[i]; n++; } return n ? s / n : 0; };
+const meanV = (arr, a, b) => { let s = [0,0,0], n = 0; for (let i = Math.max(0, a); i <= Math.min(arr.length - 1, b); i++) { s = add(s, arr[i]); n++; } return n ? mul(s, 1/n) : [0,0,0]; };
+
+/* ---------- binární formát záznamu (firmware krok 8) ---------- */
+const MAGIC = 0x315A4B53;
+function parse(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  if (u8.byteLength < 64 || dv.getUint32(0, true) !== MAGIC) throw new Error('neplatný záznam');
+  const h = { idx: dv.getUint16(4, true), nVz: dv.getUint16(6, true), krok: dv.getUint16(8, true), program: dv.getUint8(10), nRan: dv.getUint8(11),
+    ranaMs: [0,1,2,3].map(i => dv.getUint16(12 + 2*i, true)), unix0: dv.getUint32(20, true), up0: dv.getUint32(24, true),
+    perioda: dv.getUint8(28) || 10, bat: dv.getInt8(29), predvolba: dv.getUint8(30), polozka: dv.getUint8(31) };
+  const n = Math.min(h.nVz, Math.floor((u8.byteLength - 64) / 10));
+  const W = [], A = [], M = [];
+  for (let k = 0; k < n; k++) { const o = 64 + k * 10;
+    W.push([dv.getInt16(o, true) * 0.07, dv.getInt16(o+2, true) * 0.07, dv.getInt16(o+4, true) * 0.07]);
+    A.push([dv.getInt8(o+6) / 8, dv.getInt8(o+7) / 8, dv.getInt8(o+8) / 8]);
+    M.push(dv.getUint8(o+9)); }
+  return { h, W, A, M };
+}
+function build(h, W, A, M) {   // opačný směr – pro ukázková data
+  const n = W.length, u8 = new Uint8Array(64 + n * 10), dv = new DataView(u8.buffer);
+  dv.setUint32(0, MAGIC, true); dv.setUint16(4, h.idx||0, true); dv.setUint16(6, n, true); dv.setUint16(8, h.krok||0, true);
+  dv.setUint8(10, h.program||0); dv.setUint8(11, h.ranaMs.length);
+  h.ranaMs.forEach((m, i) => dv.setUint16(12 + 2*i, m, true));
+  dv.setUint32(20, h.unix0||0, true); dv.setUint32(24, h.up0||0, true); dv.setUint8(28, 10); dv.setInt8(29, h.bat ?? 80);
+  dv.setUint8(30, 255); dv.setUint8(31, h.polozka||0);
+  const c16 = v => Math.max(-32768, Math.min(32767, Math.round(v / 0.07))), c8 = v => Math.max(-127, Math.min(127, Math.round(v * 8)));
+  for (let k = 0; k < n; k++) { const o = 64 + k*10;
+    for (let j = 0; j < 3; j++) { dv.setInt16(o + 2*j, c16(W[k][j]), true); dv.setInt8(o + 6 + j, c8(A[k][j])); }
+    dv.setUint8(o + 9, Math.max(0, Math.min(255, Math.round(M[k])))); }
+  return u8;
+}
+
+/* ---------- programy ---------- */
+const PROGS = {
+  0: { n: 'Trénink 1 terč', k: 'T1', seq: null },
+  1: { n: 'Trénink double', k: 'T2', seq: null },
+  2: { n: 'Skeet', k: 'SK', seq: [[1,'V'],[1,'D'],[2,'V'],[2,'D'],[3,'V'],[3,'D'],[4,'V'],[4,'N'],[5,'N'],[5,'D'],[6,'N'],[6,'D'],[7,'D'],[4,'D'],[4,'D'],[8,'V'],[8,'N']] },
+  3: { n: 'Lovecké kolo', k: 'LK', seq: [[1,'V'],[1,'D'],[2,'V'],[2,'D'],[3,'V'],[3,'N'],[4,'D'],[4,'D'],[5,'V'],[5,'N'],[6,'N'],[6,'D'],[7,'N'],[7,'D']] },
+};
+
+/* ---------- osa hlavně ---------- */
+const OSY = { '+X': [1,0,0], '-X': [-1,0,0], '+Y': [0,1,0], '-Y': [0,-1,0], '+Z': [0,0,1], '-Z': [0,0,-1] };
+function osaHlavne(W, A, s, pref) {
+  if (pref && OSY[pref]) return { B: OSY[pref], auto: false };
+  const n = W.length, U = norm(meanV(A, s - 30, s - 5));
+  let best = -1, bi = -1;
+  for (let i = clampI(s - 1, n); i <= clampI(s + 8, n); i++) { const l = len(W[i]); if (l > best) { best = l; bi = i; } }
+  if (best < 200) return { B: [1,0,0], auto: false, nejista: true };
+  let L = W[bi]; L = norm(sub(L, mul(U, dot(L, U))));
+  let B = norm(cross(L, U));
+  // první prudký pohyb po ráně = zdvih ústí → elevace hlavně musí růst
+  let first = bi; for (let i = clampI(s - 1, n); i <= bi; i++) if (len(W[i]) > 250) { first = i; break; }
+  const rate = -dot(B, cross(W[first], U));
+  if (rate < 0) B = mul(B, -1);
+  return { B, auto: true };
+}
+
+/* ---------- rotace ---------- */
+function rotMat(w, dt) {   // w ve °/s, výsledek: matice malé rotace (Rodrigues)
+  const th = len(w) * dt / DEG; if (th < 1e-9) return [[1,0,0],[0,1,0],[0,0,1]];
+  const k = norm(w), c = Math.cos(th), s = Math.sin(th), C = 1 - c, [x, y, z] = k;
+  return [[c + x*x*C, x*y*C - z*s, x*z*C + y*s], [y*x*C + z*s, c + y*y*C, y*z*C - x*s], [z*x*C - y*s, z*y*C + x*s, c + z*z*C]];
+}
+const mm = (P, Q) => P.map((r, i) => [0,1,2].map(j => r[0]*Q[0][j] + r[1]*Q[1][j] + r[2]*Q[2][j]));
+const mv = (P, v) => [dot(P[0], v), dot(P[1], v), dot(P[2], v)];
+const tr = P => [[P[0][0],P[1][0],P[2][0]],[P[0][1],P[1][1],P[2][1]],[P[0][2],P[1][2],P[2][2]]];
+
+/* ---------- hlavní rozbor ---------- */
+function analyze(rec, opt = {}) {
+  const { h } = rec, W0 = rec.W, A = rec.A, M = rec.M, n = W0.length, dt = h.perioda / 1000;
+  const S = h.ranaMs.slice(0, h.nRan).map(ms => clampI(Math.round(ms / h.perioda), n));
+  const s1 = S[0], sL = S[S.length - 1];
+  const ax = osaHlavne(W0, A, s1, opt.osa);
+  const B = ax.B;
+  // posun nuly gyra z nejklidnějšího úseku před ranou
+  let bias = [0,0,0], bestQ = 1e9;
+  for (let i = 0; i + 30 < s1 - 20; i += 5) { const m = meanV(W0, i, i + 29); let q = 0; for (let k = i; k < i + 30; k++) q += len(sub(W0[k], m)); q /= 30;
+    if (q < bestQ && len(m) < 8) { bestQ = q; bias = m; } }
+  if (bestQ > 4) bias = [0,0,0];
+  // zpětný ráz se z pohybu vynechá (gyro je v té chvíli přebuzené), úsek −10 až +120 ms se proloží
+  const W = W0.map(w => sub(w, bias)), maska = new Array(n).fill(false);
+  for (const s of S) { const a = clampI(s - 1, n), b = clampI(s + 12, n), w0 = W[clampI(a - 1, n)], w1 = W[clampI(b + 1, n)];
+    for (let i = a; i <= b; i++) { const t = (i - a + 1) / (b - a + 2); W[i] = add(mul(w0, 1 - t), mul(w1, t)); maska[i] = true; } }
+  // rychlost ústí = otáčení kolmo na hlaveň
+  const spR = W.map(w => len(sub(w, mul(B, dot(w, B)))));
+  const sp = spR.map((_, i) => mean(spR, i - 1, i + 1));
+  // natočení ve světě: vztažný okamžik 0,15 s před ranou, svislice z akcelerometru
+  const r = clampI(s1 - 15, n);
+  const U = norm(meanV(A, r - 5, r + 5)), Bh = norm(sub(B, mul(U, dot(B, U)))), Y = cross(U, Bh);
+  const R = new Array(n); R[r] = [Bh, Y, U];   // řádky: zařízení → svět (X vpřed, Y vlevo, Z nahoru)
+  for (let i = r; i < n - 1; i++) R[i + 1] = mm(R[i], rotMat(W[i], dt));
+  for (let i = r; i > 0; i--) R[i - 1] = mm(R[i], rotMat(mul(W[i - 1], -1), dt));
+  const yaw = [], pitch = [];
+  for (let i = 0; i < n; i++) { const b = mv(R[i], B); yaw.push(-Math.atan2(b[1], b[0]) * DEG); pitch.push(Math.asin(Math.max(-1, Math.min(1, b[2]))) * DEG); }
+  // zrychlení mimo gravitaci (nasazení zbraně)
+  const devR = A.map(a => Math.abs(len(a) - 1)), dev = devR.map((_, i) => mean(devR, i - 1, i + 1));
+
+  // --- události ---
+  // začátek pohybu: zpětně od rány poslední klid (< 15 °/s aspoň 60 ms)
+  let pohyb = 0;
+  for (let i = s1 - 10; i >= 6; i--) { let klid = true; for (let k = i - 5; k <= i; k++) if (sp[k] > 15) { klid = false; break; }
+    if (klid) { pohyb = i + 1; break; } }
+  // HOP: delší hlasitý úsek v mikrofonu před pohybem (ne rána)
+  const pre = M.slice(0, Math.max(1, s1 - 5)).slice().sort((a, b) => a - b), floor = pre[Math.floor(pre.length * 0.5)] || 0;
+  const prah = Math.max(floor * 3, floor + 12, 18);
+  let hop = -1, i0 = -1;
+  for (let i = 0; i < s1 - 5; i++) {
+    if (M[i] > prah) { if (i0 < 0) i0 = i; }
+    else { if (i0 >= 0 && i - i0 >= 8 && i0 <= pohyb + 15) hop = i0; i0 = -1; }
+  }
+  // nasazení: poslední výrazné zrychlení (zvedání zbraně) před ranou
+  let pazba = -1;
+  for (let i = s1 - 5; i >= Math.max(0, pohyb - 30); i--) if (dev[i] > 0.4 && !maska[i]) { pazba = i; break; }
+  const konec = clampI(sL + 30, n);
+
+  // --- průchod ranou ---
+  const vPred = s => mean(sp, s - 15, s - 2), vPo = s => mean(sp, s + 13, s + 30), vSpic = s => Math.max(0, ...sp.slice(Math.max(0, s - 60), Math.max(1, s - 15)));
+  const smer = (a, b) => { let dx = 0, dy = 0; for (let i = Math.max(1, a); i <= Math.min(n - 1, b); i++) { dx += yaw[i] - yaw[i-1]; dy += pitch[i] - pitch[i-1]; }
+    return [dx, dy]; };
+  const uhel = (u, v) => { const lu = Math.hypot(...u), lv = Math.hypot(...v); if (lu < 1 || lv < 1) return null;
+    return Math.acos(Math.max(-1, Math.min(1, (u[0]*v[0] + u[1]*v[1]) / lu / lv))) * DEG; };
+
+  // druh: jednotlivý / dvojstřel / opravná rána
+  let druh = opt.druh || 'auto';
+  let smerZmena = null;
+  if (S.length >= 2) {
+    smerZmena = uhel(smer(s1 - 12, s1 - 1), smer(s1 + 13, S[1] - 3));
+    if (druh === 'auto') druh = smerZmena != null && smerZmena < 45 ? 'oprava' : 'double';
+  } else druh = 'single';
+  if (S.length < 2 && druh !== 'single') druh = 'single';
+
+  const res = { S, s1, sL, druh, smerZmena, hop, pohyb, pazba, konec, sp, yaw, pitch, maska, osa: ax, bias, floor, prah,
+    t: i => (i - (hop >= 0 ? hop : pohyb)) * dt, dt, chips: [], parts: [] };
+  const C = (c, t) => res.chips.push([c, t]);
+  const pct = (a, b) => b > 1 ? a / b : 0;
+
+  // první rána – společné
+  const pr1 = vPred(s1), sp1 = vSpic(s1), po1 = vPo(s1);
+  res.vPred1 = pr1; res.vSpic1 = sp1; res.vPo1 = po1;
+  const zastavil1 = sp1 > 30 && pr1 < 0.4 * sp1;
+  if (hop >= 0 && pohyb > hop && (pohyb - hop) * dt > 0.6) C('warn', `Pomalý start: ${((pohyb - hop) * dt).toFixed(2).replace('.', ',')} s po HOP`);
+  else if (hop >= 0 && pohyb > hop) C('ok', `Start ${((pohyb - hop) * dt).toFixed(2).replace('.', ',')} s po HOP`);
+  if (hop >= 0 && pazba >= 0 && pazba < hop) C('warn', 'Nasazeno už před HOP');
+  if (pazba >= 0 && (s1 - pazba) * dt < 0.15) C('warn', `Pozdní nasazení: ${((s1 - pazba) * dt).toFixed(2).replace('.', ',')} s před ranou`);
+  else if (pazba >= 0) C('ok', `Nasazení ${((s1 - pazba) * dt).toFixed(2).replace('.', ',')} s před ranou`);
+  const usek = sp.slice(Math.max(pazba, pohyb, 0), s1 - 1);
+  if (usek.length > 10) { const m = usek.reduce((a, b) => a + b, 0) / usek.length, sd = Math.sqrt(usek.reduce((a, b) => a + (b - m) ** 2, 0) / usek.length);
+    if (m > 20 && sd / m > 0.35) C('warn', 'Trhaný švih'); else if (m > 20) C('ok', 'Plynulý švih'); }
+  if (sp1 > 30 && !zastavil1 && pr1 < 0.75 * sp1) C('warn', 'Zpomaluješ před ranou');
+
+  if (druh === 'single') {
+    const ratio = pct(po1, pr1);
+    res.ratio = ratio;
+    if (zastavil1) res.v = { c: 'bad', t: 'Zastavil jsi', s: `V posledních 0,15 s před ranou rychlost klesla o ${Math.round(100 - pr1 / sp1 * 100)} %.` };
+    else if (po1 < 12 && pr1 > 25) res.v = { c: 'bad', t: 'Bez dotažení', s: 'Po ráně zbraň stála.' };
+    else if (ratio >= 0.9) res.v = { c: 'ok', t: 'Rána v pohybu, dotaženo', s: 'Rychlost švihu po ráně stejná jako před ní.' };
+    else if (ratio >= 0.6) res.v = { c: 'warn', t: 'Zpomaluješ', s: `Po ráně jen ${Math.round(ratio * 100)} % rychlosti před ranou.` };
+    else res.v = { c: 'bad', t: 'Zastavil jsi', s: `Po ráně jen ${Math.round(ratio * 100)} % rychlosti před ranou.` };
+    if (pr1 < 8 && sp1 < 30) res.v = { c: 'warn', t: 'Skoro bez pohybu', s: 'Terč letěl skoro od vás nebo zbraň stála celou dobu.' };
+    res.num = { v: `${Math.round(ratio * 100)} %`, l: 'průchod ranou' };
+    res.parts = [];
+  } else {
+    const s2 = S[1], mezi = (s2 - s1) * dt;
+    res.mezi = mezi;
+    // zotavení z rázu: kdy se zbraň po ráně znovu rozjede
+    let rozjezd = -1; for (let i = s1 + 13; i < s2; i++) if (sp[i] > 30) { rozjezd = i; break; }
+    const cek = rozjezd < 0 ? (s2 - s1) * dt : (rozjezd - s1) * dt;
+    const p1 = zastavil1 ? { c: 'bad', b: 'Zastavil', s: `průchod ${Math.round(pct(pr1, sp1) * 100)} %` } : { c: 'ok', b: 'V pohybu', s: `rychlost ${Math.round(pr1)} °/s` };
+    if (druh === 'double') {
+      // přechod na druhý terč
+      let vp = 0, ip = s1 + 13; for (let i = s1 + 13; i < s2; i++) if (sp[i] > vp) { vp = sp[i]; ip = i; }
+      let prijezd = s2; for (let i = ip; i < s2; i++) if (sp[i] < 0.3 * vp) { prijezd = i; break; }
+      const dohl = (s2 - prijezd) * dt;
+      // přestřelení: jak daleko za bod druhé rány hlaveň přejela
+      const P = i => [yaw[i], pitch[i]], P2 = P(s2), P0 = P(clampI(s1 + 13, n));
+      const u = [P2[0] - P0[0], P2[1] - P0[1]], lu = Math.hypot(...u) || 1, uu = [u[0] / lu, u[1] / lu];
+      let pres = 0; for (let i = ip; i <= s2; i++) { const d = (yaw[i] - P2[0]) * uu[0] + (pitch[i] - P2[1]) * uu[1]; if (d > pres) pres = d; }
+      // počet zrychlení během přechodu (dvoufázový přesun)
+      let vrcholy = 0; for (let i = s1 + 14; i < prijezd; i++) if (sp[i] > sp[i-1] && sp[i] >= sp[i+1] && sp[i] > 0.5 * vp) vrcholy++;
+      const pt = cek > 0.4 ? { c: 'bad', b: 'Čekal jsi na první', s: `start ${cek.toFixed(2).replace('.', ',')} s po ráně` }
+               : vrcholy > 1 ? { c: 'warn', b: 'Dvěma tahy', s: `start ${cek.toFixed(2).replace('.', ',')} s po ráně` }
+               : { c: 'ok', b: 'Jedním tahem', s: `start ${cek.toFixed(2).replace('.', ',')} s po ráně` };
+      const p2 = pres > 1.0 ? { c: 'bad', b: 'Přestřelil', s: `o ${pres.toFixed(1).replace('.', ',')}° a zpět` }
+               : dohl > 0.25 ? { c: 'warn', b: 'Dohledával', s: `korekce ${dohl.toFixed(2).replace('.', ',')} s` }
+               : { c: 'ok', b: 'Nahozeno', s: `rána ${Math.max(0, dohl).toFixed(2).replace('.', ',')} s po dojetí` };
+      res.parts = [['1. rána', p1], ['Přechod', pt], ['2. rána', p2]];
+      res.dohl = dohl; res.pres = pres; res.cek = cek;
+      if (cek <= 0.4) C('ok', 'Bez čekání na první');
+      if (pres > 0.5) C(pres > 1 ? 'bad' : 'warn', `Přestřelil o ${pres.toFixed(1).replace('.', ',')}° a vracel se`);
+      if (vrcholy <= 1) C('ok', 'Plynulý přesun');
+    } else {   // opravná rána na stejný terč
+      const navrat = cek, ratio2 = pct(vPo(s2), vPred(s2));
+      const pz = navrat > 0.3 || po1 < 0.4 * pr1 ? { c: 'bad', b: 'Zastavil', s: `rozjezd ${navrat.toFixed(2).replace('.', ',')} s` }
+               : navrat > 0.18 ? { c: 'warn', b: 'Pomalý návrat', s: `${navrat.toFixed(2).replace('.', ',')} s` }
+               : { c: 'ok', b: 'Rychlý návrat', s: `${navrat.toFixed(2).replace('.', ',')} s` };
+      const p2 = ratio2 >= 0.9 ? { c: 'ok', b: 'Dotaženo', s: `průchod ${Math.round(ratio2 * 100)} %` }
+               : ratio2 >= 0.6 ? { c: 'warn', b: 'Zpomaluješ', s: `průchod ${Math.round(ratio2 * 100)} %` }
+               : { c: 'bad', b: 'Zastavil', s: `průchod ${Math.round(ratio2 * 100)} %` };
+      res.parts = [['1. rána', p1], ['Po rázu', pz], ['2. rána', p2]];
+      if (navrat <= 0.3) C('ok', 'Nečekal jsi, jestli praskne');
+    }
+    const horsi = res.parts.map(p => p[1]).sort((a, b) => ({ bad: 0, warn: 1, ok: 2 }[a.c] - { bad: 0, warn: 1, ok: 2 }[b.c]))[0];
+    const hl = res.parts.find(p => p[1] === horsi);
+    const texty = {
+      'Zastavil': 'Před ranou nebo po ní zbraň stála.', 'Čekal jsi na první': 'Po první ráně jsi čekal, jestli terč praskne.',
+      'Dvěma tahy': 'Přesun na druhý terč šel na dvakrát.', 'Přestřelil': 'Hlaveň přejela místo druhé rány a vracela se.',
+      'Dohledával': 'Zbraň byla na místě a ještě se drobně opravovala.', 'Pomalý návrat': 'Po rázu trvalo, než se hlaveň vrátila na dráhu.',
+      'Zpomaluješ': 'Druhá rána padla ve zpomalení.' };
+    res.v = horsi.c === 'ok'
+      ? { c: 'ok', t: druh === 'double' ? 'Dvojstřel bez chyby' : 'Zůstal jsi na čáře', s: druh === 'double' ? 'Obě rány v pohybu a čistý přechod.' : 'Po rázu jsi pokračoval stejnou dráhou.' }
+      : { c: horsi.c, t: `${hl[0]}: ${horsi.b.toLowerCase()}`, s: texty[horsi.b] || '' };
+    res.num = { v: `${mezi.toFixed(2).replace('.', ',')} s`, l: 'mezi ranami' };
+  }
+  return res;
+}
+
+/* ---------- ukázková data: simulace pohybu zbraně → stejný binární formát ---------- */
+function demo() {
+  const D = 1 / 0.01;   // vzorků za sekundu
+  const sm = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  const Mdev = [[0,1,0],[0,0,-1],[-1,0,0]];   // zařízení otočené vůči zbrani (hlaveň = +Y krabičky) – test automatické osy
+  const rz = a => [[Math.cos(a), -Math.sin(a), 0], [Math.sin(a), Math.cos(a), 0], [0,0,1]];
+  const ry = a => [[Math.cos(a), 0, Math.sin(a)], [0,1,0], [-Math.sin(a), 0, Math.cos(a)]];
+  function gen(scn, hdr) {
+    const T = scn.len, n = Math.round(T * D), dt = 0.01, Rs = [], lin = [];
+    // úhly hlavně ve světě (yaw kladně = vlevo), plus zvedání zbraně (výška v m) pro zrychlení
+    const ang = []; for (let k = 0; k <= n + 1; k++) { const t = k * dt; ang.push(scn.f(t)); }
+    for (let k = 0; k <= n + 1; k++) { const [y, p] = ang[k]; Rs.push(mm(mm(rz(y / DEG), ry(-p / DEG)), tr(Mdev))); }
+    const W = [], A = [], M = [];
+    for (let k = 0; k < n; k++) {
+      const dR = mm(tr(Rs[k]), Rs[k + 1]);   // rotace v soustavě zařízení
+      const w = [(dR[2][1] - dR[1][2]) / 2, (dR[0][2] - dR[2][0]) / 2, (dR[1][0] - dR[0][1]) / 2].map(v => Math.asin(Math.max(-1, Math.min(1, v))) / dt * DEG);
+      const hgt = t => scn.h(t), t = k * dt, acc = (hgt(t + dt) - 2 * hgt(t) + hgt(t - dt)) / dt / dt / 9.81;
+      let a = mv(tr(Rs[k]), [0, 0, 1 + acc]);
+      let wn = w.map(v => v + (Math.random() - 0.5) * 2 + 1.2);   // šum + posun nuly
+      let mic = 6 + Math.random() * 5;
+      for (const s of scn.shots) { const d = t - s;
+        if (d >= 0 && d < 0.03) { a = a.map(() => (Math.random() > 0.5 ? 15.8 : -15.8)); }
+        if (d >= 0 && d < 0.05) mic = 255; else if (d >= 0.05 && d < 0.3) mic = Math.max(mic, 255 * Math.exp(-(d - 0.05) / 0.06)); }
+      if (t >= scn.hop && t < scn.hop + 0.22) mic = 70 + Math.random() * 30;
+      W.push(wn.map(v => Math.max(-2290, Math.min(2290, v)))); A.push(a); M.push(mic);
+    }
+    return parse(build({ ...hdr, ranaMs: scn.shots.map(s => Math.round(s * 1000)) }, W, A, M));
+  }
+  // pomocné: výstřel s rázem – ústí vyskočí o 7° a vrátí se
+  const kick = (t, s) => { const d = t - s; if (d < 0) return 0; return 7 * (d / 0.02) * Math.exp(1 - d / 0.02); };
+  // jednotlivý terč: klid dole (pažba pod páskou), HOP, zvednutí, švih, rána
+  const single = (opt) => ({ len: 4.6, hop: 1.5, shots: [3.0], h: t => 0.25 * sm((t - 1.75) / 0.45),
+    f: t => { const t0 = 1.75, tm = 2.2, ts = 3.0; let y = 0, p = -28 + 28 * sm((t - t0) / 0.45);
+      // švih: rychlost 70 °/s od nasazení, varianta "zastavil" zpomalí 0,2 s před ranou
+      const v = u => { if (u < t0) return 0; let s = 70 * sm((u - t0) / 0.3); if (opt.stop) { if (u > ts - 0.2) s *= 1 - 0.8 * sm((u - ts + 0.2) / 0.15); if (u > ts) s = 70 * 0.2 * Math.exp(-(u - ts) / 0.08); } return s; };
+      for (let u = 0; u < t; u += 0.01) y += v(u) * 0.01 * (opt.vpravo ? -1 : 1);
+      p += 4 * sm((t - tm) / 1) + kick(t, ts); return [y, p]; } });
+  const dbl = { len: 5.0, hop: 1.4, shots: [2.8, 3.62], h: t => 0.25 * sm((t - 1.65) / 0.45),
+    f: t => { let y = 0, p = -28 + 28 * sm((t - 1.65) / 0.45);
+      const v = u => { if (u < 1.65) return 0; if (u < 2.8) return 62 * sm((u - 1.65) / 0.3); if (u < 2.92) return 62 - 520 * (u - 2.8); return 0; };
+      for (let u = 0; u < Math.min(t, 2.92); u += 0.01) y += v(u) * 0.01;
+      if (t > 2.92) { const s = sm((t - 2.92) / 0.38); y += -30 * s; p += -7 * s;
+        if (t > 3.3) { const d = t - 3.3; y += 1.6 * Math.exp(-d / 0.12) * Math.cos(d * 20) - 1.6 * Math.exp(-d / 0.12) * 0; p += 0.3 * Math.sin(d * 35) * Math.exp(-d / 0.15); } }
+      if (t > 3.62) y -= 8 * (t - 3.62);
+      return [y, p + kick(t, 2.8) + kick(t, 3.62)]; } };
+  const oprava = { len: 4.8, hop: 1.5, shots: [2.95, 3.41], h: t => 0.25 * sm((t - 1.75) / 0.45),
+    f: t => { let y = 0, p = -28 + 28 * sm((t - 1.75) / 0.45);
+      for (let u = 1.75; u < t; u += 0.01) y += 58 * sm((u - 1.75) / 0.3) * (u > 2.95 && u < 3.1 ? 0.8 : 1) * 0.01;
+      return [y, p + 3 * sm((t - 2.2)) + kick(t, 2.95) + kick(t, 3.41)]; } };
+  const now = Math.floor(Date.now() / 1000) - 3600;
+  const recs = [
+    [single({}), 0], [dbl, 1], [oprava, 2], [dbl, 3], [single({ stop: true }), 4], [single({ vpravo: true }), 5],
+  ].map(([scn, krok], i) => gen(scn, { idx: i, krok, program: 3, polozka: 7, unix0: now + i * 40, up0: 100000 + i * 40000 }));
+  return recs;
+}
+
+return { parse, build, analyze, demo, PROGS, OSY };
+})();
+if (typeof module !== 'undefined') module.exports = AN;
+
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const css = v => `var(--${v})`;
+const cz = (x, d = 2) => x.toFixed(d).replace('.', ',');
+const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+             set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function log(t) { const el = $('log'); el.textContent = (el.textContent + t + '\n').slice(-6000); el.scrollTop = 1e9; }
+
+/* ---------- úložiště záznamů (IndexedDB, záloha v paměti) ---------- */
+const DB = (() => {
+  let db = null, mem = new Map();
+  const open = () => new Promise(res => { try { const r = indexedDB.open('skeet-zaznam', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath: 'key' });
+    r.onsuccess = () => { db = r.result; res(); }; r.onerror = () => res(); } catch (e) { res(); } });
+  const st = m => db.transaction('rec', m).objectStore('rec');
+  const p = q => new Promise((res, rej) => { q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  return { open,
+    all: async () => db ? p(st('readonly').getAll()) : [...mem.values()],
+    put: async o => { if (db) await p(st('readwrite').put(o)); else mem.set(o.key, o); },
+    del: async k => { if (db) await p(st('readwrite').delete(k)); else mem.delete(k); },
+    has: async k => db ? !!(await p(st('readonly').get(k))) : mem.has(k) };
+})();
+
+/* ---------- Bluetooth (Nordic UART) ---------- */
+const NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e', RXU = '6e400002-b5a3-f393-e0a9-e50e24dcca9e', TXU = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+let dev = null, rx = null, tx = null, inBuf = '', listeners = [], wq = Promise.resolve();
+const enc = new TextEncoder(), dec = new TextDecoder();
+const connected = () => !!(dev && dev.gatt && dev.gatt.connected && rx);
+function onLine(l) {
+  if (!l.startsWith('r ')) log('← ' + l);
+  listeners.slice().forEach(f => f(l));
+  if (l.startsWith('S ')) { stav = kv(l); showConn(); }
+  else if (l.startsWith('C ') || l.startsWith('X ')) { Object.assign(cfg, kv(l)); fillForm(); }
+  else if (l.startsWith('N ')) { if (stav) stav.zaznamu = (+stav.zaznamu || 0) + 1; showConn(); autoFetch(); }
+  else if (l.startsWith('E PAMET_PLNA')) zMsg('Paměť spouště je plná. Stáhněte záznamy a smažte je ve spoušti.');
+}
+function kv(l) { const o = {}; l.slice(2).split(' ').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i)] = p.slice(i + 1); }); return o; }
+function send(c) {
+  log('→ ' + c);
+  wq = wq.then(async () => { if (!connected()) throw new Error('nepřipojeno'); const b = enc.encode(c + '\n');
+    for (let i = 0; i < b.length; i += 20) { const ch = b.slice(i, i + 20);
+      if (rx.writeValueWithResponse) await rx.writeValueWithResponse(ch); else await rx.writeValue(ch); } })
+    .catch(e => log('! ' + e.message));
+  return wq;
+}
+function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řádky až po koncový
+  return new Promise((res, rej) => { const out = []; let t;
+    const done = () => { clearTimeout(t); listeners = listeners.filter(x => x !== f); };
+    const arm = () => { clearTimeout(t); t = setTimeout(() => { done(); rej(new Error('spoušť neodpovídá')); }, idleMs); };
+    const f = l => { out.push(l); arm(); if (endP(l)) { done(); res(out); } };
+    listeners.push(f); arm(); send(cmd); });
+}
+const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
+
+async function connect() {
+  if (connected()) { dev.gatt.disconnect(); return; }
+  if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
+  try {
+    connMsg('Vyberte „Skeet Trigger“…');
+    dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
+    dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); });
+    connMsg('Připojuji…');
+    const srv = await dev.gatt.connect(), s = await srv.getPrimaryService(NUS);
+    rx = await s.getCharacteristic(RXU); tx = await s.getCharacteristic(TXU);
+    await tx.startNotifications();
+    tx.addEventListener('characteristicvaluechanged', e => { inBuf += dec.decode(e.target.value, { stream: true });
+      let i; while ((i = inBuf.indexOf('\n')) >= 0) { const l = inBuf.slice(0, i).replace(/\r$/, ''); inBuf = inBuf.slice(i + 1); if (l) onLine(l); } });
+    await ask('cas ' + Math.floor(Date.now() / 1000), ['S ']);
+    await ask('info', ['X ']);
+    await loadPv();
+    showConn();
+    if (LS.get('autoSync', true)) sync();
+  } catch (e) { log('! ' + e.message); rx = null; showConn(); if (!/cancel/i.test(e.message)) connMsg('Nepodařilo se připojit: ' + e.message); }
+}
+let stav = null; const cfg = {};
+function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
+function showConn() {
+  const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
+  $('fsN').disabled = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn'].forEach(id => $(id).disabled = !on);
+  if (!on) { connMsg('Spoušť nepřipojena'); return; }
+  if (!stav) { connMsg('Připojeno'); return; }
+  const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
+  const pr = (AN.PROGS[+stav.program] || {}).n || '';
+  $('connTxt').innerHTML = `<b>Připojeno · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? 'jen RAM!' : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+}
+
+/* ---------- stahování záznamů ---------- */
+let syncing = false, syncAgain = false;
+function zMsg(t) { $('zMsg').textContent = t; }
+async function fetchRec(i) {
+  const lines = await collect('poslat ' + i, l => l.startsWith('R konec') || l.startsWith('R chyba'), 8000);
+  const head = lines.find(l => /^R \d+ \d+$/.test(l)), end = lines[lines.length - 1];
+  if (!head || !end.startsWith('R konec')) throw new Error('záznam ' + i + ' se nepřenesl');
+  const total = +head.split(' ')[2], b = atob(lines.filter(l => l.startsWith('r ')).map(l => l.slice(2)).join(''));
+  const u8 = new Uint8Array(b.length); let sum = 0; for (let k = 0; k < b.length; k++) { u8[k] = b.charCodeAt(k); sum += u8[k]; }
+  if (u8.length !== total || (sum >>> 0) !== (+end.split(' ')[3] >>> 0)) throw new Error('záznam ' + i + ' poškozený');
+  return u8;
+}
+async function sync() {
+  if (!connected()) return; if (syncing) { syncAgain = true; return; } syncing = true;
+  try {
+    const lines = await collect('zaznamy', l => l.startsWith('Z konec'), 6000);
+    const list = lines.filter(l => /^Z \d+ /.test(l)).map(l => { const o = kv(l); o.i = +l.split(' ')[1]; return o; });
+    let n = 0;
+    for (const z of list) { const key = `${z.polozka}-${z.krok}-${z.unix}-${z.up}`;
+      if (await DB.has(key)) continue;
+      zMsg(`Stahuji záznam ${z.i + 1} z ${list.length}…`);
+      const u8 = await fetchRec(z.i); const r = AN.parse(u8);
+      await DB.put({ key, bytes: u8, hits: [], polozka: r.h.polozka, krok: r.h.krok, program: r.h.program, unix: r.h.unix0, up: r.h.up0, demo: false });
+      n++; }
+    zMsg(n ? `Staženo ${n} ${n === 1 ? 'nový záznam' : n < 5 ? 'nové záznamy' : 'nových záznamů'}.` : `Vše staženo (${list.length} ve spoušti).`);
+    if (n) render();
+  } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message); }
+  syncing = false; if (syncAgain) { syncAgain = false; sync(); }
+}
+let autoT = 0; function autoFetch() { if (!LS.get('autoSync', true)) return; clearTimeout(autoT); autoT = setTimeout(sync, 400); }
+
+/* ---------- nastavení ---------- */
+const NUMS = ['prah_rana_g', 'prah_rana_mic', 'prah_g', 'prah_mic', 'soubeh', 'blokace'], SELS = ['zaznam', 'program', 'rezim'];
+function fillForm() {
+  NUMS.forEach(k => { if (cfg[k] != null && document.activeElement !== $(k)) { $(k).value = cfg[k]; $('o_' + k).textContent = cfg[k]; } });
+  SELS.forEach(k => { if (cfg[k] != null && document.activeElement !== $(k)) $(k).value = cfg[k]; });
+}
+NUMS.forEach(k => $(k).addEventListener('input', () => $('o_' + k).textContent = $(k).value));
+async function sendForm() {
+  for (const k of [...SELS, ...NUMS]) await send(`${k} ${$(k).value}`);
+}
+$('saveBtn').onclick = async () => { $('saveMsg').textContent = 'Ukládám…';
+  try { await sendForm(); await ask('ulozit', ['OK ulozeno', 'CHYBA']); await ask('stav', ['S ']); $('saveMsg').textContent = 'Uloženo ve spoušti ✓'; }
+  catch (e) { $('saveMsg').textContent = 'Chyba: ' + e.message; } };
+let pv = [];
+async function loadPv() {
+  const lines = await collect('predvolby', l => l.startsWith('P konec'), 5000);
+  pv = lines.filter(l => /^P \d/.test(l)).map(l => { const a = l.slice(2).split('|'); return { i: +a[0], n: a[1], d: a.slice(2) }; });
+  renderPv();
+}
+function renderPv() {
+  const cur = stav ? +stav.predvolba : -1;
+  $('pvList').innerHTML = pv.length ? pv.map(p => `<div class="pv ${p.i === cur ? 'cur' : ''}"><b>${esc(p.n)}</b>
+     <button class="btn" data-pvload="${p.i}">Načíst</button><button class="btn danger" data-pvdel="${p.i}">Smazat</button>
+     <span class="meta">${['VR', 'záznam', 'VR+záznam'][+p.d[5]]} · ${(AN.PROGS[+p.d[6]] || {}).n || ''} · rána ${p.d[7]} g / ${p.d[8]} · VR ${p.d[0]} g / ${p.d[1]}</span></div>`).join('')
+    : '<p class="explain">Zatím žádná předvolba.</p>';
+  const used = new Set(pv.map(p => p.i));
+  $('pvSlot').innerHTML = [0, 1, 2, 3, 4, 5].map(i => `<option value="${i}">${used.has(i) ? 'přepsat ' + esc(pv.find(p => p.i === i).n) : 'místo ' + (i + 1)}</option>`).join('');
+  const free = [0, 1, 2, 3, 4, 5].find(i => !used.has(i)); if (free != null) $('pvSlot').value = free;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+$('pvList').onclick = async e => { const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.pvload != null) { await ask('predvolba ' + b.dataset.pvload, ['X ', '?']); await ask('stav', ['S ']); renderPv(); }
+  if (b.dataset.pvdel != null) { if (b.dataset.sure) { await ask('predvolba_smaz ' + b.dataset.pvdel, ['P konec']); await loadPv(); }
+    else { b.dataset.sure = 1; b.textContent = 'Opravdu smazat?'; } } };
+$('pvSave').onclick = async () => {
+  let n = $('pvName').value.trim().replace(/\|/g, '/'); if (!n) { $('pvName').focus(); return; }
+  while (enc.encode(n).length > 15) n = n.slice(0, -1);
+  await sendForm(); await ask(`predvolba_uloz ${$('pvSlot').value} ${n}`, ['P ', '?', 'CHYBA']); await ask('stav', ['S ']); await loadPv(); $('pvName').value = '';
+};
+$('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $('osa').value); render(); };
+
+/* ---------- tlačítka ---------- */
+$('connBtn').onclick = connect;
+$('syncBtn').onclick = sync;
+$('newRoundBtn').onclick = async () => { await ask('nova_polozka', ['S ']); zMsg(`Nová položka ${stav.polozka}. Další rána bude první terč programu.`); };
+$('wipeBtn').onclick = async e => { const b = e.currentTarget;
+  if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu? Nestažené záznamy zmizí'; setTimeout(() => { delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti'; }, 5000); return; }
+  delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti';
+  await sync(); await ask('smazat_zaznamy', ['S '], 30000); zMsg('Záznamy ve spoušti smazány (v aplikaci zůstaly).'); };
+$('demoBtn').onclick = async () => { const recs = AN.demo();
+  const hits = [[true], [true, false], [false, true], [true, true], [false], [true]];
+  for (const [i, r] of recs.entries()) await DB.put({ key: 'demo-' + i, bytes: AN.build({ ...r.h, ranaMs: r.h.ranaMs.slice(0, r.h.nRan) }, r.W, r.A, r.M), hits: hits[i], polozka: 'demo', krok: r.h.krok, program: 3, unix: r.h.unix0, up: r.h.up0, demo: true });
+  render(); zMsg('Přidána ukázková položka (lovecké kolo, 6 ran).'); };
+$('clearApp').onclick = async e => { const b = e.currentTarget;
+  if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu smazat vše v aplikaci?'; return; }
+  for (const o of await DB.all()) await DB.del(o.key); delete b.dataset.sure; b.textContent = 'Smazat všechny záznamy v aplikaci'; render(); };
+function tab(z) { $('pZ').hidden = !z; $('pN').hidden = z; $('tZ').setAttribute('aria-pressed', z); $('tN').setAttribute('aria-pressed', !z); }
+$('tZ').onclick = () => tab(true); $('tN').onclick = () => tab(false);
+
+/* ---------- kreslení ---------- */
+function star(cx, cy, n) { let d = ''; for (let i = 0; i < 10; i++) { const r = i % 2 ? 4.5 : 11, a = -Math.PI / 2 + i * Math.PI / 5; d += (i ? 'L' : 'M') + (cx + r * Math.cos(a)).toFixed(1) + ' ' + (cy + r * Math.sin(a)).toFixed(1); }
+  return `<path d="${d}Z" fill="var(--fg)" stroke="var(--card)" stroke-width="1.5"/>` + (n ? `<text x="${cx + 12}" y="${cy - 8}" style="fill:var(--fg);font-size:12px;font-weight:600">${n}</text>` : ''); }
+function phase(a, i) { return i <= a.s1 ? 'pre' : (a.S.length > 1 && i <= a.sL ? 'tr' : 'post'); }
+function traceSvg(a) {
+  const W = 340, H = 200, P = 22, from = Math.max(0, a.pohyb, a.pazba > 0 ? a.pazba - 5 : 0, a.s1 - 70), to = a.konec, idx = [];   // od nasazení (zvedání zbraně by švih zmenšilo)
+  for (let i = from; i <= to; i++) if (!a.maska[i]) idx.push(i);
+  const xs = idx.map(i => a.yaw[i] - a.yaw[a.s1]), ys = idx.map(i => a.pitch[i] - a.pitch[a.s1]);
+  const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 2, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 2;
+  const sc = Math.min((W - 2 * P) / (x1 - x0), (H - 2 * P) / (y1 - y0));
+  const ox = P + ((W - 2 * P) - (x1 - x0) * sc) / 2, oy = P + ((H - 2 * P) - (y1 - y0) * sc) / 2;
+  const X = x => ox + (x - x0) * sc, Y = y => H - (oy + (y - y0) * sc);
+  const step = sc * 5 < 14 ? (sc * 10 < 14 ? 20 : 10) : 5;
+  let g = '';
+  for (let gx = Math.ceil(x0 / step) * step; gx <= x1; gx += step) g += `<line x1="${X(gx)}" y1="${P / 2}" x2="${X(gx)}" y2="${H - P / 2}" stroke="var(--grid)"/>`;
+  for (let gy = Math.ceil(y0 / step) * step; gy <= y1; gy += step) g += `<line x1="${P / 2}" y1="${Y(gy)}" x2="${W - P / 2}" y2="${Y(gy)}" stroke="var(--grid)"/>`;
+  const path = idx.map((i, k) => (k ? 'L' : 'M') + X(xs[k]).toFixed(1) + ' ' + Y(ys[k]).toFixed(1)).join(' ');
+  const dots = idx.map((i, k) => `<circle cx="${X(xs[k]).toFixed(1)}" cy="${Y(ys[k]).toFixed(1)}" r="2.8" fill="${css(phase(a, i))}"/>`).join('');
+  const stars = a.S.map((s, k) => star(X(a.yaw[s] - a.yaw[a.s1]), Y(a.pitch[s] - a.pitch[a.s1]), a.S.length > 1 ? String(k + 1) : '')).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stopa ústí hlavně">${g}<path d="${path}" fill="none" stroke="var(--line)" stroke-width="1.2"/>${dots}${stars}
+    <line x1="${P / 2 + 4}" y1="${H - 8}" x2="${P / 2 + 4 + step * sc}" y2="${H - 8}" stroke="var(--muted)" stroke-width="1.5"/><text x="${P / 2 + 8 + step * sc}" y="${H - 5}">${step}°</text></svg>`;
+}
+function speedSvg(a) {
+  const W = 340, H = 100, P = 18, from = Math.max(0, a.pohyb - 20), to = a.konec, dt = a.dt;
+  const T = i => (i - a.s1) * dt, t0 = T(from), t1 = T(to);
+  let vm = 60; for (let i = from; i <= to; i++) vm = Math.max(vm, a.sp[i]); vm = Math.ceil(vm / 40) * 40;
+  const X = t => P + (t - t0) / (t1 - t0) * (W - 2 * P - 12), Y = v => H - 14 - v / vm * (H - 26);
+  let g = `<line x1="${P}" y1="${Y(0)}" x2="${W - P}" y2="${Y(0)}" stroke="var(--line)"/>`;
+  for (let v = 40; v < vm; v += vm > 160 ? 80 : 40) g += `<line x1="${P}" y1="${Y(v)}" x2="${W - P - 12}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${W - P - 10}" y="${Y(v) + 3}">${v}</text>`;
+  let seg = '';
+  for (const ph of ['pre', 'tr', 'post']) { const ii = []; for (let i = from; i <= to; i++) if (phase(a, i) === ph) ii.push(i); if (!ii.length) continue;
+    if (ii[0] > from) ii.unshift(ii[0] - 1);
+    const line = ii.map((i, k) => (k ? 'L' : 'M') + X(T(i)).toFixed(1) + ' ' + Y(a.sp[i]).toFixed(1)).join(' ');
+    seg += `<path d="${line} L${X(T(ii[ii.length - 1]))} ${Y(0)} L${X(T(ii[0]))} ${Y(0)}Z" fill="${css(ph)}" opacity=".14"/><path d="${line}" fill="none" stroke="${css(ph)}" stroke-width="2"/>`; }
+  const sh = a.S.map((s, k) => `<line x1="${X(T(s))}" y1="6" x2="${X(T(s))}" y2="${Y(0)}" stroke="var(--fg)" stroke-dasharray="3 3"/><text x="${X(T(s)) + 3}" y="12" style="fill:var(--fg)">rána${a.S.length > 1 ? ' ' + (k + 1) : ''}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rychlost švihu">${g}${seg}${sh}<text x="${P}" y="${H - 2}">${cz(t0, 1)} s</text><text x="${W - P - 30}" y="${H - 2}">+${cz(t1, 1)} s</text></svg>`;
+}
+function timeline(a) {
+  const ev = [], dt = a.dt, base = a.hop >= 0 ? a.hop : a.pohyb;
+  if (a.hop >= 0) ev.push({ i: a.hop, n: 'HOP' });
+  ev.push({ i: a.pohyb, n: 'pohyb' });
+  if (a.pazba > a.pohyb && a.pazba < a.s1) ev.push({ i: a.pazba, n: 'pažba' });
+  a.S.forEach((s, k) => ev.push({ i: s, n: a.S.length > 1 ? 'rána ' + (k + 1) : 'rána' }));
+  if (a.S.length === 1) ev.push({ i: Math.min(a.konec, a.s1 + 30), n: 'konec' });
+  ev.sort((x, y) => x.i - y.i);
+  const T0 = ev[0].i, Tn = ev[ev.length - 1].i, span = Math.max(1, Tn - T0);
+  const segC = { 'HOP': 'var(--muted)', 'pohyb': 'color-mix(in srgb,var(--pre) 45%,var(--card))', 'pažba': 'var(--pre)' };
+  const segN = { 'HOP': 'reakce', 'pohyb': a.pazba > a.pohyb ? 'nasazení' : 'švih', 'pažba': 'švih' };
+  const segs = []; for (let k = 0; k < ev.length - 1; k++) { const e = ev[k]; let n, c;
+    if (e.n.startsWith('rána')) { if (a.S.length === 1) { n = 'dotažení'; c = 'var(--post)'; } else { n = a.druh === 'double' ? 'přechod' : 'mezi ranami'; c = 'var(--tr)'; } }
+    else { n = segN[e.n]; c = segC[e.n]; }
+    segs.push({ n, c, d: (ev[k + 1].i - e.i) * dt }); }
+  const bar = segs.map(s => `<div style="flex:${Math.max(0.01, s.d)};background:${s.c}"></div>`).join('');
+  const marks = ev.map((e, k) => `<div class="${k === 0 ? 'first' : k === ev.length - 1 ? 'last' : ''} ${k % 2 ? 'low' : ''}" style="left:${(e.i - T0) / span * 100}%"><b>${cz((e.i - base) * dt)}</b>${e.n}</div>`).join('');
+  const leg = segs.map(s => `<span><i style="background:${s.c}"></i>${s.n} ${cz(s.d)} s</span>`).join('');
+  return `<div><p class="lbl">Časová osa od ${a.hop >= 0 ? 'HOP' : 'začátku pohybu (HOP nezachycen)'}</p><div class="tlbar">${bar}</div><div class="tlmarks">${marks}</div><div class="tllegend">${leg}</div></div>`;
+}
+const DRUH = { single: 'Jednotlivý', double: 'Dvojstřel', oprava: '2 rány na 1 terč' };
+const VN = { V: 'Vysoká', N: 'Nízká', D: 'Dvojterč' };
+function stepInfo(o, off) {
+  const P = AN.PROGS[o.program] || AN.PROGS[0]; if (!P.seq) return null;
+  const k = o.krok + (off || 0); if (k < 0) return null; const s = P.seq[k % P.seq.length]; return { st: s[0], t: s[1], k, n: P.seq.length };
+}
+function druhPro(o, st, nRan) {
+  if (nRan < 2) return 'single';
+  if (o.program === 1) return 'double';
+  if (st) return st.t === 'D' ? 'double' : (o.program === 3 ? 'oprava' : 'auto');
+  return 'auto';
+}
+function card(o, a, st) {
+  const title = st ? `St. ${st.st} · ${VN[st.t]}` : DRUH[a.druh];
+  const time = o.unix ? new Date(o.unix * 1000).toLocaleTimeString('cs-CZ') : '';
+  const trio = a.parts.length ? `<div class="trio">${a.parts.map(([h, p]) => `<div class="mini" style="--c:${css(p.c)}"><div class="h"><i></i>${h}</div><b>${p.b}</b><span>${p.s}</span></div>`).join('')}</div>` : '';
+  const leg = a.S.length > 1
+    ? `<span><i style="background:var(--pre)"></i>před 1. ranou</span><span><i style="background:var(--tr)"></i>${a.druh === 'double' ? 'přechod' : 'mezi ranami'}</span><span><i style="background:var(--post)"></i>po 2. ráně</span>`
+    : `<span><i style="background:var(--pre)"></i>před ranou</span><span><i style="background:var(--post)"></i>po ráně</span>`;
+  const hitsN = a.druh === 'double' ? 2 : a.druh === 'oprava' ? a.S.length : 1;
+  const hitLbl = i => a.druh === 'double' ? `${i + 1}. terč` : a.druh === 'oprava' ? `${i + 1}. rána` : 'Terč';
+  const hits = `<div class="hitrow">${[...Array(hitsN)].map((_, i) => `<div><p class="lbl">${hitLbl(i)}</p><div class="hit" data-key="${esc(o.key)}" data-i="${i}">
+      <button class="y" aria-pressed="${o.hits[i] === true}">✓ Zásah</button><button class="n" aria-pressed="${o.hits[i] === false}">✗ Vedle</button></div></div>`).join('')}</div>`;
+  return `<section class="card">
+    <div class="chead"><span class="st">${title}</span><span class="meta">${st ? `${st.k % st.n + 1}/${st.n} · ` : ''}${a.S.length} ${a.S.length === 1 ? 'rána' : 'rány'}${time ? ' · ' + time : ''}</span></div>
+    <div class="verdict" style="--c:${css(a.v.c)}"><i class="lamp"></i><div><b>${a.v.t}</b><span>${a.v.s}</span></div><div class="num">${a.num.v}<small>${a.num.l}</small></div></div>
+    ${trio}${timeline(a)}
+    <div><p class="lbl">Stopa ústí hlavně od nasazení (pohled od střelce)</p>${traceSvg(a)}
+      <div class="legend">${leg}<span>tečka = 10 ms</span></div></div>
+    <div><p class="lbl">Rychlost švihu (°/s)</p>${speedSvg(a)}</div>
+    <div class="chips">${a.chips.map(c => `<span class="chip" style="--c:${css(c[0])}"><i></i>${c[1]}</span>`).join('')}</div>
+    ${hits}
+    <details><summary>Technické údaje</summary><p class="explain">osa hlavně ${a.osa.auto ? 'zjištěna' : 'pevná'} [${a.osa.B.map(v => cz(v, 2)).join('; ')}] · posun gyra ${a.bias.map(v => cz(v, 1)).join('/')} °/s · mikrofon klid ${a.floor}, práh HOP ${Math.round(a.prah)}${a.smerZmena != null ? ' · změna směru po 1. ráně ' + Math.round(a.smerZmena) + '°' : ''} · ${o.demo ? 'ukázková data' : 'krok ' + o.krok}</p></details>
+  </section>`;
+}
+function roundSummary(items, prog) {
+  const P = AN.PROGS[prog] || AN.PROGS[0];
+  const marked = items.filter(x => x.o.hits.length && x.o.hits.some(h => h != null));
+  const hitOf = x => x.o.hits.some(h => h === true);
+  const by = c => marked.filter(x => x.a.v.c === c), rate = arr => arr.length ? `${arr.filter(hitOf).length}/${arr.length}` : '–';
+  const facts = [];
+  facts.push([`${items.length}`, `${items.length === 1 ? 'záznam' : items.length < 5 ? 'záznamy' : 'záznamů'} · zásahů ${marked.filter(hitOf).length} z ${marked.length} označených`, 'fg']);
+  if (by('ok').length) facts.push([rate(by('ok')), 'zásahů, když byla rána bez chyby', 'ok']);
+  if (by('bad').length) facts.push([rate(by('bad')), 'zásahů při červeném hodnocení', 'bad']);
+  const singles = items.filter(x => x.a.ratio != null);
+  if (singles.length >= 6) { const f = singles.slice(0, 3).reduce((s, x) => s + x.a.ratio, 0) / 3, l = singles.slice(-3).reduce((s, x) => s + x.a.ratio, 0) / 3;
+    const d = Math.round((l - f) * 100); facts.push([`${d > 0 ? '+' : ''}${d} %`, 'průchod ranou na konci oproti začátku', d < -10 ? 'warn' : 'fg']); }
+  let grid = '';
+  if (P.seq) {
+    const sts = [...new Set(P.seq.map(s => s[0]))].sort((a, b) => a - b), rows = ['V', 'N', 'D'];
+    const rank = { bad: 0, warn: 1, ok: 2 }, cell = {};
+    items.forEach(x => { if (!x.st) return; const k = x.st.st + x.st.t, c = x.a.v.c; if (!(k in cell) || rank[c] < rank[cell[k]]) cell[k] = c; });
+    const has = new Set(P.seq.map(s => s[0] + s[1]));
+    grid = `<div><p class="lbl">Nejhorší hodnocení podle stanoviště</p><div class="gridst" style="grid-template-columns:28px repeat(${sts.length},minmax(0,44px))">
+      <div></div>${sts.map(s => `<div class="hd">${s}</div>`).join('')}
+      ${rows.map(r => `<div class="hd">${r}</div>` + sts.map(s => { const k = s + r; if (!has.has(k)) return '<div></div>';
+        const c = cell[k]; return c ? `<div class="c" style="--c:${css(c)}">${c === 'bad' ? '✕' : c === 'warn' ? '!' : ''}</div>` : '<div class="c x"></div>'; }).join('')).join('')}
+      </div></div>`;
+  }
+  return `<section class="card"><div class="two">${grid}<div><p class="lbl">Souvislosti</p><ul class="facts">${facts.map(f => `<li><span class="big" style="color:${css(f[2])}">${f[0]}</span><span>${f[1]}</span></li>`).join('')}</ul></div></div></section>`;
+}
+async function render() {
+  const all = await DB.all();
+  if (!all.length) { $('list').innerHTML = `<div class="empty"><b>Zatím žádné záznamy</b>Připojte spoušť a stáhněte záznamy ze střelnice, nebo si prohlédněte ukázková data.</div>`; return; }
+  const offs = LS.get('offs', {}), osa = LS.get('osa', '');
+  const groups = new Map(); all.forEach(o => { const g = String(o.polozka); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(o); });
+  const order = [...groups.keys()].sort((a, b) => Math.max(...groups.get(b).map(o => o.unix || o.up)) - Math.max(...groups.get(a).map(o => o.unix || o.up)));
+  let html = '';
+  for (const g of order) {
+    const list = groups.get(g).sort((a, b) => a.krok - b.krok || a.up - b.up), prog = list[0].program, P = AN.PROGS[prog] || AN.PROGS[0];
+    const items = [];
+    for (const o of list) { try { const r = AN.parse(o.bytes instanceof Uint8Array ? o.bytes : new Uint8Array(o.bytes));
+        const st = stepInfo(o, offs[g]); const a = AN.analyze(r, { osa, druh: druhPro(o, st, r.h.nRan) }); items.push({ o, a, st }); }
+      catch (e) { log('! záznam ' + o.key + ': ' + e.message); } }
+    const d = list[0].unix ? new Date(list[0].unix * 1000).toLocaleDateString('cs-CZ') : '';
+    html += `<div class="round"><div class="rhead"><h2>${g === 'demo' ? 'Ukázka · ' : 'Položka ' + esc(g) + ' · '}${P.n}${d ? ' · ' + d : ''}</h2>
+      ${P.seq ? `<span class="shift">posunout pořadí <button class="btn" data-shift="${esc(g)}" data-d="-1">−1</button><button class="btn" data-shift="${esc(g)}" data-d="1">+1</button></span>` : ''}</div>
+      ${roundSummary(items, prog)}<div class="cards">${items.slice().reverse().map(x => card(x.o, x.a, x.st)).join('')}</div></div>`;
+  }
+  $('list').innerHTML = html;
+}
+$('list').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.shift != null) { const offs = LS.get('offs', {}); offs[b.dataset.shift] = (offs[b.dataset.shift] || 0) + (+b.dataset.d); LS.set('offs', offs); render(); return; }
+  const h = b.closest('.hit'); if (!h) return;
+  const all = await DB.all(), o = all.find(x => x.key === h.dataset.key); if (!o) return;
+  const i = +h.dataset.i, v = b.classList.contains('y'); o.hits[i] = o.hits[i] === v ? null : v; await DB.put(o);
+  h.querySelector('.y').setAttribute('aria-pressed', o.hits[i] === true); h.querySelector('.n').setAttribute('aria-pressed', o.hits[i] === false);
+};
+
+DB.open().then(render);
+showConn();
+if (!navigator.bluetooth) $('connTxt').innerHTML = '<b>Spoušť nepřipojena</b><br>Tento prohlížeč neumí Bluetooth: v iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.';
+})();
+</script>
+
+</body>
+</html>
