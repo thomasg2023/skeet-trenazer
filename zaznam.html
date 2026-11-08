@@ -96,6 +96,18 @@ details summary{cursor:pointer;font-size:13px;color:var(--muted)}
 .rhead .shift{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
 .rhead .shift button{padding:3px 9px;font-size:13px}
 .ract{display:flex;gap:6px;flex-wrap:wrap}
+.run{gap:12px}
+.seg4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--bg);border-radius:10px;padding:3px}
+.seg4 button{border:0;background:transparent;color:var(--muted);padding:8px 4px;border-radius:8px;font-weight:600;font-size:13px;line-height:1.15}
+.seg4 button[aria-pressed="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.seg4 button:disabled{cursor:default}
+.bigbtn{width:100%;border:0;border-radius:16px;padding:22px 12px;font-family:var(--f-disp);font-weight:700;font-size:44px;letter-spacing:.06em;color:#fff;background:var(--ok);line-height:1}
+.bigbtn.stop{background:var(--bad)}
+.bigbtn:disabled{background:var(--line);color:var(--muted);cursor:default}
+.runinfo{text-align:center;font-size:14px;color:var(--muted)}
+.runinfo b{color:var(--fg)}
+.rec-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bad);margin-right:6px;vertical-align:0;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
 .ract .btn{padding:5px 10px;font-size:13px}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
 .gridst{display:grid;gap:4px;font-family:var(--f-mono);font-size:12px;align-items:center}
@@ -138,6 +150,12 @@ fieldset:disabled{opacity:.5}
     <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
 
   <section id="pZ" class="round">
+    <div class="card run" id="runCard">
+      <div class="seg4" role="group" aria-label="Program" id="progSeg">
+        <button data-p="0">Trénink 1 terč</button><button data-p="1">Trénink double</button><button data-p="2">Skeet 25</button><button data-p="3">Lovecké kolo</button></div>
+      <button class="bigbtn" id="runBtn" disabled>START</button>
+      <div class="runinfo" id="runInfo">Připojte spoušť</div>
+    </div>
     <div class="tools">
       <button class="btn" id="syncBtn" disabled>Stáhnout nové</button>
       <button class="btn" id="newRoundBtn" disabled>Začít novou položku</button>
@@ -537,7 +555,7 @@ function onLine(l) {
   listeners.slice().forEach(f => f(l));
   if (l.startsWith('S ')) { stav = kv(l); showConn(); }
   else if (l.startsWith('C ') || l.startsWith('X ')) { Object.assign(cfg, kv(l)); fillForm(); }
-  else if (l.startsWith('N ')) { if (stav) stav.zaznamu = (+stav.zaznamu || 0) + 1; showConn(); autoFetch(); }
+  else if (l.startsWith('N ')) { if (stav) { stav.zaznamu = (+stav.zaznamu || 0) + 1; stav.krok = (+stav.krok || 0) + 1; } showConn(); autoFetch(); }
   else if (l.startsWith('E PAMET_PLNA')) zMsg('Paměť spouště je plná. Stáhněte záznamy a smažte je ve spoušti.');
 }
 function kv(l) { const o = {}; l.slice(2).split(' ').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i)] = p.slice(i + 1); }); return o; }
@@ -583,6 +601,7 @@ function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
 function showConn() {
   const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
   $('fsN').disabled = !on; $('blinkBtn').hidden = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
+  showRun();
   if (!on) { connMsg('Spoušť nepřipojena'); return; }
   if (!stav) { connMsg('Připojeno'); return; }
   const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
@@ -590,6 +609,25 @@ function showConn() {
   if (stav.jmeno && document.activeElement !== $('jmeno')) $('jmeno').value = stav.jmeno.replace(/_/g, ' ');
   $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
+
+/* ---------- START / STOP ---------- */
+function showRun() {
+  const on = connected() && !!stav, bezi = on && stav.bezi === '1';
+  const b = $('runBtn'); b.disabled = !on || runBusy; b.textContent = bezi ? 'STOP' : 'START'; b.classList.toggle('stop', bezi);
+  document.querySelectorAll('#progSeg button').forEach(x => { x.setAttribute('aria-pressed', on && x.dataset.p === stav.program); x.disabled = !on || bezi; });
+  $('runInfo').innerHTML = !connected() ? 'Připojte spoušť' : !stav ? 'Načítám stav…'
+    : bezi ? `<span class="rec-dot"></span><b>Nahrává</b> · ${(AN.PROGS[+stav.program] || {}).n} · položka ${stav.polozka} · ${stav.krok} ${+stav.krok === 1 ? 'záznam' : +stav.krok >= 2 && +stav.krok <= 4 ? 'záznamy' : 'záznamů'}`
+    : 'Zastaveno. Zvolte program a dejte START – začne nová položka.';
+}
+let runBusy = false;
+$('progSeg').onclick = async e => { const b = e.target.closest('button'); if (!b || b.disabled) return;
+  await ask('program ' + b.dataset.p, ['X ']); await ask('ulozit', ['OK', 'CHYBA']); await ask('stav', ['S ']); };
+$('runBtn').onclick = async () => { if (runBusy) return; runBusy = true; showRun();
+  try {
+    if (stav.bezi === '1') { await ask('stop', ['S '], 8000); zMsg('Zastaveno, stahuji záznamy…'); runBusy = false; showRun(); await sync(); }
+    else { await ask('start', ['S '], 8000); zMsg(`Položka ${stav.polozka} běží. Každá ostrá rána se uloží.`); }
+  } catch (e) { zMsg('Chyba: ' + e.message); }
+  runBusy = false; showRun(); };
 
 /* ---------- stahování záznamů ---------- */
 let syncing = false, syncAgain = false;
@@ -604,7 +642,8 @@ async function fetchRec(i) {
   return u8;
 }
 async function sync() {
-  if (!connected()) return; if (syncing) { syncAgain = true; return; } syncing = true;
+  if (!connected()) return { ok: false }; if (syncing) { syncAgain = true; return { ok: false, busy: true }; } syncing = true;
+  let res = { ok: false };
   try {
     const lines = await collect('zaznamy', l => l.startsWith('Z konec'), 6000);
     const list = lines.filter(l => /^Z \d+ /.test(l)).map(l => { const o = kv(l); o.i = +l.split(' ')[1]; return o; });
@@ -617,8 +656,11 @@ async function sync() {
       n++; }
     zMsg(n ? `Staženo ${n} ${n === 1 ? 'nový záznam' : n < 5 ? 'nové záznamy' : 'nových záznamů'}.` : `Vše staženo (${list.length} ve spoušti).`);
     if (n) render();
+    let vse = true; for (const z of list) if (!(await DB.has(`${z.polozka}-${z.krok}-${z.unix}-${z.up}`))) vse = false;
+    res = { ok: vse, total: list.length };
   } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message); }
   syncing = false; if (syncAgain) { syncAgain = false; sync(); }
+  return res;
 }
 let autoT = 0; function autoFetch() { if (!LS.get('autoSync', true)) return; clearTimeout(autoT); autoT = setTimeout(sync, 400); }
 
@@ -688,7 +730,11 @@ $('testBtn').onclick = async () => { const l = await ask('test_rana', ['OK', '?'
 $('wipeBtn').onclick = async e => { const b = e.currentTarget;
   if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu? Nestažené záznamy zmizí'; setTimeout(() => { delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti'; }, 5000); return; }
   delete b.dataset.sure; b.textContent = 'Smazat záznamy ve spoušti';
-  await sync(); await ask('smazat_zaznamy', ['S '], 30000); zMsg('Záznamy ve spoušti smazány (v aplikaci zůstaly).'); };
+  zMsg('Nejdřív stahuji všechny záznamy ze spouště…');
+  while (syncing) await new Promise(r => setTimeout(r, 200));
+  const r = await sync();
+  if (!r.ok) { zMsg('Záznamy se nepodařilo celé stáhnout – ve spoušti jsem nic nesmazal. Zkuste to znovu.'); return; }
+  await ask('smazat_zaznamy', ['S '], 30000); zMsg(`Staženo a uloženo v aplikaci (${r.total}), ve spoušti smazáno.`); };
 async function demoSync() { const has = (await DB.all()).some(o => o.demo); $('demoBtn').textContent = has ? 'Odebrat ukázková data' : 'Ukázková data'; return has; }
 $('demoBtn').onclick = async () => {
   if (await demoSync()) { for (const o of await DB.all()) if (o.demo) await DB.del(o.key); await demoSync(); render(); zMsg('Ukázková data odebrána.'); return; }
