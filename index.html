@@ -625,16 +625,17 @@ function panelTick(){ let hov=-1, hh=-1, pt=null;
 function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud(); if(typeof drawPanel==='function'&&panel.visible) drawPanel();}
 const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice',N:'Nástřel'};
 let hBtns=[], hHover=-1;
-let spoustTep=-1e9; const spoustOK=()=>performance.now()-spoustTep<12000;
+let spoustTep=-1e9, spoustBat=null;
+const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
   $('hudL').innerHTML=`<b>Stanoviště ${st.station+1}</b><br>${MODE[st.mode]}`;
-  $('hudR').innerHTML=`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}<br>Spoušť ${spoustOK()?'● připojena':'○ nepřipojena'}`;
+  $('hudR').innerHTML=`Náboje ${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)}<br>Spoušť ${spoustOK()?'● připojena'+batTxt():'○ nepřipojena'}`;
   const x=hudCanvas.getContext('2d'), W=1024, H=448; x.clearRect(0,0,W,H);
   x.fillStyle='rgba(15,23,19,0.82)'; x.fillRect(0,0,W,H); x.fillStyle='#e8662a'; x.fillRect(0,0,12,H);
   const SH={H:'VYSOKÁ',L:'NÍZKÁ',D:'DVOJICE',N:'NÁSTŘEL'};
   x.fillStyle='#fff'; x.font='700 72px Barlow Condensed, Arial'; x.fillText(`${st.station+1} · ${SH[st.mode]}`,36,80);
   x.textAlign='right'; x.font='600 44px IBM Plex Mono, monospace'; x.fillStyle='#cfe3d6'; x.fillText(`${'●'.repeat(st.shells)}${'○'.repeat(2-st.shells)} ${totals()}`,W-30,74);
-  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?'#7fe0a0':'#ffb08a'; x.fillText(spoustOK()?'● SPOUŠŤ':'○ SPOUŠŤ',W-30,122); x.textAlign='left';
+  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(spoustOK()?'● SPOUŠŤ'+batTxt():'○ SPOUŠŤ',W-30,122); x.textAlign='left';
   // hláška – zkrácená a zmenšená, aby se vždy vešla
   let m=st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za');
   let fs=60; x.font=`700 ${fs}px Barlow Condensed, Arial`; while(x.measureText(m).width>W-72&&fs>30){fs-=4; x.font=`700 ${fs}px Barlow Condensed, Arial`;}
@@ -699,7 +700,8 @@ renderer.domElement.addEventListener('pointermove',e=>{if(st.inXR)return;
 document.addEventListener('keydown',e=>{
   try{ $('lastKey').textContent=(e.key||'?')+' / '+(e.code||'?')+' · '+new Date().toLocaleTimeString('cs-CZ'); }catch(_){}
   if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
-  if(e.key==='F24'||e.code==='F24'){e.preventDefault(); const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} return;}
+  const fk=/^F(1[3-9]|2[0-4])$/.exec(e.key||'')||/^F(1[3-9]|2[0-4])$/.exec(e.code||'');
+  if(fk){e.preventDefault(); const n=+fk[1]; spoustBat=n<24?(n-13)*10:null; const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} else drawHud(); return;}
   if(e.key==='f'||e.key==='F'){e.preventDefault(); spoustTep=performance.now(); spoust();}
   else if(e.key===' '){e.preventDefault();audio();pull();}
   else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}

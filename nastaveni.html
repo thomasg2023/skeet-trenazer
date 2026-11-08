@@ -129,6 +129,7 @@ function onLine(l){
   if(l.startsWith('C ')){ l.slice(2).split(' ').forEach(kv=>{const [k,v]=kv.split('='); cfg[k]=+v;}); fill(); $('fs').disabled=false;
     if(!ulozCeka) $('cfgSt').textContent='Hodnoty načtené z desky.'; return; }
   if(l.startsWith('OK ulozeno')){ ulozCeka=false; $('cfgSt').textContent='Uloženo do desky ✓'; log('Nastavení uloženo do desky'); return; }
+  if(l.startsWith('B ')){ const [,v,pc]=l.split(' '); $('st').innerHTML='<b>Připojeno</b> · baterka '+(+pc<0?'nepřipojena':(+v).toFixed(2).replace('.',',')+' V · '+pc+' %'); return; }
   if(l.startsWith('E VYSTREL')){ shots[N-1]=1; log('Výstřel ('+l.slice(10)+')',true); peakG=0; peakM=0; return; }
   log(l);
 }
