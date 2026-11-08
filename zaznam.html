@@ -135,7 +135,7 @@ fieldset:disabled{opacity:.5}
   <div class="bar"><h1>Skeet záznam</h1>
     <div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
-    <button class="btn pri" id="connBtn">Připojit spoušť</button></div>
+    <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
 
   <section id="pZ" class="round">
     <div class="tools">
@@ -179,6 +179,13 @@ fieldset:disabled{opacity:.5}
         <div class="row"><label for="blokace">Blokace po výstřelu (ms)</label><div class="inl"><input type="range" id="blokace" min="50" max="2000" step="10"><output id="o_blokace"></output></div></div>
         <button class="btn pri" id="saveBtn">Uložit do spouště</button>
         <span class="msg" id="saveMsg"></span>
+      </div>
+      <div class="card fs">
+        <h2>Tato spoušť</h2>
+        <div class="row"><label for="jmeno">Jméno (začne vždy „Skeet “)</label>
+          <div class="inl"><input type="text" id="jmeno" maxlength="20" placeholder="např. Zoli" style="flex:1;min-width:0"></div>
+          <span class="hint">Podle jména rozeznáte spouště v Bluefy i v Questu. Platí po restartu spouště. Jen písmena bez háčků a číslice.</span>
+          <button class="btn" id="jmenoBtn">Uložit jméno a restartovat</button><span class="msg" id="jmenoMsg"></span></div>
       </div>
       <div class="card fs">
         <h2>Předvolby</h2>
@@ -575,12 +582,13 @@ let stav = null; const cfg = {};
 function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
 function showConn() {
   const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
-  $('fsN').disabled = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
+  $('fsN').disabled = !on; $('blinkBtn').hidden = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
   if (!on) { connMsg('Spoušť nepřipojena'); return; }
   if (!stav) { connMsg('Připojeno'); return; }
   const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
   const pr = (AN.PROGS[+stav.program] || {}).n || '';
-  $('connTxt').innerHTML = `<b>Připojeno · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+  if (stav.jmeno && document.activeElement !== $('jmeno')) $('jmeno').value = stav.jmeno.replace(/_/g, ' ');
+  $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
 
 /* ---------- stahování záznamů ---------- */
@@ -667,6 +675,12 @@ $('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $(
 
 /* ---------- tlačítka ---------- */
 $('connBtn').onclick = connect;
+$('blinkBtn').onclick = () => ask('blikni', ['OK', '?']).then(() => zMsg('Spoušť, na kterou jste připojen, teď 4 s bliká všemi LED.'));
+$('jmenoBtn').onclick = async () => {
+  const n = $('jmeno').value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^ -~]/g, '').replace(/\|/g, '').trim().slice(0, 20);
+  $('jmeno').value = n;
+  try { await ask('jmeno ' + n, ['OK', 'CHYBA']); $('jmenoMsg').textContent = 'Uloženo, spoušť se restartuje – za pár sekund ji připojte znovu. V Questu se jméno změní samo.';
+    send('restart'); } catch (e) { $('jmenoMsg').textContent = 'Chyba: ' + e.message; } };
 $('syncBtn').onclick = sync;
 $('newRoundBtn').onclick = async () => { await ask('nova_polozka', ['S ']); zMsg(`Nová položka ${stav.polozka}. Další rána bude první terč programu.`); };
 $('testBtn').onclick = async () => { const l = await ask('test_rana', ['OK', '?']);
