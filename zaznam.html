@@ -95,6 +95,8 @@ details summary{cursor:pointer;font-size:13px;color:var(--muted)}
 .rhead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
 .rhead .shift{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
 .rhead .shift button{padding:3px 9px;font-size:13px}
+.ract{display:flex;gap:6px;flex-wrap:wrap}
+.ract .btn{padding:5px 10px;font-size:13px}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
 .gridst{display:grid;gap:4px;font-family:var(--f-mono);font-size:12px;align-items:center}
 .gridst .c{aspect-ratio:1;border-radius:6px;background:var(--c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;max-width:44px}
@@ -142,6 +144,9 @@ fieldset:disabled{opacity:.5}
       <button class="btn" id="testBtn" disabled>Zkušební záznam</button>
       <button class="btn danger" id="wipeBtn" disabled>Smazat záznamy ve spoušti</button>
       <button class="btn" id="demoBtn">Ukázková data</button>
+      <button class="btn" id="shareAll">Poslat vše</button>
+      <button class="btn" id="importBtn">Načíst ze souboru</button><input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="btn danger" id="clearAll">Smazat v aplikaci</button>
       <span class="msg" id="zMsg"></span>
     </div>
     <div id="list"></div>
@@ -575,7 +580,7 @@ function showConn() {
   if (!stav) { connMsg('Připojeno'); return; }
   const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
   const pr = (AN.PROGS[+stav.program] || {}).n || '';
-  $('connTxt').innerHTML = `<b>Připojeno · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? 'jen RAM!' : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+  $('connTxt').innerHTML = `<b>Připojeno · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
 
 /* ---------- stahování záznamů ---------- */
@@ -807,7 +812,7 @@ async function render() {
   const offs = LS.get('offs', {}), osa = LS.get('osa', '');
   const groups = new Map(); all.forEach(o => { const g = String(o.polozka); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(o); });
   const order = [...groups.keys()].sort((a, b) => Math.max(...groups.get(b).map(o => o.unix || o.up)) - Math.max(...groups.get(a).map(o => o.unix || o.up)));
-  let html = '';
+  let html = ''; GROUPS = {};
   for (const g of order) {
     const list = groups.get(g).sort((a, b) => a.krok - b.krok || a.up - b.up), prog = list[0].program, P = AN.PROGS[prog] || AN.PROGS[0];
     const items = [];
@@ -815,20 +820,65 @@ async function render() {
         const st = stepInfo(o, offs[g]); const a = AN.analyze(r, { osa, druh: druhPro(o, st, r.h.nRan) }); items.push({ o, a, st }); }
       catch (e) { log('! záznam ' + o.key + ': ' + e.message); } }
     const d = list[0].unix ? new Date(list[0].unix * 1000).toLocaleDateString('cs-CZ') : '';
-    html += `<div class="round"><div class="rhead"><h2>${g === 'demo' ? 'Ukázka · ' : 'Položka ' + esc(g) + ' · '}${P.n}${d ? ' · ' + d : ''}</h2>
-      ${P.seq ? `<span class="shift">posunout pořadí <button class="btn" data-shift="${esc(g)}" data-d="-1">−1</button><button class="btn" data-shift="${esc(g)}" data-d="1">+1</button></span>` : ''}</div>
+    const nazev = `${g === 'demo' ? 'Ukázka · ' : 'Položka ' + g + ' · '}${P.n}${d ? ' · ' + d : ''}`;
+    GROUPS[g] = { items, nazev, list };
+    html += `<div class="round"><div class="rhead"><h2>${esc(nazev)}</h2>
+      <div class="ract">${P.seq ? `<span class="shift">posunout pořadí <button class="btn" data-shift="${esc(g)}" data-d="-1">−1</button><button class="btn" data-shift="${esc(g)}" data-d="1">+1</button></span>` : ''}
+      <button class="btn" data-share="${esc(g)}">Poslat</button><button class="btn danger" data-delg="${esc(g)}">Smazat</button></div></div>
       ${roundSummary(items, prog)}<div class="cards">${items.slice().reverse().map(x => card(x.o, x.a, x.st)).join('')}</div></div>`;
   }
   $('list').innerHTML = html;
 }
 $('list').onclick = async e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.share != null) { shareGroups([b.dataset.share]); return; }
+  if (b.dataset.delg != null) { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu smazat?'; setTimeout(() => { delete b.dataset.sure; b.textContent = 'Smazat'; }, 4000); return; }
+    for (const o of GROUPS[b.dataset.delg].list) await DB.del(o.key); await demoSync(); render(); zMsg('Položka smazána z aplikace.'); return; }
   if (b.dataset.shift != null) { const offs = LS.get('offs', {}); offs[b.dataset.shift] = (offs[b.dataset.shift] || 0) + (+b.dataset.d); LS.set('offs', offs); render(); return; }
   const h = b.closest('.hit'); if (!h) return;
   const all = await DB.all(), o = all.find(x => x.key === h.dataset.key); if (!o) return;
   const i = +h.dataset.i, v = b.classList.contains('y'); o.hits[i] = o.hits[i] === v ? null : v; await DB.put(o);
   h.querySelector('.y').setAttribute('aria-pressed', o.hits[i] === true); h.querySelector('.n').setAttribute('aria-pressed', o.hits[i] === false);
 };
+
+/* ---------- poslat / načíst / smazat ---------- */
+let GROUPS = {};
+const b64e = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const b64d = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+function souhrn(gs) {
+  return gs.map(g => { const G = GROUPS[g]; return G.nazev + '\n' + G.items.map(x => {
+    const h = x.o.hits.map(v => v === true ? '✓' : v === false ? '✗' : '–').join(' ');
+    const kde = x.st ? `St. ${x.st.st} ${x.st.t}` : DRUH[x.a.druh];
+    return `  ${kde}: ${x.a.v.t} (${x.a.num.v} ${x.a.num.l})${h ? '  ' + h : ''}`; }).join('\n'); }).join('\n\n');
+}
+async function shareGroups(gs) {
+  gs = gs.filter(g => GROUPS[g]); if (!gs.length) { zMsg('Není co poslat.'); return; }
+  const recs = gs.flatMap(g => GROUPS[g].list).map(o => ({ ...o, bytes: b64e(o.bytes instanceof Uint8Array ? o.bytes : new Uint8Array(o.bytes)) }));
+  const json = JSON.stringify({ format: 'skeet-zaznam', verze: 1, vytvoreno: new Date().toISOString(), zaznamy: recs });
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  const name = `skeet-zaznam-${gs.length === 1 ? 'polozka-' + gs[0] + '-' : ''}${stamp}.json`;
+  const text = 'Skeet záznam\n\n' + souhrn(gs) + '\n\nPřiložený soubor otevřete v aplikaci Skeet záznam tlačítkem „Načíst ze souboru“.';
+  const file = new File([json], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Skeet záznam', text }); zMsg('Odesláno.'); return; }
+  } catch (e) { if (e.name === 'AbortError') return; log('! sdílení: ' + e.message); }
+  // náhrada: stáhnout soubor + souhrn do schránky
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+  try { await navigator.clipboard.writeText(text); zMsg(`Soubor ${name} je stažený a souhrn ve schránce – vložte ho do e-mailu a soubor přiložte.`); }
+  catch (e) { zMsg(`Soubor ${name} je stažený – přiložte ho k e-mailu.`); }
+}
+$('shareAll').onclick = () => shareGroups(Object.keys(GROUPS));
+$('clearAll').onclick = async e => { const b = e.currentTarget;
+  if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Opravdu smazat vše?'; setTimeout(() => { delete b.dataset.sure; b.textContent = 'Smazat v aplikaci'; }, 4000); return; }
+  delete b.dataset.sure; b.textContent = 'Smazat v aplikaci';
+  for (const o of await DB.all()) await DB.del(o.key); await demoSync(); render(); zMsg('Všechny záznamy v aplikaci smazány (ve spoušti zůstaly, pokud jste je tam nesmazal).'); };
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => { const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (d.format !== 'skeet-zaznam') throw new Error('to není soubor Skeet záznamu');
+    let n = 0; for (const r of d.zaznamy) { await DB.put({ ...r, bytes: b64d(r.bytes), hits: r.hits || [] }); n++; }
+    await demoSync(); render(); zMsg(`Načteno ${n} záznamů ze souboru.`); }
+  catch (err) { zMsg('Soubor nejde načíst: ' + err.message); }
+  e.target.value = ''; };
 
 DB.open().then(() => { demoSync(); render(); });
 showConn();
