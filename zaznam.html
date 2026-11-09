@@ -204,6 +204,15 @@ fieldset:disabled{opacity:.5}
           <div class="inl"><input type="text" id="jmeno" maxlength="20" placeholder="např. Zoli" style="flex:1;min-width:0"></div>
           <span class="hint">Podle jména rozeznáte spouště v Bluefy i v Questu. Platí po restartu spouště. Jen písmena bez háčků a číslice.</span>
           <button class="btn" id="jmenoBtn">Uložit jméno a restartovat</button><span class="msg" id="jmenoMsg"></span></div>
+        <div class="row"><label for="klavesa">Co spoušť pošle při výstřelu</label>
+          <select id="klavesa">
+            <option value="f">F – Skeet simulátor (výchozí)</option><option value="mezernik">Mezerník</option><option value="enter">Enter</option>
+            <option value="mys">Levé tlačítko myši</option><option value="mys2">Pravé tlačítko myši</option>
+            <option value="hlasitost+">Hlasitost + (spoušť fotoaparátu v telefonu)</option><option value="hlasitost-">Hlasitost −</option>
+            <option value="a">Písmeno A</option><option value="b">Písmeno B</option><option value="c">Písmeno C</option><option value="d">Písmeno D</option><option value="e">Písmeno E</option><option value="g">Písmeno G</option><option value="h">Písmeno H</option><option value="i">Písmeno I</option><option value="j">Písmeno J</option><option value="k">Písmeno K</option><option value="l">Písmeno L</option><option value="m">Písmeno M</option><option value="n">Písmeno N</option><option value="o">Písmeno O</option><option value="p">Písmeno P</option><option value="q">Písmeno Q</option><option value="r">Písmeno R</option><option value="s">Písmeno S</option><option value="t">Písmeno T</option><option value="u">Písmeno U</option><option value="v">Písmeno V</option><option value="w">Písmeno W</option><option value="x">Písmeno X</option><option value="y">Písmeno Y</option><option value="z">Písmeno Z</option>
+            <option value="f1">F1</option><option value="f2">F2</option><option value="f3">F3</option><option value="f4">F4</option><option value="f5">F5</option><option value="f6">F6</option><option value="f7">F7</option><option value="f8">F8</option><option value="f9">F9</option><option value="f10">F10</option><option value="f11">F11</option><option value="f12">F12</option>
+          </select>
+          <span class="hint">Pro jiné hry a programy, které reagují na klávesnici nebo myš (prohlížeč, PC). Hry v Questu, které čtou jen spoušť ovladače, na to nereagují. Skeet simulátor potřebuje F. Uloží se hned.</span><span class="msg" id="klMsg"></span></div>
       </div>
       <div class="card fs">
         <h2>Předvolby</h2>
@@ -576,15 +585,23 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
-async function connect() {
+function chybaText(e) {
+  const m = (e && (e.name + ' ' + e.message)) || String(e);
+  if (/NotFound.*(service|UUID)|No Services|getPrimaryService/i.test(m)) return 'Spoušť nemá nový firmware s aplikací (krok 8). Nahrajte do ní SkeetTrigger.ino.';
+  if (/Network|GATT|disconnect|connect/i.test(m)) return 'Spojení se nepodařilo. Spoušť je možná obsazená: v iPhonu Nastavení → Bluetooth → „Skeet…“ → ⓘ → Odstranit toto zařízení. Pak spoušť vypněte a zapněte a zkuste to znovu.';
+  if (/spoušť neodpovídá/i.test(m)) return 'Spoušť se připojila, ale neodpovídá. Vypněte ji a zapněte a zkuste znovu.';
+  return 'Nepodařilo se připojit: ' + m;
+}
+async function connect(vse) {
   if (connected()) { dev.gatt.disconnect(); return; }
   if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
   try {
-    connMsg('Vyberte „Skeet Trigger“…');
-    dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
+    connMsg(vse ? 'Vyberte spoušť ze seznamu všech zařízení…' : 'Vyberte „Skeet …“…');
+    dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
     dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); });
     connMsg('Připojuji…');
-    const srv = await dev.gatt.connect(), s = await srv.getPrimaryService(NUS);
+    let srv; try { srv = await dev.gatt.connect(); } catch (e1) { log('! 1. pokus: ' + e1.message); await new Promise(r => setTimeout(r, 800)); srv = await dev.gatt.connect(); }   // iOS občas napoprvé selže
+    const s = await srv.getPrimaryService(NUS);
     rx = await s.getCharacteristic(RXU); tx = await s.getCharacteristic(TXU);
     await tx.startNotifications();
     tx.addEventListener('characteristicvaluechanged', e => { inBuf += dec.decode(e.target.value, { stream: true });
@@ -594,7 +611,11 @@ async function connect() {
     await loadPv();
     showConn();
     if (LS.get('autoSync', true)) sync();
-  } catch (e) { log('! ' + e.message); rx = null; showConn(); if (!/cancel/i.test(e.message)) connMsg('Nepodařilo se připojit: ' + e.message); }
+  } catch (e) { log('! ' + e.name + ': ' + e.message); rx = null; showConn();
+    if (/cancel/i.test(e.message) || e.name === 'NotFoundError' && /cancel|chooser/i.test(e.message)) {
+      $('connTxt').innerHTML = '<b>Spoušť nevybrána.</b> Pokud v seznamu nebyla, <a href="#" id="vseLink">zkuste hledat všechna zařízení</a>.';
+      const a = $('vseLink'); if (a) a.onclick = ev => { ev.preventDefault(); connect(true); };
+    } else connMsg(chybaText(e)); }
 }
 let stav = null; const cfg = {};
 function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
@@ -607,6 +628,7 @@ function showConn() {
   const rez = ['jen VR spoušť', 'záznam', 'VR + záznam'][+stav.zaznam] || '?';
   const pr = (AN.PROGS[+stav.program] || {}).n || '';
   if (stav.jmeno && document.activeElement !== $('jmeno')) $('jmeno').value = stav.jmeno.replace(/_/g, ' ');
+  if (stav.klavesa && document.activeElement !== $('klavesa')) $('klavesa').value = stav.klavesa;
   $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
 
@@ -716,8 +738,10 @@ $('pvSave').onclick = async () => {
 $('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $('osa').value); render(); };
 
 /* ---------- tlačítka ---------- */
-$('connBtn').onclick = connect;
+$('connBtn').onclick = () => connect(false);
 $('blinkBtn').onclick = () => ask('blikni', ['OK', '?']).then(() => zMsg('Spoušť, na kterou jste připojen, teď 4 s bliká všemi LED.'));
+$('klavesa').onchange = async () => { try { const l = await ask('klavesa ' + $('klavesa').value, ['K ', '?', 'CHYBA']);
+  $('klMsg').textContent = l.startsWith('K ') ? 'Uloženo ve spoušti ✓' : l; } catch (e) { $('klMsg').textContent = 'Chyba: ' + e.message; } };
 $('jmenoBtn').onclick = async () => {
   const n = $('jmeno').value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^ -~]/g, '').replace(/\|/g, '').trim().slice(0, 20);
   $('jmeno').value = n;
