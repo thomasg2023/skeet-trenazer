@@ -112,6 +112,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <div class="seg"><button type="button" id="autoBtn" aria-pressed="false">Automat</button></div>
         <div class="seg" id="progSeg" aria-label="Program"><button type="button" data-p="volny">Volně</button><button type="button" data-p="skeet">Skeet 25</button><button type="button" data-p="lov">Lovecké kolo 20</button></div>
         <div class="seg"><button type="button" id="unlimBtn" aria-pressed="true">Neomezeně ran</button></div>
+        <div class="seg"><button type="button" id="throwSndBtn" aria-pressed="true">Zvuk vrhačky</button></div>
         <div class="seg" id="windSeg" aria-label="Vítr"><button type="button" data-w="0">Bez větru</button><button type="button" data-w="1">Slabý vítr</button><button type="button" data-w="2">Střední vítr</button></div>
         <div class="seg" id="speedSeg" aria-label="Rychlost"><button type="button" data-v="0.5">50 %</button><button type="button" data-v="0.75">75 %</button><button type="button" data-v="1">100 %</button></div>
       </div>
@@ -424,7 +425,7 @@ function sShot(){ const a=audio(); if(!a)return; const o=out(), t=a.currentTime;
   for(let i=0;i<n2;i++) d2[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*0.35))*0.25;
   const s2=a.createBufferSource(); s2.buffer=b2; const f2=a.createBiquadFilter(); f2.type='lowpass'; f2.frequency.value=900; s2.connect(f2).connect(o); s2.start(t+0.03);
 }
-const _sShotOld=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>noise(0.25,300,0.6,0.05), sClick=()=>noise(0.03,8000,0.2,0.004);
+const _sShotOld=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>{ if(throwSnd) noise(0.25,300,0.6,0.05); }, sClick=()=>noise(0.03,8000,0.2,0.004);
 
 /* ---------- Terče ---------- */
 const clayGeo=new THREE.CylinderGeometry(0.054,0.054,0.026,20), clayMat=mat(0xe8662a), clayRim=mat(0x1b1b1b);
@@ -460,6 +461,7 @@ const corrEuler=()=>new THREE.Euler(corr.pitch,corr.yaw,0,'YXZ');
 function fire(src){
   audio();
   if(st.mode==='N') st.shells=2;
+  if(st.mode==='N' && st.zAlign && src){ zAlignNow(src); return; }
   if(st.shells<=0){ if(st.unlim) st.shells=1; else {sClick(); say('Prázdná zbraň – nejdřív vypusťte terč (A / grip / mezerník)'); return;} }
   const barrel=st.mode==='N'?0:Math.min(1,st.shotN); st.shotN++; st.shells--; sShot();
   const a=ammoInfo(AMMO[gun.ammo]), rate=CHOKES[gun.ch[barrel]].rate;
@@ -516,6 +518,17 @@ function zSave(){
   applyCorr(); zClear();
   say(`Korekce uložena (${(corr.yaw*180/Math.PI).toFixed(1)}° / ${(corr.pitch*180/Math.PI).toFixed(1)}°) – vystřelte kontrolní ránu`);
 }
+// „OSA“: zamířit skutečnou puškou na černý bod a stisknout spoušť → simulátor dopočítá, kam ovladač vůči hlavni míří
+function zAlignNow(src){
+  st.zAlign=false; sClick();
+  const o=new V(); src.getWorldPosition(o); src.getWorldQuaternion(tmpQ);
+  const l=zBasis.c.clone().sub(o).normalize().applyQuaternion(tmpQ.clone().invert());
+  corr.pitch=Math.asin(Math.max(-1,Math.min(1,l.y))); corr.yaw=Math.atan2(-l.x,-l.z);
+  try{localStorage.setItem('skeet-corr',JSON.stringify(corr));}catch(e){}
+  applyCorr(); zClear(); drawHud();
+  say(`Osa srovnána (${(corr.yaw*180/Math.PI).toFixed(1)}° / ${(corr.pitch*180/Math.PI).toFixed(1)}°) – teď 3–5 ran a ULOŽIT`);
+}
+function zAlignArm(){ if(!st.inXR){ say('Srovnání osy jde jen ve VR'); return; } st.zAlign=true; drawHud(); say('Zamiřte puškou na černý bod a stiskněte spoušť'); }
 function zReset(){ corr.yaw=0; corr.pitch=0; try{localStorage.removeItem('skeet-corr');}catch(e){} applyCorr(); zClear(); say('Korekce vynulována'); }
 zDrawBase();
 
@@ -649,6 +662,17 @@ function panelTick(){ let hov=-1, hh=-1, pt=null;
 function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud(); if(typeof drawPanel==='function'&&panel.visible) drawPanel();}
 const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice',N:'Nástřel'};
 let hBtns=[], hHover=-1;
+// zvuk vrhačky (při vypnutí střelec nereaguje na zvuk, jen na terč)
+let throwSnd=true; try{ throwSnd=localStorage.getItem('skeet-throwsnd')!=='0'; }catch(e){}
+function toggleThrowSnd(){ throwSnd=!throwSnd; try{localStorage.setItem('skeet-throwsnd',throwSnd?'1':'0');}catch(e){} say(throwSnd?'Zvuk vrhačky zapnut':'Zvuk vrhačky vypnut'); drawHud(); }
+function drawSpeaker(x,X,Y,w,h,on,hover){
+  x.fillStyle=hover?'#3c5a4a':(on?'#24362c':'#5a2a24'); x.fillRect(X,Y,w,h);
+  const cx=X+w*0.38, cy=Y+h/2, s=h*0.22;
+  x.fillStyle='#fff'; x.beginPath(); x.moveTo(cx-s*1.3,cy-s*0.6); x.lineTo(cx-s*0.4,cy-s*0.6); x.lineTo(cx+s*0.6,cy-s*1.4); x.lineTo(cx+s*0.6,cy+s*1.4); x.lineTo(cx-s*0.4,cy+s*0.6); x.lineTo(cx-s*1.3,cy+s*0.6); x.closePath(); x.fill();
+  x.strokeStyle='#fff'; x.lineWidth=5; x.lineCap='round';
+  if(on){ [1,1.7].forEach(k=>{ x.beginPath(); x.arc(cx+s*0.7,cy,s*k,-0.8,0.8); x.stroke(); }); }
+  else { x.strokeStyle='#ff6a4d'; x.lineWidth=9; x.beginPath(); x.moveTo(X+10,Y+h-10); x.lineTo(X+w-10,Y+10); x.stroke(); }
+}
 let spoustTep=-1e9, spoustBat=null;
 const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
@@ -663,16 +687,21 @@ function drawHud(){
   x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(spoustOK()?'● SPOUŠŤ'+batTxt():'○ SPOUŠŤ',W-30,122); x.textAlign='left';
   // hláška – zkrácená a zmenšená, aby se vždy vešla
   let m=st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za');
-  let fs=60; x.font=`700 ${fs}px Barlow Condensed, Arial`; while(x.measureText(m).width>W-72&&fs>30){fs-=4; x.font=`700 ${fs}px Barlow Condensed, Arial`;}
-  if(x.measureText(m).width>W-72){ while(m.length>4&&x.measureText(m+'…').width>W-72) m=m.slice(0,-1); m+='…'; }
+  const MW=W-72-170;   // vpravo je tlačítko reproduktoru
+  let fs=60; x.font=`700 ${fs}px Barlow Condensed, Arial`; while(x.measureText(m).width>MW&&fs>30){fs-=4; x.font=`700 ${fs}px Barlow Condensed, Arial`;}
+  if(x.measureText(m).width>MW){ while(m.length>4&&x.measureText(m+'…').width>MW) m=m.slice(0,-1); m+='…'; }
   x.fillStyle=st.lastMsg.startsWith('Zásah')?'#7fe0a0':(st.lastMsg.startsWith('Vedle')?'#ffb08a':'#ffffff'); x.fillText(m,36,230);
   // tlačítka: přepnutí druhu terče
   hBtns=[]; const lab=[['H','V'],['L','N'],['D','D'],['N','NÁSTŘEL']], bw=[140,140,140,250];
   let bx=36; lab.forEach(([k,t],i)=>{ hBtns.push({x:bx,y:300,w:bw[i],h:110,act:()=>setMode(k)}); 
     x.fillStyle=st.mode===k?'#e8662a':(i===hHover?'#3c5a4a':'#24362c'); x.fillRect(bx,300,bw[i],110);
     x.fillStyle='#fff'; fitFont(x,t,bw[i]-20,64); x.textAlign='center'; x.fillText(t,bx+bw[i]/2,378); x.textAlign='left'; bx+=bw[i]+20; });
-  hBtns.push({x:bx,y:300,w:W-36-bx,h:110,act:()=>callPull()});
-  x.fillStyle=(hHover===4)?'#3c5a4a':'#2f7d4a'; x.fillRect(bx,300,W-36-bx,110); x.fillStyle='#fff'; fitFont(x,'PULL',W-56-bx,64); x.textAlign='center'; x.fillText('PULL',bx+(W-36-bx)/2,378); x.textAlign='left';
+  const lastT=st.mode==='N'?(st.zAlign?'MIŘTE…':'OSA'):'PULL';
+  hBtns.push({x:bx,y:300,w:W-36-bx,h:110,act:()=>st.mode==='N'?zAlignArm():callPull()});
+  x.fillStyle=(hHover===4)?'#3c5a4a':(st.zAlign?'#e8662a':'#2f7d4a'); x.fillRect(bx,300,W-36-bx,110); x.fillStyle='#fff'; fitFont(x,lastT,W-56-bx,64); x.textAlign='center'; x.fillText(lastT,bx+(W-36-bx)/2,378); x.textAlign='left';
+  // reproduktor – zvuk vrhačky zapnout / vypnout (přeškrtnutý = vypnuto)
+  hBtns.push({x:W-36-140,y:150,w:140,h:110,act:()=>toggleThrowSnd()});
+  drawSpeaker(x,W-36-140,150,140,110,throwSnd,hHover===5);
   hudTex.needsUpdate=true;
 }
 function totals(){let h=0,n=0;st.stats.forEach(s=>['H','L','D'].forEach(k=>{h+=s[k][0];n+=s[k][1];}));return `${h}/${n}`;}
@@ -848,7 +877,7 @@ $('panoYaw').oninput=e=>{PANO.yaw=+e.target.value; panoBuild(); panoSave();};
 $('panoFov').oninput=e=>{PANO.fov=+e.target.value; panoBuild(); panoSave();};
 $('autoBtn').onclick=()=>{audio(); setAuto(!st.auto);};
 $('progSeg').onclick=e=>{const b=e.target.closest('button'); if(b){audio(); setProg(b.dataset.p);}};
-$('unlimBtn').onclick=()=>setUnlim(!st.unlim); $('unlimBtn').setAttribute('aria-pressed',st.unlim); syncProg();
+$('unlimBtn').onclick=()=>setUnlim(!st.unlim); $('throwSndBtn').onclick=()=>{toggleThrowSnd(); $('throwSndBtn').setAttribute('aria-pressed',throwSnd);}; $('throwSndBtn').setAttribute('aria-pressed',throwSnd); $('unlimBtn').setAttribute('aria-pressed',st.unlim); syncProg();
 $('zeroSave').onclick=()=>zSave(); $('zeroReset').onclick=()=>zReset(); applyCorr();
 function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${o.n}</option>`).join('');}
 fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo);
