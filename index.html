@@ -140,10 +140,13 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
     </section>
 
     <section class="panel">
-      <h2>Zbraň a náboj <span id="gunDisc" style="color:var(--muted);font-size:.8em"></span></h2>
+      <h2>Zbraň a náboj</h2>
+      <div class="seg" id="gunSeg" aria-label="Zbraň" style="margin-bottom:10px"><button type="button" data-g="skeet">Skeet</button><button type="button" data-g="trap">Trap</button></div>
+      <div class="field"><label for="gunName">Název zbraně</label><input type="text" id="gunName" maxlength="40" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
+      <div class="field"><label for="gunPopis">Popis</label><input type="text" id="gunPopis" maxlength="120" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
       <div class="field"><label for="ch1">Čok 1. rána (spodní hlaveň)</label><select id="ch1"></select></div>
       <div class="field"><label for="ch2">Čok 2. rána (horní hlaveň)</label><select id="ch2"></select></div>
-      <div class="field"><label for="ammo">Náboj</label><select id="ammo"></select></div>
+      <div class="field"><label for="ammo">Náboj</label><select id="ammo"></select><span class="small" id="ammoDesc" style="margin:2px 0 0"></span></div>
       <div class="field"><label for="poi">Kam zbraň bije</label><select id="poi"><option value="50">50/50 – do bodu míření (skeet)</option><option value="60">60/40 – mírně výš (trap)</option><option value="70">70/30 – výš (trap)</option><option value="80">80/20 – hodně výš</option></select></div>
       <div class="field"><label for="odpad">Odpad broků (zdeformované) <output id="odpadO"></output></label><input type="range" id="odpad" min="0" max="10" step="0.5" style="width:100%"></div>
       <div class="tablewrap">
@@ -152,7 +155,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
           <tbody id="patBody"></tbody>
         </table>
       </div>
-      <p class="small">Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Pro skeet a trap se pamatuje zvlášť.</p>
+      <p class="small">Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Skeet a trap mají každý svou zbraň a náboje; ve hře se použije ta podle zvolené disciplíny.</p>
     </section>
 
     <section class="panel">
@@ -285,11 +288,11 @@ const PH={
  '70/30 – výš (trap)':['70/30 – high (trap)','70/30 – hoch (Trap)','70/30 – alto (foso)','70/30 – alto (fossa)'],
  '80/20 – hodně výš':['80/20 – very high','80/20 – sehr hoch','80/20 – muy alto','80/20 – molto alto'],
  'Odpad broků (zdeformované)':['Deformed pellets (flyers)','Deformierte Schrote (Ausreißer)','Perdigones deformados','Pallini deformati'],
- 'Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Pro skeet a trap se pamatuje zvlášť.':[
-  'Pattern diameter (75 % of pellets) and the average number of pellets hitting the clay with perfect aim. Every shot is simulated pellet by pellet, so a clay can slip through a hole in the pattern. Deformed = pellets squashed in the bore (cheaper soft shot without antimony): they fly wider and slower. Skeet and trap are stored separately.',
-  'Garbendurchmesser (75 % der Schrote) und mittlere Zahl der Treffer auf der Taube bei genauem Zielen. Jeder Schuss wird Schrot für Schrot berechnet, die Taube kann also durch ein Loch in der Garbe fliegen. Deformiert = im Lauf verformte Schrote (billigere weiche Schrote ohne Antimon): streuen weiter und sind langsamer. Skeet und Trap werden getrennt gespeichert.',
-  'Diámetro del plomeo (75 % de perdigones) y número medio de perdigones que tocan el plato apuntando bien. Cada disparo se calcula perdigón a perdigón, así que el plato puede pasar por un hueco del plomeo. Deformados = perdigones aplastados en el cañón (perdigón blando y barato sin antimonio): se abren más y van más lentos. Skeet y foso se guardan por separado.',
-  'Diametro della rosata (75 % dei pallini) e numero medio di pallini sul piattello mirando bene. Ogni colpo è calcolato pallino per pallino, quindi il piattello può passare in un buco della rosata. Deformati = pallini schiacciati in canna (pallini morbidi economici senza antimonio): si aprono di più e sono più lenti. Skeet e fossa sono salvati separatamente.'],
+ 'Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Skeet a trap mají každý svou zbraň a náboje; ve hře se použije ta podle zvolené disciplíny.':[
+  'Pattern diameter (75 % of pellets) and the average number of pellets hitting the clay with perfect aim. Every shot is simulated pellet by pellet, so a clay can slip through a hole in the pattern. Deformed = pellets squashed in the bore (cheaper soft shot without antimony): they fly wider and slower. Skeet and trap each have their own gun and cartridges; the game uses the one for the chosen discipline.',
+  'Garbendurchmesser (75 % der Schrote) und mittlere Zahl der Treffer auf der Taube bei genauem Zielen. Jeder Schuss wird Schrot für Schrot berechnet, die Taube kann also durch ein Loch in der Garbe fliegen. Deformiert = im Lauf verformte Schrote (billigere weiche Schrote ohne Antimon): streuen weiter und sind langsamer. Skeet und Trap haben je eigene Flinte und Patronen; im Spiel gilt die der gewählten Disziplin.',
+  'Diámetro del plomeo (75 % de perdigones) y número medio de perdigones que tocan el plato apuntando bien. Cada disparo se calcula perdigón a perdigón, así que el plato puede pasar por un hueco del plomeo. Deformados = perdigones aplastados en el cañón (perdigón blando y barato sin antimonio): se abren más y van más lentos. Skeet y foso tienen cada uno su escopeta y cartuchos; el juego usa los de la disciplina elegida.',
+  'Diametro della rosata (75 % dei pallini) e numero medio di pallini sul piattello mirando bene. Ogni colpo è calcolato pallino per pallino, quindi il piattello può passare in un buco della rosata. Deformati = pallini schiacciati in canna (pallini morbidi economici senza antimonio): si aprono di più e sono più lenti. Skeet e fossa hanno ciascuno fucile e cartucce propri; il gioco usa quelli della disciplina scelta.'],
  'Chyba předstihu':['Lead error','Vorhaltfehler','Error de adelanto','Errore d\'anticipo'],
  'Chyba předstihu = průměr u minutých terčů.':['Lead error = average over missed clays.','Vorhaltfehler = Mittel der verfehlten Tauben.','Error de adelanto = media de los platos fallados.','Errore d\'anticipo = media sui piattelli mancati.'],
  'Za terčem':['Behind','Hinter der Taube','Detrás','Dietro'],
@@ -361,6 +364,15 @@ const PH={
  'Vysoká':['High','Hochhaus','Alta','Alto'],'Nízká':['Low','Niederhaus','Baja','Basso'],'Dvojice':['Doubles','Dublette','Doblete','Doppietto'],'Nástřel':['Patterning','Anschießen','Patronaje','Rosata'],
  'Trap · ':['Trap · ','Trap · ','Foso · ','Fossa · '],'Trap 25':['Trap 25','Trap 25','Foso 25','Fossa 25'],
  'Automatický':['Automatic','Automatisch','Automático','Automatico'],'Americký':['American','Amerikanisch','Americano','Americano'],'Olympijský':['Olympic','Olympisch','Olímpico','Olimpico'],'Univerzální':['Universal','Universal','Universal','Universale'],
+ 'Název zbraně':['Gun name','Name der Flinte','Nombre de la escopeta','Nome del fucile'],'Popis':['Description','Beschreibung','Descripción','Descrizione'],
+ 'Skeetový náboj, drobné broky pro blízké terče. Měkčí olovo – odpad asi 2 %.':['Skeet load, small shot for close clays. Softer lead – about 2 % deformed.','Skeet-Patrone, feine Schrote für nahe Tauben. Weicheres Blei – etwa 2 % deformiert.','Cartucho de skeet, perdigón fino para platos cercanos. Plomo más blando – unos 2 % deformados.','Cartuccia da skeet, pallini piccoli per piattelli vicini. Piombo più morbido – circa 2 % deformati.'],
+ 'Běžný skeetový náboj, o kousek větší broky – víc energie na delší terče.':['Standard skeet load, slightly larger shot – more energy for longer clays.','Übliche Skeet-Patrone, etwas größere Schrote – mehr Energie für weitere Tauben.','Cartucho de skeet habitual, perdigón algo mayor – más energía a más distancia.','Cartuccia da skeet comune, pallini un po\' più grandi – più energia sui piattelli lontani.'],
+ 'Těžší lovecká navážka, víc broků, pomalejší, větší zpětný ráz.':['Heavier hunting load, more pellets, slower, more recoil.','Schwerere Jagdladung, mehr Schrote, langsamer, mehr Rückstoß.','Carga de caza más pesada, más perdigones, más lenta, más retroceso.','Carica da caccia più pesante, più pallini, più lenta, più rinculo.'],
+ 'Ocelové broky (kde je olovo zakázané): lehčí, rychleji ztrácí energii, nedeformují se.':['Steel shot (where lead is banned): lighter, loses energy faster, does not deform.','Stahlschrot (wo Blei verboten ist): leichter, verliert schneller Energie, verformt sich nicht.','Perdigón de acero (donde el plomo está prohibido): más ligero, pierde energía antes, no se deforma.','Pallini d\'acciaio (dove il piombo è vietato): più leggeri, perdono energia prima, non si deformano.'],
+ 'Levnější trapový náboj. Měkčí broky – občas létavec, odpad asi 2 %. Rychlost odhadem 400 m/s.':['Cheaper trap load. Softer shot – the odd flyer, about 2 % deformed. Speed estimated 400 m/s.','Günstigere Trap-Patrone. Weichere Schrote – ab und zu ein Ausreißer, etwa 2 % deformiert. Geschwindigkeit geschätzt 400 m/s.','Cartucho de foso más económico. Perdigón más blando – algún perdigón suelto, unos 2 % deformados. Velocidad estimada 400 m/s.','Cartuccia da fossa più economica. Pallini più morbidi – qualche pallino fuori, circa 2 % deformati. Velocità stimata 400 m/s.'],
+ 'Tvrdší broky s antimonem – rovnoměrný obrazec, odpad asi 1 %. 420 m/s podle katalogu.':['Harder antimony shot – even pattern, about 1 % deformed. 420 m/s per catalogue.','Härtere Schrote mit Antimon – gleichmäßige Garbe, etwa 1 % deformiert. 420 m/s laut Katalog.','Perdigón más duro con antimonio – plomeo uniforme, unos 1 % deformados. 420 m/s según catálogo.','Pallini più duri all\'antimonio – rosata uniforme, circa 1 % deformati. 420 m/s da catalogo.'],
+ 'Italský závodní trapový náboj, tvrdé broky – odpad asi 1 %. Rychlost odhadem 400 m/s.':['Italian competition trap load, hard shot – about 1 % deformed. Speed estimated 400 m/s.','Italienische Wettkampf-Trap-Patrone, harte Schrote – etwa 1 % deformiert. Geschwindigkeit geschätzt 400 m/s.','Cartucho italiano de competición, perdigón duro – unos 1 % deformados. Velocidad estimada 400 m/s.','Cartuccia italiana da gara per fossa, pallini duri – circa 1 % deformati. Velocità stimata 400 m/s.'],
+ 'Ocelové broky na trap: nedeformují se, ale na 35 m mají méně energie než olovo.':['Steel shot for trap: no deformation, but less energy than lead at 35 m.','Stahlschrot für Trap: verformt sich nicht, hat aber auf 35 m weniger Energie als Blei.','Acero para foso: no se deforma, pero a 35 m tiene menos energía que el plomo.','Acciaio per fossa: non si deforma, ma a 35 m ha meno energia del piombo.'],
  'Lovecké kolo':['Sporting round','Jagdrunde','Ronda de caza','Giro di caccia'],
 };
 let LANG='cs'; try{ const l=localStorage.getItem('skeet-lang'); if(LANGS.some(x=>x[0]===l)) LANG=l; }catch(e){}
@@ -377,6 +389,7 @@ function trStatic(root){ const w=document.createTreeWalker(root,NodeFilter.SHOW_
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const V=THREE.Vector3;
 
 /* ---------- Geometrie skeetové střelnice (metry) ---------- */
@@ -403,25 +416,26 @@ const CHOKES={SK2:{n:'SK2 · skeet 2 (otevřenější než válec)',rate:0.058},
 /* náboje: hmotnost [g], průměr broku [mm], hustota [g/cm3], úsťová rychlost [m/s],
    odpad = podíl broků zdeformovaných ve vývrtu a čoku (létavci: širší rozptyl, pomalejší, zaostávají) – odhad, jde upravit */
 const AMMO={
-  pb24_95:{n:'Olovo 24 g · č. 9½ (≈1,9 mm), např. Fiocchi',g:24,dmm:1.9,rho:11.35,v0:390,odpad:0.02},
-  pb24_9:{n:'Olovo 24 g · č. 9 (≈2,0 mm)',g:24,dmm:2.0,rho:11.35,v0:390,odpad:0.015},
-  pb28_9:{n:'Olovo 28 g · č. 9 (≈2,0 mm)',g:28,dmm:2.0,rho:11.35,v0:375,odpad:0.015},
-  fi24_24:{n:'Fiocchi 24 g · 2,4 mm (č. 7½) – trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.02},
-  sb24_24:{n:'Sellier & Bellot Trap 24 g · 2,4 mm (zelené)',g:24,dmm:2.4,rho:11.35,v0:420,odpad:0.01},
-  bo24_24:{n:'Bornaghi 24 g · 2,4 mm – trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.01},
-  fe24_24:{n:'Ocel 24 g · 2,4 mm',g:24,dmm:2.4,rho:7.85,v0:430,steel:true,odpad:0},
-  fe24_22:{n:'Ocel 24 g · 2,2 mm',g:24,dmm:2.2,rho:7.85,v0:430,steel:true,odpad:0}};
+  pb24_95:{n:'Fiocchi 24 g · č. 9½ (1,9 mm)',disc:'skeet',g:24,dmm:1.9,rho:11.35,v0:390,odpad:0.02,d:'Skeetový náboj, drobné broky pro blízké terče. Měkčí olovo – odpad asi 2 %.'},
+  pb24_9:{n:'Olovo 24 g · č. 9 (2,0 mm)',disc:'skeet',g:24,dmm:2.0,rho:11.35,v0:390,odpad:0.015,d:'Běžný skeetový náboj, o kousek větší broky – víc energie na delší terče.'},
+  pb28_9:{n:'Olovo 28 g · č. 9 (2,0 mm)',disc:'skeet',g:28,dmm:2.0,rho:11.35,v0:375,odpad:0.015,d:'Těžší lovecká navážka, víc broků, pomalejší, větší zpětný ráz.'},
+  fe24_22:{n:'Ocel 24 g · 2,2 mm',disc:'skeet',g:24,dmm:2.2,rho:7.85,v0:430,steel:true,odpad:0,d:'Ocelové broky (kde je olovo zakázané): lehčí, rychleji ztrácí energii, nedeformují se.'},
+  fi24_24:{n:'Fiocchi 24 g · 2,4 mm (č. 7½)',disc:'trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.02,d:'Levnější trapový náboj. Měkčí broky – občas létavec, odpad asi 2 %. Rychlost odhadem 400 m/s.'},
+  sb24_24:{n:'Sellier & Bellot Trap 24 g · 2,4 mm (zelené)',disc:'trap',g:24,dmm:2.4,rho:11.35,v0:420,odpad:0.01,d:'Tvrdší broky s antimonem – rovnoměrný obrazec, odpad asi 1 %. 420 m/s podle katalogu.'},
+  bo24_24:{n:'Bornaghi 24 g · 2,4 mm',disc:'trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.01,d:'Italský závodní trapový náboj, tvrdé broky – odpad asi 1 %. Rychlost odhadem 400 m/s.'},
+  fe24_24:{n:'Ocel 24 g · 2,4 mm',disc:'trap',g:24,dmm:2.4,rho:7.85,v0:430,steel:true,odpad:0,d:'Ocelové broky na trap: nedeformují se, ale na 35 m mají méně energie než olovo.'}};
 /* kam zbraň bije: 50/50 = střed obrazce v bodě míření; 60/40, 70/30 = trapová zbraň bije výš (~7,5 cm na 36 m za každých 10 %) */
 const POI={50:0,60:0.0021,70:0.0042,80:0.0063};
 function ammoInfo(a){const r=a.dmm/2000, m=4/3*Math.PI*Math.pow(a.dmm/20,3)*a.rho/1000; // kg
   return {...a, mass:m, count:Math.round(a.g/1000/m), k:1.2*0.5*3/(8*r*a.rho*1000)};}
 const CLAY_AREA=0.0065, E_MIN=0.6;
 // zvlášť zbraň pro skeet a pro trap
-const GUNS={skeet:{ch:['SK2','CL'],ammo:'pb24_95',poi:50,odpad:null},trap:{ch:['M','IM'],ammo:'fi24_24',poi:60,odpad:null}};
+const GUNS={skeet:{name:'Zoli – skeet',popis:'12/70, hlaveň 71 cm, plochá lišta, skeetové čoky',ch:['SK2','CL'],ammo:'pb24_95',poi:50,odpad:null},
+            trap:{name:'Trapová brokovnice',popis:'12/70, hlaveň 76 cm, vyšší lišta, bije výš',ch:['M','IM'],ammo:'fi24_24',poi:60,odpad:null}};
 const GUN_KEY={skeet:'skeet-gun',trap:'skeet-gun-trap'};
-for(const d of ['skeet','trap']) try{const sv=JSON.parse(localStorage.getItem(GUN_KEY[d])||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo])Object.assign(GUNS[d],sv);}catch(e){}
+for(const d of ['skeet','trap']) try{const sv=JSON.parse(localStorage.getItem(GUN_KEY[d])||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo]&&AMMO[sv.ammo].disc===d)Object.assign(GUNS[d],sv);}catch(e){}
 let gun=GUNS.skeet;
-const odpadOf=()=>gun.odpad!=null?gun.odpad:(AMMO[gun.ammo].odpad||0);
+const odpadOf=(G=gun)=>G.odpad!=null?G.odpad:(AMMO[G.ammo].odpad||0);
 function patternR(rate,steel,d){return 0.009+(steel?rate*0.85:rate)*d/2;}
 function pelletV(a,d){return a.v0*Math.exp(-a.k*d);}
 function expPellets(a,rate,d,off){const R=patternR(rate,a.steel,d), sg=R/1.665;
@@ -622,10 +636,10 @@ const trapLabels=[];
   // oranžové značky skupin vrhaček na krytu (jen pro orientaci)
   for(let g=0;g<5;g++){ const m=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.02,0.12),mat(0xe8662a)); m.position.set((g-2)*3,0.31,TZ-0.25); G.add(m); }
 }
-function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d==='trap'; gun=GUNS[d]; if(typeof gunUi==='function') gunUi();
+function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d==='trap'; gun=GUNS[d]; st.gunEdit=d; if(typeof gunUi==='function') gunUi();
   SKEET_OBJS.forEach(o=>o.visible=!isTr); TRAP_GROUP.visible=isTr;
   st.mode=isTr?'T':'H'; st.station=isTr?2:3; clearField(); placeDolly(); buildSeg(); syncSeg(); renderScore();
-  if(typeof panel!=='undefined'&&panel.visible) drawPanel(); say(isTr?`Trap · ${trapKindTxt()}`:'Skeet'); }
+  if(typeof panel!=='undefined'&&panel.visible) drawPanel(); say((isTr?`Trap · ${trapKindTxt()}`:'Skeet')+' · '+gun.name); }
 const trapKindTxt=()=>tr(TRAP_KIND[st.trapKind].n)+(st.trapKind==='at'?` ${st.trapArc}°`:'');
 function trapSave(){ try{localStorage.setItem('skeet-trap',JSON.stringify({kind:st.trapKind,arc:st.trapArc}));}catch(e){} }
 function setTrapKind(k){ st.trapKind=k; trapSave(); clearField(); syncTrapUi(); say('Trap · '+trapKindTxt()); }
@@ -1017,7 +1031,7 @@ let spoustTep=-1e9, spoustBat=null;
 const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
   $('hudL').innerHTML=`<b>${tr('Stanoviště')} ${st.station+1}</b><br>${tr(MODE[st.mode])}`;
-  $('hudR').innerHTML=`${tr('Náboje')} ${shellsTxt()}<br>${tr('Spoušť')} ${spoustOK()?tr('● připojena')+batTxt():tr('○ nepřipojena')}`;
+  $('hudR').innerHTML=`${gun.name?esc(gun.name)+' · '+tr(AMMO[gun.ammo].n).split(' · ')[0]+'<br>':''}${tr('Náboje')} ${shellsTxt()}<br>${tr('Spoušť')} ${spoustOK()?tr('● připojena')+batTxt():tr('○ nepřipojena')}`;
   const x=hudCanvas.getContext('2d'), W=1024, H=448; x.clearRect(0,0,W,H);
   x.fillStyle='rgba(15,23,19,0.82)'; x.fillRect(0,0,W,H); x.fillStyle='#e8662a'; x.fillRect(0,0,12,H);
   const SH={H:tr('VYSOKÁ'),L:tr('NÍZKÁ'),D:tr('DVOJICE'),N:tr('NÁSTŘEL'),T:tr('TRAP')+' '+trapKindTxt().toUpperCase(),W:tr('DOUBLE TRAP')};
@@ -1234,20 +1248,29 @@ $('discSeg').onclick=e=>{const b=e.target.closest('button'); if(b){audio(); setD
 $('trapSeg').onclick=e=>{const b=e.target.closest('button[data-k]'); if(b) setTrapKind(b.dataset.k);};
 $('trapArc').onchange=e=>setTrapArc(+e.target.value);
 $('zeroSave').onclick=()=>zSave(); $('zeroReset').onclick=()=>zReset(); applyCorr();
-function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${tr(o.n)}</option>`).join('');}
-function gunUi(){ fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo); $('poi').value=gun.poi;
-  $('odpad').value=odpadOf()*100; $('odpadO').textContent=(odpadOf()*100).toFixed(1).replace('.',',')+' %'; $('gunDisc').textContent='· '+tr(st.disc==='trap'?'trap':'skeet'); renderPattern(); }
-function renderPattern(){const a=ammoInfo(AMMO[gun.ammo]);
-  $('patBody').innerHTML=[0,1].map(i=>{const rate=CHOKES[gun.ch[i]].rate;
-    return `<tr><td>${i+1}. ${gun.ch[i]}</td>`+[15,20,25,30].map(d=>{const v=pelletV(a,d),E=0.5*a.mass*v*v,n=E>=E_MIN?expPellets(a,rate,d,0):0;
-      return `<td>${(patternR(rate,a.steel,d)*200).toFixed(0)} cm · ${(n*(1-odpadOf())).toFixed(1)}</td>`;}).join('')+'</tr>';}).join('')
-    +`<tr><td>${tr('Broků')}</td><td colspan="4">${a.count}${tr(' ks · úsťová rychlost ')}${a.v0} m/s${tr(' · na 25 m ')}${Math.round(pelletV(a,25))} m/s${tr(' · odpad ')}${(odpadOf()*100).toFixed(1).replace('.',',')} %</td></tr>`;
-  try{localStorage.setItem(GUN_KEY[st.disc],JSON.stringify(gun));}catch(e){} drawHud();}
-$('ch1').onchange=e=>{gun.ch[0]=e.target.value;renderPattern();};
-$('ch2').onchange=e=>{gun.ch[1]=e.target.value;renderPattern();};
-$('ammo').onchange=e=>{gun.ammo=e.target.value; gun.odpad=null; gunUi();};
-$('poi').onchange=e=>{gun.poi=+e.target.value; renderPattern(); say('Zbraň bije '+gun.poi+'/'+(100-gun.poi));};
-$('odpad').oninput=e=>{gun.odpad=+e.target.value/100; $('odpadO').textContent=(+e.target.value).toFixed(1).replace('.',',')+' %'; renderPattern();};
+function fillSel(id,obj,val,flt){$(id).innerHTML=Object.entries(obj).filter(([k,o])=>!flt||flt(o)).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${tr(o.n)}</option>`).join('');}
+// karta zbraně: upravuje se profil zvolený nahoře (skeet / trap), ve hře se použije profil zvolené disciplíny
+st.gunEdit=st.disc; const GE=()=>GUNS[st.gunEdit];
+function gunUi(){ const G=GE(); document.querySelectorAll('#gunSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===st.gunEdit));
+  if(document.activeElement!==$('gunName')) $('gunName').value=G.name; if(document.activeElement!==$('gunPopis')) $('gunPopis').value=G.popis;
+  fillSel('ch1',CHOKES,G.ch[0]); fillSel('ch2',CHOKES,G.ch[1]); fillSel('ammo',AMMO,G.ammo,o=>o.disc===st.gunEdit); $('poi').value=G.poi;
+  $('ammoDesc').textContent=tr(AMMO[G.ammo].d||'');
+  $('odpad').value=odpadOf(G)*100; $('odpadO').textContent=(odpadOf(G)*100).toFixed(1).replace('.',',')+' %'; renderPattern(); }
+function gunSave(){ for(const d of ['skeet','trap']) try{localStorage.setItem(GUN_KEY[d],JSON.stringify(GUNS[d]));}catch(e){} }
+function renderPattern(){const G=GE(), a=ammoInfo(AMMO[G.ammo]);
+  $('patBody').innerHTML=[0,1].map(i=>{const rate=CHOKES[G.ch[i]].rate;
+    return `<tr><td>${i+1}. ${G.ch[i]}</td>`+[15,20,25,30].map(d=>{const v=pelletV(a,d),E=0.5*a.mass*v*v,n=E>=E_MIN?expPellets(a,rate,d,0):0;
+      return `<td>${(patternR(rate,a.steel,d)*200).toFixed(0)} cm · ${(n*(1-odpadOf(G))).toFixed(1)}</td>`;}).join('')+'</tr>';}).join('')
+    +`<tr><td>${tr('Broků')}</td><td colspan="4">${a.count}${tr(' ks · úsťová rychlost ')}${a.v0} m/s${tr(' · na 25 m ')}${Math.round(pelletV(a,25))} m/s${tr(' · odpad ')}${(odpadOf(G)*100).toFixed(1).replace('.',',')} %</td></tr>`;
+  gunSave(); drawHud();}
+$('gunSeg').onclick=e=>{const b=e.target.closest('button'); if(b){ st.gunEdit=b.dataset.g; gunUi(); }};
+$('gunName').oninput=e=>{GE().name=e.target.value; gunSave();};
+$('gunPopis').oninput=e=>{GE().popis=e.target.value; gunSave();};
+$('ch1').onchange=e=>{GE().ch[0]=e.target.value;renderPattern();};
+$('ch2').onchange=e=>{GE().ch[1]=e.target.value;renderPattern();};
+$('ammo').onchange=e=>{GE().ammo=e.target.value; GE().odpad=null; gunUi();};
+$('poi').onchange=e=>{GE().poi=+e.target.value; renderPattern();};
+$('odpad').oninput=e=>{GE().odpad=+e.target.value/100; $('odpadO').textContent=(+e.target.value).toFixed(1).replace('.',',')+' %'; renderPattern();};
 gunUi();
 $('bigBtn').onclick=()=>{st.big=!st.big; $('bigBtn').setAttribute('aria-pressed',st.big); st.targets.forEach(t=>applyBig(t.m)); say(st.big?'Zvýraznění zapnuto':'Zvýraznění vypnuto');};
 $('speedSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.speed=+b.dataset.v; syncSpeed(); say('Rychlost '+Math.round(st.speed*100)+' %');};
