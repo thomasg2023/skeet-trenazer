@@ -83,6 +83,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
+      <select id="langSel" aria-label="Jazyk / Language" style="font:600 14px var(--body);padding:6px 8px;border-radius:6px;margin-bottom:8px"><option value="cs">CZ · Čeština</option><option value="en">GB · English</option><option value="es">ES · Español</option><option value="it">IT · Italiano</option><option value="de">DE · Deutsch</option></select>
       <button class="vrbtn" id="vrBtn" type="button">Vstoupit do VR</button>
       <div class="vrnote" id="vrNote">Otevřete tuto stránku v prohlížeči v Questu.</div>
     </div>
@@ -139,17 +140,19 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
     </section>
 
     <section class="panel">
-      <h2>Zbraň a náboj</h2>
+      <h2>Zbraň a náboj <span id="gunDisc" style="color:var(--muted);font-size:.8em"></span></h2>
       <div class="field"><label for="ch1">Čok 1. rána (spodní hlaveň)</label><select id="ch1"></select></div>
       <div class="field"><label for="ch2">Čok 2. rána (horní hlaveň)</label><select id="ch2"></select></div>
       <div class="field"><label for="ammo">Náboj</label><select id="ammo"></select></div>
+      <div class="field"><label for="poi">Kam zbraň bije</label><select id="poi"><option value="50">50/50 – do bodu míření (skeet)</option><option value="60">60/40 – mírně výš (trap)</option><option value="70">70/30 – výš (trap)</option><option value="80">80/20 – hodně výš</option></select></div>
+      <div class="field"><label for="odpad">Odpad broků (zdeformované) <output id="odpadO"></output></label><input type="range" id="odpad" min="0" max="10" step="0.5" style="width:100%"></div>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Vzdálenost</th><th>15 m</th><th>20 m</th><th>25 m</th><th>30 m</th></tr></thead>
           <tbody id="patBody"></tbody>
         </table>
       </div>
-      <p class="small">Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. K rozbití jsou potřeba aspoň 2 broky s dostatečnou energií.</p>
+      <p class="small">Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Pro skeet a trap se pamatuje zvlášť.</p>
     </section>
 
     <section class="panel">
@@ -167,6 +170,209 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- Jazyky: čeština je zdroj, ostatní [en, de, es, it] ---------- */
+const LANGS=[['cs','CZ'],['en','GB'],['es','ES'],['it','IT'],['de','DE']];
+const LI={en:0,de:1,es:2,it:3};
+// EX = jen celý text (krátká slova), PH = i jako část delší hlášky
+const EX={
+ 'trenažér':['trainer','Trainer','simulador','simulatore'],
+ 'Vstoupit do VR':['Enter VR','VR starten','Entrar en RV','Entra in VR'],
+ 'Ukončit VR':['Exit VR','VR beenden','Salir de RV','Esci dalla VR'],
+ 'Ovládání':['Controls','Steuerung','Controles','Comandi'],
+ 'Automatický':['Automatic','Automatisch','Automático','Automatico'],
+ 'Americký':['American','Amerikanisch','Americano','Americano'],
+ 'Olympijský':['Olympic','Olympisch','Olímpico','Olimpico'],
+ 'Univerzální':['Universal','Universal','Universal','Universale'],
+ 'AUTOMATICKÝ':['AUTOMATIC','AUTOMATISCH','AUTOMÁTICO','AUTOMATICO'],
+ 'AMERICKÝ':['AMERICAN','AMERIKANISCH','AMERICANO','AMERICANO'],
+ 'OLYMPIJSKÝ':['OLYMPIC','OLYMPISCH','OLÍMPICO','OLIMPICO'],
+ 'UNIVERZÁLNÍ':['UNIVERSAL','UNIVERSAL','UNIVERSAL','UNIVERSALE'],
+ 'Automat':['Auto-pull','Automatik','Automático','Automatico'],
+ 'Volně':['Free','Frei','Libre','Libero'],
+ 'Laser':['Laser','Laser','Láser','Laser'],
+ 'Vysoká':['High','Hochhaus','Alta','Alto'],
+ 'Nízká':['Low','Niederhaus','Baja','Basso'],
+ 'Dvojice':['Doubles','Dublette','Doblete','Doppietto'],
+ 'Nástřel':['Patterning','Anschießen','Patronaje','Rosata'],
+ 'Terč':['Target','Taube','Plato','Piattello'],
+ 'VYSOKÁ':['HIGH','HOCHHAUS','ALTA','ALTO'],'NÍZKÁ':['LOW','NIEDERHAUS','BAJA','BASSO'],'DVOJICE':['DOUBLES','DUBLETTE','DOBLETE','DOPPIETTO'],
+ 'NÁSTŘEL':['PATTERN','ANSCHUSS','PATRÓN','ROSATA'],'TERČ':['TARGET','TAUBE','PLATO','PIATTELLO'],'DVOJ':['PAIR','DUBL.','DOBLE','DOPP.'],
+ 'MIŘTE…':['AIM…','ZIELEN…','APUNTE…','MIRA…'],'OSA':['AXIS','ACHSE','EJE','ASSE'],
+ 'Stan.':['Stn.','Stand','Pto.','Ped.'],'Celkem':['Total','Gesamt','Total','Totale'],
+ 'Výsledky':['Results','Ergebnisse','Resultados','Risultati'],
+ 'Náboj':['Cartridge','Patrone','Cartucho','Cartuccia'],
+ 'Vzdálenost':['Distance','Entfernung','Distancia','Distanza'],
+ 'Broků':['Pellets','Schrote','Perdigones','Pallini'],
+ 'před':['ahead','vorne','delante','avanti'],'za':['behind','hinten','detrás','dietro'],
+ 'Slabý':['Light','Schwach','Suave','Debole'],'Střední':['Medium','Mittel','Medio','Medio'],
+ 'skeet':['skeet','Skeet','skeet','skeet'],'trap':['trap','Trap','foso','fossa'],
+ 'OVLÁDÁNÍ':['CONTROLS','STEUERUNG','CONTROLES','COMANDI'],
+ 'UKONČIT VR':['EXIT VR','VR BEENDEN','SALIR RV','ESCI VR'],
+ 'AUTOMAT ZAP':['AUTO ON','AUTOMATIK AN','AUTO SÍ','AUTO ON'],'AUTOMAT VYP':['AUTO OFF','AUTOMATIK AUS','AUTO NO','AUTO OFF'],
+ 'NEOMEZENĚ ZAP':['UNLIMITED ON','UNBEGRENZT AN','ILIMITADO SÍ','ILLIMITATO ON'],'NEOMEZENĚ VYP':['UNLIMITED OFF','UNBEGRENZT AUS','ILIMITADO NO','ILLIMITATO OFF'],
+ 'Lovecké 20':['Sporting 20','Jagdrunde 20','Caza 20','Caccia 20'],'Double 25':['Double 25','Doppel 25','Doble 25','Doppio 25'],
+ 'Trap':['Trap','Trap','Foso','Fossa'],'TRAP':['TRAP','TRAP','FOSO','FOSSA'],
+ 'Double trap':['Double trap','Doppeltrap','Doble foso','Double trap'],'DOUBLE TRAP':['DOUBLE TRAP','DOPPELTRAP','DOBLE FOSO','DOUBLE TRAP'],
+};
+const PH={
+ 'Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.':[
+  'Olympic skeet in virtual reality for Meta Quest. Range dimensions per ISSF rules, stations 1–8, high and low house, doubles; trap with five stations too. After every shot you see where the pattern centre was relative to the clay.',
+  'Olympisches Skeet in virtueller Realität für Meta Quest. Stand nach ISSF-Regeln, Stände 1–8, Hoch- und Niederhaus, Dubletten; dazu Trap mit fünf Ständen. Nach jedem Schuss sehen Sie, wo die Garbenmitte zur Taube lag.',
+  'Skeet olímpico en realidad virtual para Meta Quest. Cancha según el reglamento ISSF, puestos 1–8, caseta alta y baja, dobletes; también foso con cinco puestos. Tras cada disparo verá dónde quedó el centro del plomeo respecto al plato.',
+  'Skeet olimpico in realtà virtuale per Meta Quest. Campo secondo il regolamento ISSF, pedane 1–8, casotto alto e basso, doppietti; anche fossa con cinque pedane. Dopo ogni colpo vedi dove era il centro della rosata rispetto al piattello.'],
+ 'Otevřete tuto stránku v prohlížeči v Questu.':['Open this page in the Quest browser.','Öffnen Sie diese Seite im Quest-Browser.','Abra esta página en el navegador de Quest.','Apri questa pagina nel browser del Quest.'],
+ 'Tento prohlížeč nepodporuje WebXR. Na počítači hrajte myší, ve VR otevřete stránku v Questu.':['This browser does not support WebXR. On a computer play with the mouse; for VR open the page in the Quest.','Dieser Browser unterstützt kein WebXR. Am Computer mit der Maus spielen, für VR die Seite im Quest öffnen.','Este navegador no admite WebXR. En el ordenador juegue con el ratón; para RV abra la página en Quest.','Questo browser non supporta WebXR. Sul computer gioca con il mouse; per la VR apri la pagina sul Quest.'],
+ 'VR tu není k dispozici. V Questu otevřete stránku v Meta Quest Browser.':['VR is not available here. In the Quest open the page in Meta Quest Browser.','VR ist hier nicht verfügbar. Im Quest die Seite im Meta Quest Browser öffnen.','La RV no está disponible aquí. En Quest abra la página en Meta Quest Browser.','La VR non è disponibile qui. Sul Quest apri la pagina in Meta Quest Browser.'],
+ 'Připraveno. Postavte se do volného prostoru.':['Ready. Stand in a clear space.','Bereit. Stellen Sie sich in einen freien Bereich.','Listo. Colóquese en un espacio libre.','Pronto. Mettiti in uno spazio libero.'],
+ 'VR se nespustilo':['VR did not start','VR ist nicht gestartet','La RV no se inició','La VR non è partita'],
+ 'Zkuste stránku otevřít přímo v Meta Quest Browser.':['Try opening the page directly in Meta Quest Browser.','Öffnen Sie die Seite direkt im Meta Quest Browser.','Pruebe a abrir la página directamente en Meta Quest Browser.','Prova ad aprire la pagina direttamente in Meta Quest Browser.'],
+ 'Výstřelů z desky:':['Shots from trigger:','Schüsse vom Abzug:','Disparos del gatillo:','Colpi dal grilletto:'],
+ 'Poslední klávesa:':['Last key:','Letzte Taste:','Última tecla:','Ultimo tasto:'],
+ 'Mezerník = terč, klik = výstřel':['Space = target, click = shot','Leertaste = Taube, Klick = Schuss','Espacio = plato, clic = disparo','Spazio = piattello, clic = sparo'],
+ 'Klikněte pro zaměřování myší':['Click to aim with the mouse','Klicken, um mit der Maus zu zielen','Haga clic para apuntar con el ratón','Clicca per mirare con il mouse'],
+ 'Úhel vrhačky':['Trap machine angle','Winkel der Wurfmaschine','Ángulo de la máquina','Angolo della macchina'],
+ 'Terč (Pull)':['Target (Pull)','Taube (Pull)','Plato (Pull)','Piattello (Pull)'],
+ 'Uložit korekci':['Save correction','Korrektur speichern','Guardar corrección','Salva correzione'],
+ 'Vynulovat korekci':['Reset correction','Korrektur zurücksetzen','Borrar corrección','Azzera correzione'],
+ 'Zvýraznit terč':['Highlight target','Taube hervorheben','Resaltar plato','Evidenzia piattello'],
+ 'Krajina: Mělník foto':['Landscape: Mělník photo','Landschaft: Foto Mělník','Paisaje: foto Mělník','Paesaggio: foto Mělník'],
+ 'Krajina: vymyšlená':['Landscape: generated','Landschaft: erzeugt','Paisaje: generado','Paesaggio: generato'],
+ 'Natočení fotky':['Photo rotation','Fotodrehung','Giro de la foto','Rotazione foto'],
+ 'Šířka záběru':['Field of view','Bildbreite','Ancho de vista','Ampiezza'],
+ 'Lovecké kolo 20':['Sporting round 20','Jagdrunde 20','Ronda de caza 20','Giro di caccia 20'],
+ 'Double trap 25':['Double trap 25','Doppeltrap 25','Doble foso 25','Double trap 25'],
+ 'Neomezeně ran':['Unlimited shots','Unbegrenzte Schüsse','Disparos ilimitados','Colpi illimitati'],
+ 'Zvuk vrhačky':['Trap machine sound','Wurfmaschinengeräusch','Sonido de la máquina','Suono della macchina'],
+ 'Bez větru':['No wind','Kein Wind','Sin viento','Senza vento'],
+ 'Slabý vítr':['Light wind','Schwacher Wind','Viento suave','Vento debole'],
+ 'Střední vítr':['Medium wind','Mittlerer Wind','Viento medio','Vento medio'],
+ 'Quest · spoušť':['Quest · trigger','Quest · Abzug','Quest · gatillo','Quest · grilletto'],
+ 'výstřel z ruky s brokovnicí (podle programu, nebo neomezeně)':['shot from the gun hand (per programme, or unlimited)','Schuss aus der Hand mit der Flinte (nach Programm oder unbegrenzt)','disparo desde la mano de la escopeta (según programa o ilimitado)','sparo dalla mano con il fucile (secondo il programma o illimitato)'],
+ 'Programy':['Programmes','Programme','Programas','Programmi'],
+ 'Skeet 25 a Lovecké kolo 20 jdou samy po stanovištích ve správném pořadí; ruční změna stanoviště nebo druhu terče program ukončí':['Skeet 25 and Sporting 20 move through the stations in the correct order; changing station or target type by hand ends the programme','Skeet 25 und Jagdrunde 20 laufen in der richtigen Reihenfolge durch die Stände; manueller Wechsel von Stand oder Taubenart beendet das Programm','Skeet 25 y Caza 20 recorren los puestos en el orden correcto; cambiar puesto o tipo de plato a mano termina el programa','Skeet 25 e Caccia 20 seguono le pedane nell\'ordine giusto; cambiare pedana o tipo di piattello a mano chiude il programma'],
+ 'přepínač Skeet / Trap (klávesa T); terč letí hned po „Hop“ od vás do strany; druh trapu: automatický (1 vrhačka, úhel 60–90°), americký, olympijský (15 vrhaček), univerzální (5 vrhaček); Trap 25 a Double trap 25 jdou po stanovištích':['Skeet / Trap switch (key T); the clay flies right after “Hop”, away and to the side; trap type: automatic (1 machine, 60–90°), American, Olympic (15 machines), universal (5 machines); Trap 25 and Double trap 25 move through the stations','Umschalter Skeet / Trap (Taste T); die Taube fliegt sofort nach „Hop“ von Ihnen weg zur Seite; Trap-Art: automatisch (1 Maschine, 60–90°), amerikanisch, olympisch (15 Maschinen), universal (5 Maschinen); Trap 25 und Doppeltrap 25 laufen durch die Stände','Conmutador Skeet / Foso (tecla T); el plato sale justo tras «Hop», alejándose y hacia un lado; tipo: automático (1 máquina, 60–90°), americano, olímpico (15 máquinas), universal (5 máquinas); Foso 25 y Doble foso 25 recorren los puestos','Selettore Skeet / Fossa (tasto T); il piattello parte subito dopo «Hop», allontanandosi di lato; tipo: automatica (1 macchina, 60–90°), americana, olimpica (15 macchine), universale (5 macchine); Fossa 25 e Double trap 25 seguono le pedane'],
+ 'Druhá ruka · spoušť':['Other hand · trigger','Andere Hand · Abzug','Otra mano · gatillo','Altra mano · grilletto'],
+ '„Pull“ – vypuštění terče':['“Pull” – release the clay','„Pull“ – Taube werfen','«Pull» – lanzar el plato','«Pull» – lancio del piattello'],
+ 'Stisk páčky':['Press thumbstick','Stick drücken','Pulsar joystick','Premi levetta'],
+ 'přehodit brokovnici do druhé ruky (výchozí pravá)':['move the shotgun to the other hand (default right)','Flinte in die andere Hand (Standard rechts)','pasar la escopeta a la otra mano (por defecto derecha)','passa il fucile all\'altra mano (predefinita destra)'],
+ 'Quest · grip / A':['Quest · grip / A','Quest · Grip / A','Quest · grip / A','Quest · grip / A'],
+ '„Pull“ – vypuštění terče (náhodné zpoždění 0,2–3 s podle ISSF)':['“Pull” – clay release (random delay 0.2–3 s per ISSF)','„Pull“ – Taube (Zufallsverzögerung 0,2–3 s nach ISSF)','«Pull» – lanzamiento (retardo aleatorio 0,2–3 s según ISSF)','«Pull» – lancio (ritardo casuale 0,2–3 s secondo ISSF)'],
+ 'Quest · X':['Quest · X','Quest · X','Quest · X','Quest · X'],
+ 'přepnout vysoká → nízká → dvojice':['switch high → low → doubles','umschalten Hoch → Nieder → Dublette','cambiar alta → baja → doblete','cambia alto → basso → doppietto'],
+ 'Páčka ← →':['Stick ← →','Stick ← →','Joystick ← →','Levetta ← →'],
+ 'předchozí / další stanoviště':['previous / next station','vorheriger / nächster Stand','puesto anterior / siguiente','pedana precedente / successiva'],
+ 'Páčka ↑ ↓':['Stick ↑ ↓','Stick ↑ ↓','Joystick ↑ ↓','Levetta ↑ ↓'],
+ 'vysoká / nízká / dvojice':['high / low / doubles','Hoch / Nieder / Dublette','alta / baja / doblete','alto / basso / doppietto'],
+ 'laserový paprsek zap/vyp (jen pro kontrolu míření)':['laser beam on/off (only to check aiming)','Laserstrahl an/aus (nur zur Kontrolle)','rayo láser sí/no (solo para comprobar)','raggio laser on/off (solo per controllo)'],
+ 'Ovládací panel':['Control panel','Bedienfeld','Panel de control','Pannello comandi'],
+ 've VR se otočte – panel visí za vámi. Mířte na něj levým ovladačem a stiskněte spoušť: stanoviště, druh terče, automat, vítr, rychlost.':['in VR turn around – the panel hangs behind you. Point at it with the left controller and pull the trigger: station, target type, auto-pull, wind, speed.','in VR umdrehen – das Feld hängt hinter Ihnen. Mit dem linken Controller darauf zielen und abdrücken: Stand, Taubenart, Automatik, Wind, Tempo.','en RV dese la vuelta – el panel está detrás. Apunte con el mando izquierdo y apriete el gatillo: puesto, tipo de plato, automático, viento, velocidad.','in VR girati – il pannello è dietro di te. Puntalo con il controller sinistro e premi il grilletto: pedana, tipo di piattello, automatico, vento, velocità.'],
+ 'zavolá „Pull!“ a po náhodném zpoždění 0,2–3 s vypustí terč, pak počká zvolenou pauzu a opakuje. Zastaví se levou spouští nebo na panelu.':['calls “Pull!”, releases the clay after a random 0.2–3 s, waits the chosen pause and repeats. Stop it with the left trigger or on the panel.','ruft „Pull!“, wirft nach 0,2–3 s Zufallsverzögerung, wartet die Pause und wiederholt. Stopp mit dem linken Abzug oder am Feld.','dice «Pull!», lanza tras 0,2–3 s aleatorios, espera la pausa y repite. Se detiene con el gatillo izquierdo o en el panel.','chiama «Pull!», lancia dopo 0,2–3 s casuali, aspetta la pausa e ripete. Si ferma col grilletto sinistro o dal pannello.'],
+ 'druh terče „Nástřel“ (X / M): tabule na 16 m. Miřte na černý bod a vystřelte 3–5 ran. B / Y uloží korekci, grip / A smaže tabuli. Korekce srovná virtuální hlaveň se skutečnou.':['target type “Patterning” (X / M): board at 16 m. Aim at the black dot and fire 3–5 shots. B / Y saves the correction, grip / A clears the board. The correction aligns the virtual barrel with the real one.','Taubenart „Anschießen“ (X / M): Scheibe auf 16 m. Auf den schwarzen Punkt zielen, 3–5 Schüsse. B / Y speichert die Korrektur, Grip / A löscht die Scheibe. Die Korrektur gleicht den virtuellen Lauf an den echten an.','tipo «Patronaje» (X / M): tablero a 16 m. Apunte al punto negro y dispare 3–5 veces. B / Y guarda la corrección, grip / A borra el tablero. La corrección alinea el cañón virtual con el real.','tipo «Rosata» (X / M): tabellone a 16 m. Mira il punto nero e spara 3–5 colpi. B / Y salva la correzione, grip / A pulisce il tabellone. La correzione allinea la canna virtuale a quella reale.'],
+ 'Bluetooth spoušť':['Bluetooth trigger','Bluetooth-Abzug','Gatillo Bluetooth','Grilletto Bluetooth'],
+ 'deska Skeet Trigger (klávesa F) vystřelí z ruky s brokovnicí':['the Skeet Trigger board (key F) fires from the gun hand','die Skeet-Trigger-Platine (Taste F) schießt aus der Flintenhand','la placa Skeet Trigger (tecla F) dispara desde la mano de la escopeta','la scheda Skeet Trigger (tasto F) spara dalla mano del fucile'],
+ 'Počítač':['Computer','Computer','Ordenador','Computer'],
+ 'myš míří, klik střílí, mezerník = terč, šipky = stanoviště, M = druh terče, Z = zvýraznění':['mouse aims, click shoots, space = target, arrows = station, M = target type, T = skeet/trap, Z = highlight','Maus zielt, Klick schießt, Leertaste = Taube, Pfeile = Stand, M = Taubenart, T = Skeet/Trap, Z = Hervorheben','el ratón apunta, clic dispara, espacio = plato, flechas = puesto, M = tipo, T = skeet/foso, Z = resaltar','il mouse mira, clic spara, spazio = piattello, frecce = pedana, M = tipo, T = skeet/fossa, Z = evidenzia'],
+ 'Zvýraznění':['Highlight','Hervorheben','Resaltado','Evidenziazione'],
+ 'terč 2,5× větší s oranžovou září, pomůcka pro začátek a pro malou obrazovku; zásah se počítá podle skutečné velikosti':['clay 2.5× larger with an orange glow, a help for beginners and small screens; hits use the real size','Taube 2,5× größer mit orangem Schein, Hilfe für den Anfang und kleine Bildschirme; Treffer zählen nach echter Größe','plato 2,5× mayor con brillo naranja, ayuda para empezar y pantallas pequeñas; el impacto usa el tamaño real','piattello 2,5× più grande con alone arancione, aiuto per iniziare e schermi piccoli; il colpo usa la dimensione reale'],
+ 'Míří se podle hlavní zobrazené na ovladači. Nejlépe s ovladačem v pažbě (GAIM nebo levná skořepina z AliExpressu).':['You aim along the barrels shown on the controller – best with the controller in a gunstock (GAIM or a cheap AliExpress shell).','Gezielt wird über die am Controller angezeigten Läufe – am besten mit dem Controller in einem Schaft (GAIM oder günstige Schale von AliExpress).','Se apunta con los cañones mostrados en el mando; mejor con el mando en una culata (GAIM o una carcasa barata de AliExpress).','Si mira con le canne mostrate sul controller; meglio con il controller in un calcio (GAIM o un guscio economico di AliExpress).'],
+ 'Zbraň a náboj':['Gun and cartridge','Flinte und Patrone','Escopeta y cartucho','Fucile e cartuccia'],
+ 'Čok 1. rána (spodní hlaveň)':['Choke 1st shot (lower barrel)','Choke 1. Schuss (unterer Lauf)','Choke 1.er disparo (cañón inferior)','Strozzatura 1° colpo (canna inferiore)'],
+ 'Čok 2. rána (horní hlaveň)':['Choke 2nd shot (upper barrel)','Choke 2. Schuss (oberer Lauf)','Choke 2.º disparo (cañón superior)','Strozzatura 2° colpo (canna superiore)'],
+ 'Kam zbraň bije':['Point of impact','Treffpunktlage','Punto de impacto','Punto d\'impatto'],
+ '50/50 – do bodu míření (skeet)':['50/50 – at point of aim (skeet)','50/50 – Haltepunkt (Skeet)','50/50 – al punto de mira (skeet)','50/50 – nel punto di mira (skeet)'],
+ '60/40 – mírně výš (trap)':['60/40 – slightly high (trap)','60/40 – leicht hoch (Trap)','60/40 – algo alto (foso)','60/40 – leggermente alto (fossa)'],
+ '70/30 – výš (trap)':['70/30 – high (trap)','70/30 – hoch (Trap)','70/30 – alto (foso)','70/30 – alto (fossa)'],
+ '80/20 – hodně výš':['80/20 – very high','80/20 – sehr hoch','80/20 – muy alto','80/20 – molto alto'],
+ 'Odpad broků (zdeformované)':['Deformed pellets (flyers)','Deformierte Schrote (Ausreißer)','Perdigones deformados','Pallini deformati'],
+ 'Průměr hraničky (75 % broků) a počet broků, které v průměru zasáhnou terč při přesném míření. Každá rána se počítá po jednotlivých broccích, takže terč může proletět i dírou v obrazci. Odpad = broky zdeformované ve vývrtu (levnější měkčí broky bez antimonu): letí šířeji a pomaleji. Pro skeet a trap se pamatuje zvlášť.':[
+  'Pattern diameter (75 % of pellets) and the average number of pellets hitting the clay with perfect aim. Every shot is simulated pellet by pellet, so a clay can slip through a hole in the pattern. Deformed = pellets squashed in the bore (cheaper soft shot without antimony): they fly wider and slower. Skeet and trap are stored separately.',
+  'Garbendurchmesser (75 % der Schrote) und mittlere Zahl der Treffer auf der Taube bei genauem Zielen. Jeder Schuss wird Schrot für Schrot berechnet, die Taube kann also durch ein Loch in der Garbe fliegen. Deformiert = im Lauf verformte Schrote (billigere weiche Schrote ohne Antimon): streuen weiter und sind langsamer. Skeet und Trap werden getrennt gespeichert.',
+  'Diámetro del plomeo (75 % de perdigones) y número medio de perdigones que tocan el plato apuntando bien. Cada disparo se calcula perdigón a perdigón, así que el plato puede pasar por un hueco del plomeo. Deformados = perdigones aplastados en el cañón (perdigón blando y barato sin antimonio): se abren más y van más lentos. Skeet y foso se guardan por separado.',
+  'Diametro della rosata (75 % dei pallini) e numero medio di pallini sul piattello mirando bene. Ogni colpo è calcolato pallino per pallino, quindi il piattello può passare in un buco della rosata. Deformati = pallini schiacciati in canna (pallini morbidi economici senza antimonio): si aprono di più e sono più lenti. Skeet e fossa sono salvati separatamente.'],
+ 'Chyba předstihu':['Lead error','Vorhaltfehler','Error de adelanto','Errore d\'anticipo'],
+ 'Chyba předstihu = průměr u minutých terčů.':['Lead error = average over missed clays.','Vorhaltfehler = Mittel der verfehlten Tauben.','Error de adelanto = media de los platos fallados.','Errore d\'anticipo = media sui piattelli mancati.'],
+ 'Za terčem':['Behind','Hinter der Taube','Detrás','Dietro'],
+ ' znamená malý předstih, ':[' means too little lead, ',' heißt zu wenig Vorhalt, ',' significa poco adelanto, ',' significa poco anticipo, '],
+ 'před terčem':['ahead of the clay','vor der Taube','delante del plato','davanti al piattello'],
+ ' příliš velký.':[' too much.',' zu viel.',' demasiado.',' troppo.'],
+ // hlášky (i části)
+ 'Prázdná zbraň – nejdřív vypusťte terč (A / grip / mezerník)':['Gun empty – release a clay first (A / grip / space)','Flinte leer – erst Taube werfen (A / Grip / Leertaste)','Escopeta vacía – lance primero un plato (A / grip / espacio)','Fucile scarico – prima lancia un piattello (A / grip / spazio)'],
+ 'Nástřel: miřte na černý bod a vystřelte 3–5 ran':['Patterning: aim at the black dot and fire 3–5 shots','Anschießen: auf den schwarzen Punkt zielen, 3–5 Schüsse','Patronaje: apunte al punto negro y dispare 3–5 veces','Rosata: mira il punto nero e spara 3–5 colpi'],
+ 'Mimo tabuli – miřte na černý bod':['Off the board – aim at the black dot','Neben der Scheibe – auf den schwarzen Punkt zielen','Fuera del tablero – apunte al punto negro','Fuori dal tabellone – mira il punto nero'],
+ ': střed ':[': centre ',': Mitte ',': centro ',': centro '],
+ 'v bodě':['on the dot','im Punkt','en el punto','nel punto'],
+ 'vpravo':['right','rechts','derecha','destra'],'vlevo':['left','links','izquierda','sinistra'],'nahoře':['high','hoch','arriba','alto'],'dole':['low','tief','abajo','basso'],
+ 'Korekce se ukládá jen ve VR – míří se ovladačem na zbrani':['The correction is saved only in VR – aim with the controller on the gun','Korrektur nur in VR – mit dem Controller an der Flinte zielen','La corrección solo se guarda en RV – apunte con el mando en la escopeta','La correzione si salva solo in VR – mira con il controller sul fucile'],
+ 'Nejdřív vystřelte na tabuli':['Shoot at the board first','Erst auf die Scheibe schießen','Dispare primero al tablero','Prima spara al tabellone'],
+ 'Korekce uložena':['Correction saved','Korrektur gespeichert','Corrección guardada','Correzione salvata'],
+ ' – vystřelte kontrolní ránu':[' – fire a check shot',' – Kontrollschuss abgeben',' – haga un disparo de control',' – spara un colpo di controllo'],
+ 'Osa srovnána':['Axis aligned','Achse ausgerichtet','Eje alineado','Asse allineato'],
+ ' – teď 3–5 ran a ULOŽIT':[' – now 3–5 shots and SAVE',' – jetzt 3–5 Schüsse und SPEICHERN',' – ahora 3–5 disparos y GUARDAR',' – ora 3–5 colpi e SALVA'],
+ 'Srovnání osy jde jen ve VR':['Axis alignment works only in VR','Achsausrichtung nur in VR','La alineación del eje solo funciona en RV','L\'allineamento dell\'asse funziona solo in VR'],
+ 'Zamiřte puškou na černý bod a stiskněte spoušť':['Aim the gun at the black dot and pull the trigger','Mit der Flinte auf den schwarzen Punkt zielen und abdrücken','Apunte la escopeta al punto negro y apriete el gatillo','Mira il punto nero con il fucile e premi il grilletto'],
+ 'Korekce vynulována':['Correction reset','Korrektur zurückgesetzt','Corrección borrada','Correzione azzerata'],
+ 'odštípnutý kus':['chipped','angeschossen','desconchado','scheggiato'],'přepůlen':['split in half','halbiert','partido','spezzato'],'rozbit':['broken','zerbrochen','roto','rotto'],'PRACH':['DUST','STAUB','POLVO','POLVERE'],
+ 'ZÁSAH':['HIT','TREFFER','BLANCO','COLPITO'],'VEDLE':['MISS','FEHLER','FALLO','ZERO'],
+ 'Zásah':['Hit','Treffer','Blanco','Colpito'],'Vedle':['Miss','Fehler','Fallo','Zero'],
+ '1. rána':['1st shot','1. Schuss','1.er disparo','1° colpo'],'2. rána':['2nd shot','2. Schuss','2.º disparo','2° colpo'],
+ ' broků':[' pellets',' Schrote',' perdigones',' pallini'],' broky':[' pellets',' Schrote',' perdigones',' pallini'],' brok ':[' pellet ',' Schrot ',' perdigón ',' pallino '],
+ 'mířeno dobře, terč proletěl dírou v obrazci':['good aim, the clay slipped through a hole in the pattern','gut gezielt, die Taube flog durch ein Loch in der Garbe','buena puntería, el plato pasó por un hueco del plomeo','mira giusta, il piattello è passato in un buco della rosata'],
+ ', nad ':[', above ',', über ',', arriba ',', sopra '],', pod ':[', below ',', unter ',', abajo ',', sotto '],
+ ' · broky už nemají energii':[' · pellets have no energy left',' · Schrote ohne Energie',' · los perdigones ya no tienen energía',' · i pallini non hanno più energia'],
+ ' · jen 1 brok':[' · only 1 pellet',' · nur 1 Schrot',' · solo 1 perdigón',' · solo 1 pallino'],
+ 'Automat zapnut – terč každých':['Auto-pull on – a clay every','Automatik an – Taube alle','Automático – un plato cada','Automatico attivo – un piattello ogni'],
+ 'Automat vypnut':['Auto-pull off','Automatik aus','Automático apagado','Automatico spento'],
+ ' · 2 rány':[' · 2 shots',' · 2 Schüsse',' · 2 disparos',' · 2 colpi'],
+ 'Volný trénink':['Free practice','Freies Training','Entrenamiento libre','Allenamento libero'],
+ 'Konec položky':['End of round','Ende der Runde','Fin de la serie','Fine della serie'],
+ 'Neomezeně ran – zbraň se nevyprázdní':['Unlimited shots – the gun never runs empty','Unbegrenzt – die Flinte wird nie leer','Ilimitado – la escopeta no se vacía','Illimitato – il fucile non si scarica'],
+ 'Náboje podle pravidel':['Cartridges per the rules','Patronen nach Regeln','Cartuchos según reglamento','Cartucce da regolamento'],
+ 'Pauza automatu':['Auto-pull pause','Automatik-Pause','Pausa del automático','Pausa automatico'],
+ 'Vítr: ':['Wind: ','Wind: ','Viento: ','Vento: '],
+ 'Rychlost':['Speed','Tempo','Velocidad','Velocità'],
+ 'Výsledky vynulovány':['Results reset','Ergebnisse zurückgesetzt','Resultados borrados','Risultati azzerati'],
+ 'Zvuk vrhačky zapnut':['Machine sound on','Maschinengeräusch an','Sonido de máquina activado','Suono macchina attivo'],
+ 'Zvuk vrhačky vypnut':['Machine sound off','Maschinengeräusch aus','Sonido de máquina apagado','Suono macchina spento'],
+ 'Stanoviště':['Station','Stand','Puesto','Pedana'],
+ 'Spoušť připojena':['Trigger connected','Abzug verbunden','Gatillo conectado','Grilletto collegato'],
+ 'Spoušť OK, ale ovladač s brokovnicí nenalezen':['Trigger OK, but the gun controller was not found','Abzug OK, aber Flinten-Controller nicht gefunden','Gatillo OK, pero no se encuentra el mando de la escopeta','Grilletto OK, ma il controller del fucile non trovato'],
+ 'Výstřel z desky č. ':['Trigger shot no. ','Abzugsschuss Nr. ','Disparo del gatillo n.º ','Colpo dal grilletto n. '],
+ ' – bez terče':[' – no clay',' – ohne Taube',' – sin plato',' – senza piattello'],
+ 'Grip nebo A = terč':['Grip or A = clay','Grip oder A = Taube','Grip o A = plato','Grip o A = piattello'],
+ 'Brokovnice v pravé ruce':['Shotgun in right hand','Flinte in der rechten Hand','Escopeta en la mano derecha','Fucile nella mano destra'],
+ 'Brokovnice v levé ruce':['Shotgun in left hand','Flinte in der linken Hand','Escopeta en la mano izquierda','Fucile nella mano sinistra'],
+ 'Zbraň bije ':['Point of impact ','Treffpunktlage ','Impacto ','Impatto '],
+ 'Zvýraznění zapnuto':['Highlight on','Hervorheben an','Resaltado activado','Evidenziazione attiva'],
+ 'Zvýraznění vypnuto':['Highlight off','Hervorheben aus','Resaltado apagado','Evidenziazione spenta'],
+ 'Vynulovat výsledky':['Reset results','Ergebnisse löschen','Borrar resultados','Azzera risultati'],
+ 'levý ovladač + spoušť':['left controller + trigger','linker Controller + Abzug','mando izquierdo + gatillo','controller sinistro + grilletto'],
+ 'Náboje':['Shells','Patronen','Cartuchos','Cartucce'],'Spoušť':['Trigger','Abzug','Gatillo','Grilletto'],'SPOUŠŤ':['TRIGGER','ABZUG','GATILLO','GRILLETTO'],
+ '● připojena':['● connected','● verbunden','● conectado','● collegato'],'○ nepřipojena':['○ not connected','○ nicht verbunden','○ no conectado','○ non collegato'],
+ 'zásahy':['hits','Treffer','blancos','colpiti'],
+ ' ks · úsťová rychlost ':[' pcs · muzzle velocity ',' Stk · Mündungsgeschw. ',' uds · velocidad en boca ',' pz · velocità alla bocca '],
+ ' · na 25 m ':[' · at 25 m ',' · auf 25 m ',' · a 25 m ',' · a 25 m '],' · odpad ':[' · deformed ',' · deformiert ',' · deformados ',' · deformati '],
+ 'otevřenější než válec':['more open than cylinder','offener als Zylinder','más abierto que cilindro','più aperto del cilindro'],
+ 'válec':['cylinder','Zylinder','cilindro','cilindrico'],'plný':['full','Voll','full','full'],
+ 'Olovo':['Lead','Blei','Plomo','Piombo'],'Ocel':['Steel','Stahl','Acero','Acciaio'],'např.':['e.g.','z. B.','p. ej.','es.'],'zelené':['green','grün','verdes','verdi'],'č. ':['No. ','Nr. ','n.º ','n. '],
+ 'Úhel vrhačky ':['Machine angle ','Maschinenwinkel ','Ángulo de máquina ','Angolo macchina '],
+ ' · st. ':[' · stn. ',' · Stand ',' · pto. ',' · ped. '],
+ 'Vítr: Slabý':['Wind: light','Wind: schwach','Viento: suave','Vento: debole'],'Vítr: Střední':['Wind: medium','Wind: mittel','Viento: medio','Vento: medio'],
+ 'Vysoká':['High','Hochhaus','Alta','Alto'],'Nízká':['Low','Niederhaus','Baja','Basso'],'Dvojice':['Doubles','Dublette','Doblete','Doppietto'],'Nástřel':['Patterning','Anschießen','Patronaje','Rosata'],
+ 'Trap · ':['Trap · ','Trap · ','Foso · ','Fossa · '],'Trap 25':['Trap 25','Trap 25','Foso 25','Fossa 25'],
+ 'Automatický':['Automatic','Automatisch','Automático','Automatico'],'Americký':['American','Amerikanisch','Americano','Americano'],'Olympijský':['Olympic','Olympisch','Olímpico','Olimpico'],'Univerzální':['Universal','Universal','Universal','Universale'],
+ 'Lovecké kolo':['Sporting round','Jagdrunde','Ronda de caza','Giro di caccia'],
+};
+let LANG='cs'; try{ const l=localStorage.getItem('skeet-lang'); if(LANGS.some(x=>x[0]===l)) LANG=l; }catch(e){}
+const PH_KEYS=Object.keys(PH).sort((a,b)=>b.length-a.length);
+function tr(s){ if(LANG==='cs'||s==null) return s; const i=LI[LANG]; s=String(s);
+  const t=s.trim(); if(EX[t]) return s.replace(t,EX[t][i]); if(PH[t]) return s.replace(t,PH[t][i]);
+  for(const k of PH_KEYS) if(s.indexOf(k)>=0) s=s.split(k).join(PH[k][i]);
+  return s; }
+// statické texty stránky: původní česká verze se pamatuje v uzlu
+function trStatic(root){ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode&&/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  let n; while((n=w.nextNode())){ if(!n.nodeValue.trim()) continue; if(n.__cz==null) n.__cz=n.nodeValue; n.nodeValue=tr(n.__cz); } }
+</script>
 <script>
 (function(){
 "use strict";
@@ -194,18 +400,28 @@ const T_V0=32, T_K=0.0075, T_G={H:3.05,L:4.8}, T_AIMUP={H:0.6,L:1.1};  // dolet 
 /* čoky: průměr hraničky (75 % broků) na 1 m vzdálenosti */
 const CHOKES={SK2:{n:'SK2 · skeet 2 (otevřenější než válec)',rate:0.058},CL:{n:'C · válec',rate:0.052},SK1:{n:'SK1 · skeet 1',rate:0.047},
   IC:{n:'IC · 1/4',rate:0.042},M:{n:'M · 1/2',rate:0.035},IM:{n:'IM · 3/4',rate:0.030},F:{n:'F · plný',rate:0.026}};
-/* náboje: hmotnost [g], průměr broku [mm], hustota [g/cm3], úsťová rychlost [m/s] */
+/* náboje: hmotnost [g], průměr broku [mm], hustota [g/cm3], úsťová rychlost [m/s],
+   odpad = podíl broků zdeformovaných ve vývrtu a čoku (létavci: širší rozptyl, pomalejší, zaostávají) – odhad, jde upravit */
 const AMMO={
-  pb24_95:{n:'Olovo 24 g · č. 9½ (≈1,9 mm), např. Fiocchi',g:24,dmm:1.9,rho:11.35,v0:390},
-  pb24_9:{n:'Olovo 24 g · č. 9 (≈2,0 mm)',g:24,dmm:2.0,rho:11.35,v0:390},
-  pb28_9:{n:'Olovo 28 g · č. 9 (≈2,0 mm)',g:28,dmm:2.0,rho:11.35,v0:375},
-  fe24_24:{n:'Ocel 24 g · 2,4 mm',g:24,dmm:2.4,rho:7.85,v0:430,steel:true},
-  fe24_22:{n:'Ocel 24 g · 2,2 mm',g:24,dmm:2.2,rho:7.85,v0:430,steel:true}};
+  pb24_95:{n:'Olovo 24 g · č. 9½ (≈1,9 mm), např. Fiocchi',g:24,dmm:1.9,rho:11.35,v0:390,odpad:0.02},
+  pb24_9:{n:'Olovo 24 g · č. 9 (≈2,0 mm)',g:24,dmm:2.0,rho:11.35,v0:390,odpad:0.015},
+  pb28_9:{n:'Olovo 28 g · č. 9 (≈2,0 mm)',g:28,dmm:2.0,rho:11.35,v0:375,odpad:0.015},
+  fi24_24:{n:'Fiocchi 24 g · 2,4 mm (č. 7½) – trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.02},
+  sb24_24:{n:'Sellier & Bellot Trap 24 g · 2,4 mm (zelené)',g:24,dmm:2.4,rho:11.35,v0:420,odpad:0.01},
+  bo24_24:{n:'Bornaghi 24 g · 2,4 mm – trap',g:24,dmm:2.4,rho:11.35,v0:400,odpad:0.01},
+  fe24_24:{n:'Ocel 24 g · 2,4 mm',g:24,dmm:2.4,rho:7.85,v0:430,steel:true,odpad:0},
+  fe24_22:{n:'Ocel 24 g · 2,2 mm',g:24,dmm:2.2,rho:7.85,v0:430,steel:true,odpad:0}};
+/* kam zbraň bije: 50/50 = střed obrazce v bodě míření; 60/40, 70/30 = trapová zbraň bije výš (~7,5 cm na 36 m za každých 10 %) */
+const POI={50:0,60:0.0021,70:0.0042,80:0.0063};
 function ammoInfo(a){const r=a.dmm/2000, m=4/3*Math.PI*Math.pow(a.dmm/20,3)*a.rho/1000; // kg
   return {...a, mass:m, count:Math.round(a.g/1000/m), k:1.2*0.5*3/(8*r*a.rho*1000)};}
 const CLAY_AREA=0.0065, E_MIN=0.6;
-const gun={ch:['SK2','CL'],ammo:'pb24_95'};
-try{const sv=JSON.parse(localStorage.getItem('skeet-gun')||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo])Object.assign(gun,sv);}catch(e){}
+// zvlášť zbraň pro skeet a pro trap
+const GUNS={skeet:{ch:['SK2','CL'],ammo:'pb24_95',poi:50,odpad:null},trap:{ch:['M','IM'],ammo:'fi24_24',poi:60,odpad:null}};
+const GUN_KEY={skeet:'skeet-gun',trap:'skeet-gun-trap'};
+for(const d of ['skeet','trap']) try{const sv=JSON.parse(localStorage.getItem(GUN_KEY[d])||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo])Object.assign(GUNS[d],sv);}catch(e){}
+let gun=GUNS.skeet;
+const odpadOf=()=>gun.odpad!=null?gun.odpad:(AMMO[gun.ammo].odpad||0);
 function patternR(rate,steel,d){return 0.009+(steel?rate*0.85:rate)*d/2;}
 function pelletV(a,d){return a.v0*Math.exp(-a.k*d);}
 function expPellets(a,rate,d,off){const R=patternR(rate,a.steel,d), sg=R/1.665;
@@ -406,11 +622,11 @@ const trapLabels=[];
   // oranžové značky skupin vrhaček na krytu (jen pro orientaci)
   for(let g=0;g<5;g++){ const m=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.02,0.12),mat(0xe8662a)); m.position.set((g-2)*3,0.31,TZ-0.25); G.add(m); }
 }
-function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const tr=d==='trap';
-  SKEET_OBJS.forEach(o=>o.visible=!tr); TRAP_GROUP.visible=tr;
-  st.mode=tr?'T':'H'; st.station=tr?2:3; clearField(); placeDolly(); buildSeg(); syncSeg(); renderScore();
-  if(typeof panel!=='undefined'&&panel.visible) drawPanel(); say(tr?`Trap · ${trapKindTxt()}`:'Skeet'); }
-const trapKindTxt=()=>TRAP_KIND[st.trapKind].n+(st.trapKind==='at'?` ${st.trapArc}°`:'');
+function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d==='trap'; gun=GUNS[d]; if(typeof gunUi==='function') gunUi();
+  SKEET_OBJS.forEach(o=>o.visible=!isTr); TRAP_GROUP.visible=isTr;
+  st.mode=isTr?'T':'H'; st.station=isTr?2:3; clearField(); placeDolly(); buildSeg(); syncSeg(); renderScore();
+  if(typeof panel!=='undefined'&&panel.visible) drawPanel(); say(isTr?`Trap · ${trapKindTxt()}`:'Skeet'); }
+const trapKindTxt=()=>tr(TRAP_KIND[st.trapKind].n)+(st.trapKind==='at'?` ${st.trapArc}°`:'');
 function trapSave(){ try{localStorage.setItem('skeet-trap',JSON.stringify({kind:st.trapKind,arc:st.trapArc}));}catch(e){} }
 function setTrapKind(k){ st.trapKind=k; trapSave(); clearField(); syncTrapUi(); say('Trap · '+trapKindTxt()); }
 function setTrapArc(a){ st.trapArc=a; trapSave(); syncTrapUi(); say('Úhel vrhačky '+a+'°'); }
@@ -537,7 +753,11 @@ function fire(src){
     const s=src.userData.src; const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0]; if(h&&h.pulse)h.pulse(1,70);}
   else{camera.getWorldPosition(o); camera.getWorldDirection(d);}
   if(st.mode==='N'){ zeroShot(o,d.normalize(),a,rate,barrel); return; }
-  st.shots.push({o,d:d.normalize(),t:0,prev:0,judged:new Set(),best:null,a,rate,barrel});
+  d.normalize(); const poi=POI[gun.poi]||0; if(poi){ const rt=new V().crossVectors(d,new V(0,1,0)).normalize(); d.applyAxisAngle(rt,poi); }
+  // jednotlivé broky: směr v obrazci (σ = 1/1,665 → 75 % uvnitř poloměru hraničky), část zdeformovaných
+  const od=odpadOf(), N=Math.round(a.count*0.95), pel=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ pel[i*3]=gauss()/1.665; pel[i*3+1]=gauss()/1.665; pel[i*3+2]=Math.random()<od?1:0; }
+  st.shots.push({o,d,t:0,prev:0,judged:new Set(),best:null,a,rate,barrel,pel});
 }
 
 /* ---------- Nástřel – tabule na 16 m ---------- */
@@ -568,7 +788,8 @@ function zeroShot(o,d,a,rate,barrel){
   const dx=rel.dot(zBasis.r), dy=rel.dot(zBasis.u), D=t;
   const R=patternR(rate,a.steel,D), sg=R/1.665, x=zCan.getContext('2d');
   x.fillStyle='rgba(20,20,20,0.85)';
-  for(let i=0;i<Math.min(a.count,400);i++){ const px=zpx(dx+gauss()*sg), py=zpx(-(dy+gauss()*sg)); x.fillRect(px-1.5,py-1.5,3,3); }
+  const od=odpadOf();
+  for(let i=0;i<Math.min(a.count,400);i++){ const k=Math.random()<od?2.5:1, px=zpx(dx+gauss()*sg*k), py=zpx(-(dy+gauss()*sg*k)); x.fillRect(px-1.5,py-1.5,3,3); }
   x.strokeStyle='#d9561f'; x.lineWidth=4; const cx=zpx(dx), cy=zpx(-dy); x.beginPath(); x.moveTo(cx-14,cy); x.lineTo(cx+14,cy); x.moveTo(cx,cy-14); x.lineTo(cx,cy+14); x.stroke();
   zHits.push({dx,dy,D}); const n=zHits.length, ax=zHits.reduce((s,h)=>s+h.dx,0)/n, ay=zHits.reduce((s,h)=>s+h.dy,0)/n;
   if(n>1){ x.strokeStyle='#2f7d4a'; x.lineWidth=5; const mx=zpx(ax), my=zpx(-ay); x.beginPath(); x.arc(mx,my,18,0,7); x.stroke(); }
@@ -641,7 +862,15 @@ function cm(x){return Math.round(Math.abs(x)*100);}
 function judge(shot,t,along,perpV,r){
   // perpV = terč − střed hraničky (kolmo na ránu)
   const off0=perpV.length(), a=shot.a, v=pelletV(a,along), E=0.5*a.mass*v*v;
-  const pellets=E>=E_MIN?poisson(expPellets(a,shot.rate,along,off0)):0;
+  // broky po jednom: zdravé v obrazci, zdeformované 2,5× širší, s větším odporem → pomalejší a zaostávají (terč mezitím uletí dál)
+  const e1=new V().crossVectors(shot.d,Math.abs(shot.d.y)<0.95?new V(0,1,0):new V(1,0,0)).normalize(), e2=new V().crossVectors(e1,shot.d);
+  const px=perpV.dot(e1), py=perpV.dot(e2), vt0=t.v.clone().addScaledVector(shot.d,-t.v.dot(shot.d)), vx=vt0.dot(e1), vy=vt0.dot(e2);
+  const kd=a.k*1.6, tG=(Math.exp(a.k*along)-1)/(a.k*a.v0), tD=(Math.exp(kd*along)-1)/(kd*a.v0), lag=tD-tG;
+  const vD=a.v0*Math.exp(-kd*along), ED=0.5*a.mass*vD*vD, rc=Math.sqrt(CLAY_AREA/Math.PI), rc2=rc*rc, P=shot.pel;
+  let pellets=0, flyers=0;
+  for(let i=0;i<P.length;i+=3){ const def=P[i+2]>0, sc=def?r*2.5:r, ox=P[i]*sc, oy=P[i+1]*sc;
+    const tx=px+(def?vx*lag:0), ty=py+(def?vy*lag:0), dx=ox-tx, dy=oy-ty;
+    if(dx*dx+dy*dy<rc2 && (def?ED:E)>=E_MIN){ pellets++; if(def) flyers++; } }
   // každý brok terč rozbije s pravděpodobností podle své energie (pomalý brok spíš udělá jen díru)
   const p1=Math.max(0.2,Math.min(0.65,0.25+0.35*(E-E_MIN)));
   const hit=pellets>0&&Math.random()<1-Math.pow(1-p1,pellets);
@@ -653,7 +882,8 @@ function judge(shot,t,along,perpV,r){
   const lead=off.dot(vtn);                 // + = před terčem
   const up=new V(0,1,0).addScaledVector(shot.d,-shot.d.y).normalize();
   const vert=off.dot(up);
-  return {hit,kind,lead,vert,along,r,pellets,E,barrel:shot.barrel};
+  const hole=!hit&&pellets===0&&off0<0.55*r&&E>=E_MIN;   // dobře mířeno, ale terč proletěl dírou v obrazci
+  return {hit,kind,lead,vert,along,r,pellets,E,barrel:shot.barrel,hole,flyers};
 }
 function report(t,res){
   const s=st.stats[st.station];
@@ -662,6 +892,7 @@ function report(t,res){
   if(res.hit){st.pullHits++; s.kinds=s.kinds||{odstip:0,pul:0,kusy:0,prach:0}; s.kinds[res.kind]++;
     say(`Zásah – ${KIND[res.kind]} · ${b} · ${res.pellets} ${res.pellets===1?'brok':res.pellets<5?'broky':'broků'} · ${Math.round(res.along)} m`);}
   else{
+    if(res.hole){ say(`Vedle (${b}): mířeno dobře, terč proletěl dírou v obrazci · ${Math.round(res.along)} m`); return; }
     (st.disc==='trap'?s.leadT:s.lead).push(res.lead);
     const h=res.lead>=0?`před terčem ${cm(res.lead)} cm`:`za terčem ${cm(res.lead)} cm`;
     const v=Math.abs(res.vert)<0.1?'':(res.vert>0?`, nad ${cm(res.vert)} cm`:`, pod ${cm(res.vert)} cm`);
@@ -724,12 +955,13 @@ function pBtn(x,y,w,h,txt,on,act){ pBtns.push({x,y,w,h,txt,on,act}); }
 function buildPanel(){
   pBtns=[]; const g=12, row=(i)=>96+i*104;
   pBtns.push({x:700,y:12,w:300,h:70,txt:'UKONČIT VR',on:false,exit:true,act:()=>{ const ss=renderer.xr.getSession(); if(ss) ss.end(); }});
-  const tr=st.disc==='trap';
+  pBtn(586,12,102,70,(LANGS.find(l=>l[0]===LANG)||LANGS[0])[1],false,()=>{ const i=LANGS.findIndex(l=>l[0]===LANG); setLang(LANGS[(i+1)%LANGS.length][0]); });
+  const isTr=st.disc==='trap';
   for(let i=0;i<nSt();i++) pBtn(24+i*122,row(0),110,84,String(i+1),st.station===i,()=>setStation(i));
-  if(tr){ pBtn(646,row(0),220,84,TRAP_KIND[st.trapKind].n,true,()=>{const k=['at','ata','ot','ut']; setTrapKind(k[(k.indexOf(st.trapKind)+1)%4]);});
+  if(isTr){ pBtn(646,row(0),220,84,TRAP_KIND[st.trapKind].n,true,()=>{const k=['at','ata','ot','ut']; setTrapKind(k[(k.indexOf(st.trapKind)+1)%4]);});
     pBtn(878,row(0),122,84,st.trapKind==='at'?st.trapArc+'°':'–',false,()=>{ if(st.trapKind==='at') setTrapArc(st.trapArc>=90?60:st.trapArc+15); }); }
-  pBtn(24,row(1),140,84,'SKEET',!tr,()=>setDisc('skeet')); pBtn(176,row(1),140,84,'TRAP',tr,()=>setDisc('trap'));
-  (tr?[['T','Terč'],['W','Dvojice'],['N','Nástřel']]:[['H','Vysoká'],['L','Nízká'],['D','Dvojice'],['N','Nástřel']]).forEach(([m,t],i,a)=>{ const w=Math.floor((1000-328)/a.length); pBtn(328+i*w,row(1),w-12,84,t,st.mode===m,()=>setMode(m)); });
+  pBtn(24,row(1),140,84,'SKEET',!isTr,()=>setDisc('skeet')); pBtn(176,row(1),140,84,'TRAP',isTr,()=>setDisc('trap'));
+  (isTr?[['T','Terč'],['W','Dvojice'],['N','Nástřel']]:[['H','Vysoká'],['L','Nízká'],['D','Dvojice'],['N','Nástřel']]).forEach(([m,t],i,a)=>{ const w=Math.floor((1000-328)/a.length); pBtn(328+i*w,row(1),w-12,84,t,st.mode===m,()=>setMode(m)); });
   pBtn(24,row(2),300,84,st.auto?'AUTOMAT ZAP':'AUTOMAT VYP',st.auto,()=>setAuto(!st.auto));
   [3,5,8].forEach((sec,i)=>pBtn(336+i*130,row(2),118,84,sec+' s',st.autoPause===sec,()=>{st.autoPause=sec; st.autoT=performance.now(); say('Pauza automatu '+sec+' s');}));
   pBtn(736,row(2),264,84,'Pull!',false,()=>callPull());
@@ -745,10 +977,10 @@ function fitFont(x,t,w,size,weight){ let f=size; do{ x.font=`${weight||700} ${f}
 function drawPanel(){
   buildPanel(); const x=pCan.getContext('2d');
   x.clearRect(0,0,PW,PH); x.fillStyle='rgba(15,23,19,0.88)'; x.beginPath(); x.roundRect?x.roundRect(0,0,PW,PH,28):x.rect(0,0,PW,PH); x.fill();
-  x.fillStyle='#e8662a'; x.font='700 46px Barlow Condensed, Arial'; x.fillText('OVLÁDÁNÍ',28,62);
-  x.fillStyle='#9fb5a8'; x.font='500 22px IBM Plex Mono, monospace'; x.fillText('levý ovladač + spoušť',290,58);
+  x.fillStyle='#e8662a'; x.font='700 46px Barlow Condensed, Arial'; x.fillText(tr('OVLÁDÁNÍ'),28,62);
+  x.fillStyle='#9fb5a8'; x.font='500 22px IBM Plex Mono, monospace'; x.fillText(tr('levý ovladač + spoušť'),290,58);
   pBtns.forEach((b,i)=>{ x.fillStyle=b.exit?(i===pHover?'#c0392b':'#8e2b20'):b.on?'#e8662a':(i===pHover?'#3c5a4a':'#24362c'); x.beginPath(); x.roundRect?x.roundRect(b.x,b.y,b.w,b.h,12):x.rect(b.x,b.y,b.w,b.h); x.fill();
-    x.fillStyle='#fff'; fitFont(x,b.txt,b.w-20,40); x.textAlign='center'; x.textBaseline='middle'; x.fillText(b.txt,b.x+b.w/2,b.y+b.h/2+2); x.textAlign='left'; x.textBaseline='alphabetic'; });
+    x.fillStyle='#fff'; const bt=tr(b.txt); fitFont(x,bt,b.w-20,40); x.textAlign='center'; x.textBaseline='middle'; x.fillText(bt,b.x+b.w/2,b.y+b.h/2+2); x.textAlign='left'; x.textBaseline='alphabetic'; });
   pTex.needsUpdate=true;
 }
 const pRay=new THREE.Raycaster(), pQ=new THREE.Quaternion(), pO=new V(), pD=new V();
@@ -764,7 +996,7 @@ function panelTick(){ let hov=-1, hh=-1, pt=null;
   if(hov!==pHover){ pHover=hov; drawPanel(); } if(hh!==hHover){ hHover=hh; drawHud(); } }
 
 /* ---------- UI ---------- */
-function say(m){st.lastMsg=m; $('fb').textContent=m; drawHud(); if(typeof drawPanel==='function'&&panel.visible) drawPanel();}
+function say(m){st.lastMsg=m; $('fb').textContent=tr(m); drawHud(); if(typeof drawPanel==='function'&&panel.visible) drawPanel();}
 const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice',N:'Nástřel',T:'Trap',W:'Double trap'};
 const MODES=()=>st.disc==='trap'?['T','W','N']:['H','L','D','N'];
 function cycleMode(d){ const m=MODES(), i=m.indexOf(st.mode); setMode(m[(i+d+m.length)%m.length]); }
@@ -784,17 +1016,18 @@ function drawSpeaker(x,X,Y,w,h,on,hover){
 let spoustTep=-1e9, spoustBat=null;
 const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
-  $('hudL').innerHTML=`<b>Stanoviště ${st.station+1}</b><br>${MODE[st.mode]}`;
-  $('hudR').innerHTML=`Náboje ${shellsTxt()}<br>Spoušť ${spoustOK()?'● připojena'+batTxt():'○ nepřipojena'}`;
+  $('hudL').innerHTML=`<b>${tr('Stanoviště')} ${st.station+1}</b><br>${tr(MODE[st.mode])}`;
+  $('hudR').innerHTML=`${tr('Náboje')} ${shellsTxt()}<br>${tr('Spoušť')} ${spoustOK()?tr('● připojena')+batTxt():tr('○ nepřipojena')}`;
   const x=hudCanvas.getContext('2d'), W=1024, H=448; x.clearRect(0,0,W,H);
   x.fillStyle='rgba(15,23,19,0.82)'; x.fillRect(0,0,W,H); x.fillStyle='#e8662a'; x.fillRect(0,0,12,H);
-  const SH={H:'VYSOKÁ',L:'NÍZKÁ',D:'DVOJICE',N:'NÁSTŘEL',T:'TRAP '+trapKindTxt().toUpperCase(),W:'DOUBLE TRAP'};
+  const SH={H:tr('VYSOKÁ'),L:tr('NÍZKÁ'),D:tr('DVOJICE'),N:tr('NÁSTŘEL'),T:tr('TRAP')+' '+trapKindTxt().toUpperCase(),W:tr('DOUBLE TRAP')};
   const P=PROG[st.prog], tt=(P?`${P.k} ${st.progI+1}/${P.seq.length} · `:'')+`${st.station+1} · ${SH[st.mode]}`;
   x.fillStyle='#fff'; fitFont(x,tt,600,72); x.fillText(tt,36,80);
   x.textAlign='right'; x.font='600 44px IBM Plex Mono, monospace'; x.fillStyle='#cfe3d6'; x.fillText(`${shellsTxt()} ${totals()}`,W-30,74);
-  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(spoustOK()?'● SPOUŠŤ'+batTxt():'○ SPOUŠŤ',W-30,122); x.textAlign='left';
+  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(tr(spoustOK()?'● SPOUŠŤ':'○ SPOUŠŤ')+(spoustOK()?batTxt():''),W-30,122); x.textAlign='left';
   // hláška – zkrácená a zmenšená, aby se vždy vešla
-  let m=st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za');
+  let m=LANG==='cs'?st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za')
+    :tr(st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,''));
   const MW=W-72-170;   // vpravo je tlačítko reproduktoru
   let fs=60; x.font=`700 ${fs}px Barlow Condensed, Arial`; while(x.measureText(m).width>MW&&fs>30){fs-=4; x.font=`700 ${fs}px Barlow Condensed, Arial`;}
   if(x.measureText(m).width>MW){ while(m.length>4&&x.measureText(m+'…').width>MW) m=m.slice(0,-1); m+='…'; }
@@ -803,8 +1036,8 @@ function drawHud(){
   hBtns=[]; const lab=st.disc==='trap'?[['T','TERČ'],['W','DVOJ'],['N','NÁSTŘEL']]:[['H','V'],['L','N'],['D','D'],['N','NÁSTŘEL']], bw=st.disc==='trap'?[200,200,250]:[140,140,140,250];
   let bx=36; lab.forEach(([k,t],i)=>{ hBtns.push({x:bx,y:300,w:bw[i],h:110,act:()=>setMode(k)}); 
     x.fillStyle=st.mode===k?'#e8662a':(i===hHover?'#3c5a4a':'#24362c'); x.fillRect(bx,300,bw[i],110);
-    x.fillStyle='#fff'; fitFont(x,t,bw[i]-20,64); x.textAlign='center'; x.fillText(t,bx+bw[i]/2,378); x.textAlign='left'; bx+=bw[i]+20; });
-  const lastT=st.mode==='N'?(st.zAlign?'MIŘTE…':'OSA'):st.disc==='trap'?'HOP':'PULL';
+    x.fillStyle='#fff'; const tt2=tr(t); fitFont(x,tt2,bw[i]-20,64); x.textAlign='center'; x.fillText(tt2,bx+bw[i]/2,378); x.textAlign='left'; bx+=bw[i]+20; });
+  const lastT=tr(st.mode==='N'?(st.zAlign?'MIŘTE…':'OSA'):st.disc==='trap'?'HOP':'PULL');
   const iPull=hBtns.length; hBtns.push({x:bx,y:300,w:W-36-bx,h:110,act:()=>st.mode==='N'?zAlignArm():callPull()});
   x.fillStyle=(hHover===iPull)?'#3c5a4a':(st.zAlign?'#e8662a':'#2f7d4a'); x.fillRect(bx,300,W-36-bx,110); x.fillStyle='#fff'; fitFont(x,lastT,W-56-bx,64); x.textAlign='center'; x.fillText(lastT,bx+(W-36-bx)/2,378); x.textAlign='left';
   // reproduktor – zvuk vrhačky zapnout / vypnout (přeškrtnutý = vypnuto)
@@ -814,21 +1047,21 @@ function drawHud(){
 }
 function totals(){let h=0,n=0;st.stats.forEach(s=>(st.disc==='trap'?['T','W']:['H','L','D']).forEach(k=>{h+=s[k][0];n+=s[k][1];}));return `${h}/${n}`;}
 function leadTxt(arr){if(!arr.length)return '–';const m=arr.reduce((a,b)=>a+b,0)/arr.length;
-  return `<span class="${m>=0?'lead-ahead':'lead-behind'}">${m>=0?'před':'za'} ${cm(m)} cm</span>`;}
+  return `<span class="${m>=0?'lead-ahead':'lead-behind'}">${tr(m>=0?'před':'za')} ${cm(m)} cm</span>`;}
 function renderScore(){
   const f=a=>a[1]?`${a[0]}/${a[1]}`:'–';
-  const tr=st.disc==='trap';
-  $('scoreHead').innerHTML=tr?'<th>Stan.</th><th>Trap</th><th>Dvojice</th><th></th><th>Chyba předstihu</th>':'<th>Stan.</th><th>Vysoká</th><th>Nízká</th><th>Dvojice</th><th>Chyba předstihu</th>';
-  $('scoreBody').innerHTML=st.stats.slice(0,nSt()).map((s,i)=>tr?`<tr class="${i===st.station?'cur':''}"><td>${i+1}</td><td>${f(s.T)}</td><td>${f(s.W)}</td><td></td><td>${leadTxt(s.leadT)}</td></tr>`
+  const isTr=st.disc==='trap';
+  $('scoreHead').innerHTML=(isTr?['Stan.','Trap','Dvojice','','Chyba předstihu']:['Stan.','Vysoká','Nízká','Dvojice','Chyba předstihu']).map(h=>`<th>${tr(h)}</th>`).join('');
+  $('scoreBody').innerHTML=st.stats.slice(0,nSt()).map((s,i)=>isTr?`<tr class="${i===st.station?'cur':''}"><td>${i+1}</td><td>${f(s.T)}</td><td>${f(s.W)}</td><td></td><td>${leadTxt(s.leadT)}</td></tr>`
     :`<tr class="${i===st.station?'cur':''}"><td>${i+1}</td><td>${f(s.H)}</td><td>${f(s.L)}</td><td>${f(s.D)}</td><td>${leadTxt(s.lead)}</td></tr>`).join('');
-  $('totHits').textContent=`zásahy ${totals()}`;
-  $('totLead').innerHTML=leadTxt(st.stats.flatMap(s=>tr?s.leadT:s.lead));
+  $('totHits').textContent=`${tr('zásahy')} ${totals()}`;
+  $('totLead').innerHTML=leadTxt(st.stats.flatMap(s=>isTr?s.leadT:s.lead));
   drawHud();
 }
 function buildSeg(){
   $('stSeg').innerHTML=[...Array(nSt())].map((_,i)=>`<button type="button" data-s="${i}">${i+1}</button>`).join('');
   $('stSeg').onclick=e=>{const b=e.target.closest('button');if(b)setStation(+b.dataset.s);};
-  $('modeSeg').innerHTML=MODES().map(m=>`<button type="button" data-m="${m}">${MODE[m]}</button>`).join('');
+  $('modeSeg').innerHTML=MODES().map(m=>`<button type="button" data-m="${m}">${tr(MODE[m])}</button>`).join('');
   $('modeSeg').onclick=e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m);};
   document.querySelectorAll('#discSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===st.disc));
   document.querySelectorAll('#progSeg button').forEach(b=>{ const t=b.dataset.p==='trap25'||b.dataset.p==='dtrap', sk=b.dataset.p==='skeet'||b.dataset.p==='lov'; b.hidden=st.disc==='trap'?sk:t; });
@@ -897,10 +1130,10 @@ function spoust(){
 /* ---------- VR ---------- */
 const vrBtn=$('vrBtn'), vrNote=$('vrNote');
 async function initVR(){
-  if(!navigator.xr){vrBtn.disabled=true; vrNote.textContent='Tento prohlížeč nepodporuje WebXR. Na počítači hrajte myší, ve VR otevřete stránku v Questu.'; return;}
+  if(!navigator.xr){vrBtn.disabled=true; vrNote.textContent=tr('Tento prohlížeč nepodporuje WebXR. Na počítači hrajte myší, ve VR otevřete stránku v Questu.'); return;}
   let ok=false; try{ok=await navigator.xr.isSessionSupported('immersive-vr');}catch(e){}
-  if(!ok){vrBtn.disabled=true; vrNote.textContent='VR tu není k dispozici. V Questu otevřete stránku v Meta Quest Browser.'; return;}
-  vrNote.textContent='Připraveno. Postavte se do volného prostoru.';
+  if(!ok){vrBtn.disabled=true; vrNote.textContent=tr('VR tu není k dispozici. V Questu otevřete stránku v Meta Quest Browser.'); return;}
+  vrNote.textContent=tr('Připraveno. Postavte se do volného prostoru.');
 }
 vrBtn.onclick=async()=>{
   audio();
@@ -908,10 +1141,10 @@ vrBtn.onclick=async()=>{
   try{
     const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
     camera.position.set(0,0,0); camera.rotation.set(0,0,0);
-    await renderer.xr.setSession(s); panel.visible=true; drawPanel(); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent='Ukončit VR';
-    s.addEventListener('end',()=>{st.inXR=false; panel.visible=false; hudMesh.visible=false; vrBtn.textContent='Vstoupit do VR'; resize(); placeDolly();});
+    await renderer.xr.setSession(s); panel.visible=true; drawPanel(); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent=tr('Ukončit VR');
+    s.addEventListener('end',()=>{st.inXR=false; panel.visible=false; hudMesh.visible=false; vrBtn.textContent=tr('Vstoupit do VR'); resize(); placeDolly();});
     placeDolly(); say('Grip nebo A = terč');
-  }catch(e){vrNote.textContent='VR se nespustilo ('+(e&&e.message?e.message:'neznámá chyba')+'). Zkuste stránku otevřít přímo v Meta Quest Browser.';}
+  }catch(e){vrNote.textContent=tr('VR se nespustilo')+' ('+(e&&e.message?e.message:'?')+'). '+tr('Zkuste stránku otevřít přímo v Meta Quest Browser.');}
 };
 
 const prevAxes=new Map(), prevBtn=new Map();
@@ -990,8 +1223,8 @@ function resize(){if(st.inXR)return; const w=stage.clientWidth,h=stage.clientHei
 new ResizeObserver(resize).observe(stage);
 
 $('pullBtn').onclick=()=>{audio();pull();};
-$('panoYaw').value=PANO.yaw; $('panoFov').value=PANO.fov; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená';
-$('panoBtn').onclick=()=>{PANO.on=!PANO.on; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená'; panoBuild(); panoSave();};
+$('panoYaw').value=PANO.yaw; $('panoFov').value=PANO.fov; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=tr(PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená');
+$('panoBtn').onclick=()=>{PANO.on=!PANO.on; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=tr(PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená'); panoBuild(); panoSave();};
 $('panoYaw').oninput=e=>{PANO.yaw=+e.target.value; panoBuild(); panoSave();};
 $('panoFov').oninput=e=>{PANO.fov=+e.target.value; panoBuild(); panoSave();};
 $('autoBtn').onclick=()=>{audio(); setAuto(!st.auto);};
@@ -1001,18 +1234,21 @@ $('discSeg').onclick=e=>{const b=e.target.closest('button'); if(b){audio(); setD
 $('trapSeg').onclick=e=>{const b=e.target.closest('button[data-k]'); if(b) setTrapKind(b.dataset.k);};
 $('trapArc').onchange=e=>setTrapArc(+e.target.value);
 $('zeroSave').onclick=()=>zSave(); $('zeroReset').onclick=()=>zReset(); applyCorr();
-function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${o.n}</option>`).join('');}
-fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo);
+function fillSel(id,obj,val){$(id).innerHTML=Object.entries(obj).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${tr(o.n)}</option>`).join('');}
+function gunUi(){ fillSel('ch1',CHOKES,gun.ch[0]); fillSel('ch2',CHOKES,gun.ch[1]); fillSel('ammo',AMMO,gun.ammo); $('poi').value=gun.poi;
+  $('odpad').value=odpadOf()*100; $('odpadO').textContent=(odpadOf()*100).toFixed(1).replace('.',',')+' %'; $('gunDisc').textContent='· '+tr(st.disc==='trap'?'trap':'skeet'); renderPattern(); }
 function renderPattern(){const a=ammoInfo(AMMO[gun.ammo]);
   $('patBody').innerHTML=[0,1].map(i=>{const rate=CHOKES[gun.ch[i]].rate;
     return `<tr><td>${i+1}. ${gun.ch[i]}</td>`+[15,20,25,30].map(d=>{const v=pelletV(a,d),E=0.5*a.mass*v*v,n=E>=E_MIN?expPellets(a,rate,d,0):0;
-      return `<td>${(patternR(rate,a.steel,d)*200).toFixed(0)} cm · ${n.toFixed(1)}</td>`;}).join('')+'</tr>';}).join('')
-    +`<tr><td>Broků</td><td colspan="4">${a.count} ks · úsťová rychlost ${a.v0} m/s · na 25 m ${Math.round(pelletV(a,25))} m/s</td></tr>`;
-  try{localStorage.setItem('skeet-gun',JSON.stringify(gun));}catch(e){} drawHud();}
+      return `<td>${(patternR(rate,a.steel,d)*200).toFixed(0)} cm · ${(n*(1-odpadOf())).toFixed(1)}</td>`;}).join('')+'</tr>';}).join('')
+    +`<tr><td>${tr('Broků')}</td><td colspan="4">${a.count}${tr(' ks · úsťová rychlost ')}${a.v0} m/s${tr(' · na 25 m ')}${Math.round(pelletV(a,25))} m/s${tr(' · odpad ')}${(odpadOf()*100).toFixed(1).replace('.',',')} %</td></tr>`;
+  try{localStorage.setItem(GUN_KEY[st.disc],JSON.stringify(gun));}catch(e){} drawHud();}
 $('ch1').onchange=e=>{gun.ch[0]=e.target.value;renderPattern();};
 $('ch2').onchange=e=>{gun.ch[1]=e.target.value;renderPattern();};
-$('ammo').onchange=e=>{gun.ammo=e.target.value;renderPattern();};
-renderPattern();
+$('ammo').onchange=e=>{gun.ammo=e.target.value; gun.odpad=null; gunUi();};
+$('poi').onchange=e=>{gun.poi=+e.target.value; renderPattern(); say('Zbraň bije '+gun.poi+'/'+(100-gun.poi));};
+$('odpad').oninput=e=>{gun.odpad=+e.target.value/100; $('odpadO').textContent=(+e.target.value).toFixed(1).replace('.',',')+' %'; renderPattern();};
+gunUi();
 $('bigBtn').onclick=()=>{st.big=!st.big; $('bigBtn').setAttribute('aria-pressed',st.big); st.targets.forEach(t=>applyBig(t.m)); say(st.big?'Zvýraznění zapnuto':'Zvýraznění vypnuto');};
 $('speedSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.speed=+b.dataset.v; syncSpeed(); say('Rychlost '+Math.round(st.speed*100)+' %');};
 $('windSeg').onclick=e=>{const b=e.target.closest('button'); if(!b)return; st.wind=+b.dataset.w; syncWind(); say(b.textContent);};
@@ -1020,7 +1256,12 @@ function syncWind(){document.querySelectorAll('#windSeg button').forEach(b=>b.se
 syncWind();
 function syncSpeed(){document.querySelectorAll('#speedSeg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===st.speed));}
 syncSpeed();
-buildSeg(); syncSeg(); placeDolly(); renderScore(); resize(); initVR();
+function setLang(l){ LANG=l; try{localStorage.setItem('skeet-lang',l);}catch(e){} document.documentElement.lang=l; $('langSel').value=l;
+  trStatic(document.querySelector('.wrap')); buildSeg(); syncSeg(); renderScore(); gunUi();
+  vrBtn.textContent=tr(renderer.xr.getSession()?'Ukončit VR':'Vstoupit do VR'); $('panoBtn').textContent=tr(PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená');
+  $('fb').textContent=tr(st.lastMsg); drawHud(); if(panel.visible) drawPanel(); }
+$('langSel').onchange=e=>setLang(e.target.value);
+buildSeg(); syncSeg(); placeDolly(); renderScore(); resize(); initVR(); setLang(LANG);
 // ukázkový terč, aby scéna nebyla prázdná
 setTimeout(()=>{if(!st.targets.length){st.pending.push({t:0,w:'H'});}},600);
 renderer.setAnimationLoop(tick);
