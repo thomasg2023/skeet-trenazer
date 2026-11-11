@@ -147,11 +147,11 @@ fieldset:disabled{opacity:.5}
 <body>
 
 <div class="wrap">
-  <div class="bar"><h1>Skeet záznam</h1>
+  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.11-2</small></h1>
     <div style="display:flex;gap:8px;align-items:center"><select id="langSel" aria-label="Jazyk / Language"><option value="cs">CZ</option><option value="en">GB</option><option value="es">ES</option><option value="it">IT</option><option value="de">DE</option></select>
     <div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
-    <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
+    <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn" id="kabBtn" hidden title="Chrome / Edge na Macu nebo PC">Kabel USB</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
 
   <section id="pZ" class="round">
     <div class="card run" id="runCard">
@@ -248,6 +248,7 @@ fieldset:disabled{opacity:.5}
         <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
       </div>
       <div class="card fs">
+        <p class="explain">Verze aplikace: <b>2026.11.11-2</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
         <h2>Komunikace</h2>
         <div class="log" id="log"></div>
       </div>
@@ -665,8 +666,16 @@ const EX = {
   'Odpojit': ['Disconnect', 'Trennen', 'Desconectar', 'Scollega'], 'Bliknout': ['Blink', 'Blinken', 'Parpadear', 'Lampeggia'],
   'jen VR spoušť': ['VR trigger only', 'nur VR-Abzug', 'solo gatillo RV', 'solo grilletto VR'], 'záznam': ['recording', 'Aufzeichnung', 'registro', 'registrazione'], 'VR + záznam': ['VR + recording', 'VR + Aufzeichnung', 'RV + registro', 'VR + registrazione'],
   'Smazat': ['Delete', 'Löschen', 'Borrar', 'Elimina'], 'Poslat': ['Send', 'Senden', 'Enviar', 'Invia'],
+  'Kabel USB': ['USB cable', 'USB-Kabel', 'Cable USB', 'Cavo USB'], 'Port nevybrán.': ['No port selected.', 'Kein Port gewählt.', 'Ningún puerto elegido.', 'Nessuna porta scelta.'],
+  'Kabel odpojen. Zapojte ho a dejte Kabel USB.': ['Cable disconnected. Plug it in and press USB cable.', 'Kabel getrennt. Einstecken und USB-Kabel drücken.', 'Cable desconectado. Conéctelo y pulse Cable USB.', 'Cavo scollegato. Collegalo e premi Cavo USB.'],
+  'Port je obsazený – zavřete Serial Monitor v Arduino IDE a zkuste znovu.': ['Port is busy – close the Serial Monitor in Arduino IDE and try again.', 'Port belegt – Serial Monitor in der Arduino IDE schließen und erneut versuchen.', 'Puerto ocupado: cierre el Serial Monitor del Arduino IDE y reintente.', 'Porta occupata: chiudi il Serial Monitor di Arduino IDE e riprova.'],
+  'Kabel umí jen Chrome nebo Edge na počítači (Mac / PC). iPhone kabel neumí.': ['The cable only works in Chrome or Edge on a computer (Mac / PC). iPhone cannot use it.', 'Kabel nur in Chrome oder Edge am Computer (Mac / PC). iPhone kann das nicht.', 'El cable solo funciona en Chrome o Edge en un ordenador (Mac / PC). El iPhone no.', 'Il cavo funziona solo in Chrome o Edge su computer (Mac / PC). iPhone no.'],
+  'Vyberte port spouště (XIAO nRF52840 / usbmodem)…': ['Choose the trigger port (XIAO nRF52840 / usbmodem)…', 'Port des Abzugs wählen (XIAO nRF52840 / usbmodem)…', 'Elija el puerto del gatillo (XIAO nRF52840 / usbmodem)…', 'Scegli la porta del grilletto (XIAO nRF52840 / usbmodem)…'],
+  'Připojuji kabelem…': ['Connecting by cable…', 'Verbinde per Kabel…', 'Conectando por cable…', 'Connessione via cavo…'],
 };
 const PH = {
+  'kabel USB': ['USB cable', 'USB-Kabel', 'cable USB', 'cavo USB'], 'Kabel – připojuji znovu': ['Cable – reconnecting', 'Kabel – verbinde erneut', 'Cable – reconectando', 'Cavo – ricollego'],
+  'Kabelem se nepodařilo připojit': ['Could not connect by cable', 'Kabelverbindung fehlgeschlagen', 'No se pudo conectar por cable', 'Collegamento via cavo non riuscito'],
   // horní lišta a záložky
   'Skeet záznam': ['Skeet log', 'Skeet-Protokoll', 'Registro de skeet', 'Registro skeet'],
   'Záznamy': ['Records', 'Aufzeichnungen', 'Registros', 'Registrazioni'], 'Nastavení': ['Settings', 'Einstellungen', 'Ajustes', 'Impostazioni'],
@@ -841,6 +850,7 @@ const PH = {
   '(starý – nahrajte nový)': ['(old – upload the new one)', '(alt – neue aufspielen)', '(antiguo – cargue el nuevo)', '(vecchio – carica il nuovo)'],
   ' – připojuji znovu (': [' – reconnecting (', ' – verbinde erneut (', ' – reconectando (', ' – ricollego ('], 'Spojení spadlo': ['Connection lost', 'Verbindung verloren', 'Conexión perdida', 'Connessione persa'], 'Spoušť přestala odpovídat': ['Trigger stopped responding', 'Abzug antwortet nicht mehr', 'El gatillo dejó de responder', 'Il grilletto non risponde più'],
   'Spojení obnoveno, pokračuji.': ['Connection restored, continuing.', 'Verbindung wiederhergestellt, weiter.', 'Conexión restablecida, continúo.', 'Connessione ripristinata, continuo.'], 'Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit.': ['Could not restore the connection. Switch the trigger off and on and press Connect.', 'Verbindung nicht wiederhergestellt. Abzug aus- und einschalten und Verbinden drücken.', 'No se pudo restablecer. Apague y encienda el gatillo y pulse Conectar.', 'Impossibile ripristinare. Spegni e riaccendi il grilletto e premi Collega.'],
+  'Verze aplikace: ': ['App version: ', 'App-Version: ', 'Versión de la app: ', 'Versione app: '], ' · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.': [' · the trigger firmware version shows after connecting (“fw …”). Send both when reporting an error.', ' · die Firmware-Version des Abzugs erscheint nach dem Verbinden („fw …“). Bei Fehlern beide senden.', ' · la versión del firmware aparece al conectar («fw …»). Envíe ambas al informar de un error.', ' · la versione del firmware appare dopo il collegamento («fw …»). In caso di errore inviale entrambe.'],
   ' · Vysoká': [' · High', ' · Hochhaus', ' · Alta', ' · Alto'], ' · Nízká': [' · Low', ' · Niederhaus', ' · Baja', ' · Basso'], ' · Dvojterč': [' · Double', ' · Dublette', ' · Doblete', ' · Doppietto'],
 };
 let LANG = 'cs'; try { const l = localStorage.getItem('zaznam-lang'); if (LANGS.some(x => x[0] === l)) LANG = l; } catch (e) {}
@@ -895,8 +905,14 @@ const DB = (() => {
 const NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e', RXU = '6e400002-b5a3-f393-e0a9-e50e24dcca9e', TXU = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 let dev = null, rx = null, tx = null, inBuf = '', listeners = [], wq = Promise.resolve();
 const enc = new TextEncoder(), dec = new TextDecoder();
-const connected = () => !!(dev && dev.gatt && dev.gatt.connected && rx);
+const connected = () => kabel() || !!(dev && dev.gatt && dev.gatt.connected && rx);
+/* ---------- kabel USB (Web Serial – jen Chrome/Edge na počítači) ---------- */
+let port = null, pw = null, pr = null, kabelOdpojeno = false;
+const kabel = () => !!(port && pw);
+// výpisy, které spoušť po kabelu posílá sama (stav každých pár sekund) – nejsou to odpovědi na příkazy
+const SUM = /^(B \d+\.\d+ -?\d+|D [\d.]+ -?\d+|Skeet .*(BLE spojeni|pripraven)|Akcelerometr|Mikrofon|\? neznamy prikaz: $)/;
 function onLine(l) {
+  if (kabel() && SUM.test(l)) return;
   if (!l.startsWith('r ')) log('← ' + l);
   listeners.slice().forEach(f => f(l));
   if (l.startsWith('S ')) { stav = kv(l); showConn(); }
@@ -910,6 +926,7 @@ function kv(l) { const o = {}; l.slice(2).split(' ').forEach(p => { const i = p.
 function send(c) {
   log('→ ' + c);
   wq = wq.then(async () => { if (!connected()) throw new Error('nepřipojeno'); const b = enc.encode(c + '\n');
+    if (kabel()) { await pw.write(b); return; }
     for (let i = 0; i < b.length; i += 20) { const ch = b.slice(i, i + 20);
       if (rx.writeValueWithResponse) await rx.writeValueWithResponse(ch); else await rx.writeValue(ch); } })
     .catch(e => log('! ' + e.message));
@@ -924,6 +941,8 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
+const VERZE = '2026.11.11-2';
+window.addEventListener('error', e => { try { log('! chyba programu (verze ' + VERZE + '): ' + (e.message || '?')); } catch (_) {} });
 function chybaText(e) {
   const m = (e && e.message ? e.name + ' ' + e.message : (e && e.name) || String(e || 'neznámá chyba'));
   if (!e || !e.message) return 'Spojení se nepodařilo (Bluefy nevrátil důvod). Úplně zavřete Bluefy, v iPhonu vypněte a zapněte Bluetooth, spoušť restartujte a zkuste znovu.';
@@ -961,6 +980,7 @@ async function obnov(proc) {
   return ok;
 }
 async function connect(vse) {
+  if (kabel()) { await zavriKabel(); showConn(); return; }
   if (connected()) { rucneOdpojeno = true; dev.gatt.disconnect(); return; }
   rucneOdpojeno = false;
   if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
@@ -973,7 +993,7 @@ async function connect(vse) {
     await loadPv();
     showConn();
     if (LS.get('autoSync', true)) sync();
-  } catch (e) { log('! ' + e.name + ': ' + e.message); rx = null; showConn();
+  } catch (e) { log('! ' + (e && e.name) + ': ' + (e && e.message) + ' (aplikace ' + VERZE + ')'); rx = null; showConn();
     if (/cancel/i.test(e.message) || e.name === 'NotFoundError' && /cancel|chooser/i.test(e.message)) {
       $('connTxt').innerHTML = '<b>Spoušť nevybrána.</b> Pokud v seznamu nebyla, <a href="#" id="vseLink">zkuste hledat všechna zařízení</a>.';
       const a = $('vseLink'); if (a) a.onclick = ev => { ev.preventDefault(); connect(true); };
@@ -983,6 +1003,7 @@ let stav = null; const cfg = {};
 function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
 function showConn() {
   const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
+  $('kabBtn').hidden = on || !('serial' in navigator);
   $('fsN').disabled = !on; $('blinkBtn').hidden = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
   showRun();
   if (!on) { connMsg('Spoušť nepřipojena'); return; }
@@ -993,7 +1014,61 @@ function showConn() {
   if (stav.klavesa && document.activeElement !== $('klavesa')) $('klavesa').value = stav.klavesa;
   if (document.activeElement !== $('usin')) { if (stav.usin != null) { $('usin').value = stav.usin; $('usin').disabled = false; } else $('usin').disabled = true; }
   if (document.activeElement !== $('nab')) { if (stav.nab) { $('nab').value = stav.nab; $('nab').disabled = false; } else { $('nab').disabled = true; $('nabMsg').textContent = 'Starý firmware ve spoušti – přepínač nabíjení funguje až s novým.'; } }
-  $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · fw ${esc(stav.verze || '?')}${+stav.verze < 9 ? ' <span style="color:var(--bad)">(starý – nahrajte nový)</span>' : ''} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+  $('connTxt').innerHTML = `<b>${kabel() ? esc((stav.jmeno || 'Spoušť').replace(/_/g, ' ')) + ' · kabel USB' : esc(dev.name || 'Spoušť')} · fw ${esc(stav.verze || '?')}${+stav.verze < 9 ? ' <span style="color:var(--bad)">(starý – nahrajte nový)</span>' : ''} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+}
+
+/* ---------- připojení kabelem ---------- */
+async function otevriKabel(p) {
+  port = p; await p.open({ baudRate: 115200 }); pw = p.writable.getWriter(); inBuf = ''; wq = Promise.resolve(); ctiKabel(p);
+}
+async function ctiKabel(p) {
+  const d = new TextDecoder(); pr = p.readable.getReader();
+  try { for (;;) { const { value, done } = await pr.read(); if (done) break;
+    inBuf += d.decode(value, { stream: true });
+    let i; while ((i = inBuf.indexOf('\n')) >= 0) { const l = inBuf.slice(0, i).replace(/\r$/, ''); inBuf = inBuf.slice(i + 1); if (l) onLine(l); } } }
+  catch (e) { log('! kabel: ' + ((e && e.message) || 'přerušeno')); }
+  if (port !== p) return;                       // zavřeno záměrně
+  await zahodKabel(); stav = null; showConn();
+  if (!kabelOdpojeno) obnovKabel(p);           // vytažený kabel / restart spouště → zkusit znovu
+}
+async function zahodKabel() {
+  const p = port, r = pr, w = pw; port = null; pw = null; pr = null;
+  try { if (r) await r.cancel(); } catch (e) {} try { if (r) r.releaseLock(); } catch (e) {}
+  try { if (w) w.releaseLock(); } catch (e) {} try { if (p) await p.close(); } catch (e) {}
+}
+async function zavriKabel() { kabelOdpojeno = true; await zahodKabel(); }
+async function poKabelu() {
+  await ask('cas ' + Math.floor(Date.now() / 1000), ['S ']);
+  await ask('info', ['X ']);
+  await loadPv(); showConn();
+  if (LS.get('autoSync', true)) sync();
+}
+async function connectKabel() {
+  if (kabel()) { await zavriKabel(); showConn(); return; }
+  if (!('serial' in navigator)) { connMsg('Kabel umí jen Chrome nebo Edge na počítači (Mac / PC). iPhone kabel neumí.'); return; }
+  if (dev && dev.gatt && dev.gatt.connected) { rucneOdpojeno = true; dev.gatt.disconnect(); }
+  kabelOdpojeno = false;
+  try {
+    connMsg('Vyberte port spouště (XIAO nRF52840 / usbmodem)…');
+    const p = await navigator.serial.requestPort();
+    connMsg('Připojuji kabelem…');
+    await otevriKabel(p); await poKabelu();
+    log('Připojeno kabelem (aplikace ' + VERZE + ')');
+  } catch (e) { log('! kabel: ' + (e && e.name) + ': ' + (e && e.message)); await zahodKabel(); showConn();
+    if (/No port selected|cancel/i.test((e && e.message) || '')) connMsg('Port nevybrán.');
+    else if (/open|busy|InvalidState|NetworkError/i.test((e && e.name) + (e && e.message))) connMsg('Port je obsazený – zavřete Serial Monitor v Arduino IDE a zkuste znovu.');
+    else connMsg('Kabelem se nepodařilo připojit: ' + ((e && e.message) || '?')); }
+}
+async function obnovKabel(stary) {
+  if (obnovuji) return; obnovuji = true; const info = stary.getInfo ? stary.getInfo() : {};
+  for (let kolo = 1; kolo <= 4 && !kabelOdpojeno; kolo++) {
+    connMsg(`Kabel – připojuji znovu (${kolo}/4)…`); await pauza(1500 * kolo);
+    try { const ps = await navigator.serial.getPorts();
+      const p = ps.find(x => { const i = x.getInfo(); return i.usbVendorId === info.usbVendorId && i.usbProductId === info.usbProductId; }) || ps[0];
+      if (!p) continue;
+      await otevriKabel(p); obnovuji = false; await poKabelu(); zMsg('Spojení obnoveno, pokračuji.'); return; }
+    catch (e) { log('! obnova kabelu: ' + ((e && e.message) || '?')); obnovuji = true; await zahodKabel(); } }
+  obnovuji = false; showConn(); if (!kabelOdpojeno) connMsg('Kabel odpojen. Zapojte ho a dejte Kabel USB.');
 }
 
 /* ---------- START / STOP ---------- */
@@ -1047,7 +1122,7 @@ async function sync() {
     let vse = true; for (const z of list) if (!(await DB.has(`${z.polozka}-${z.krok}-${z.unix}-${z.up}`))) vse = false;
     res = { ok: vse, total: list.length };
   } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message);
-    if (/neodpovídá|nepřenesl|poškozený|nepřipojeno/.test(e.message || '') && !rucneOdpojeno) { syncing = false; obnov('Spoušť přestala odpovídat'); return res; } }
+    if (/neodpovídá|nepřenesl|poškozený|nepřipojeno/.test(e.message || '') && !rucneOdpojeno && !kabel()) { syncing = false; obnov('Spoušť přestala odpovídat'); return res; } }
   syncing = false; if (syncAgain) { syncAgain = false; sync(); }
   return res;
 }
@@ -1108,6 +1183,8 @@ $('casOd').value = LS.get('casOd', ''); $('casOd').onchange = () => { LS.set('ca
 
 /* ---------- tlačítka ---------- */
 $('connBtn').onclick = () => connect(false);
+$('kabBtn').onclick = () => connectKabel();
+$('kabBtn').hidden = !('serial' in navigator);
 $('blinkBtn').onclick = () => ask('blikni', ['OK', '?']).then(() => zMsg('Spoušť, na kterou jste připojen, teď 4 s bliká všemi LED.'));
 $('klavesa').onchange = async () => { try { const l = await ask('klavesa ' + $('klavesa').value, ['K ', '?', 'CHYBA']);
   $('klMsg').textContent = l.startsWith('K ') ? 'Uloženo ve spoušti ✓' : l; } catch (e) { $('klMsg').textContent = 'Chyba: ' + e.message; } };
