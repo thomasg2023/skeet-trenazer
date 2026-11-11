@@ -837,6 +837,10 @@ const PH = {
   'Spoušť se vypnula po nečinnosti. Zapnete ji vypínačem.': ['The trigger switched off after being idle. Turn it on with the switch.', 'Abzug nach Inaktivität ausgeschaltet. Mit dem Schalter einschalten.', 'El gatillo se apagó por inactividad. Enciéndalo con el interruptor.', 'Il grilletto si è spento per inattività. Riaccendilo con l\'interruttore.'],
   'Spojení se nepodařilo. Zkuste hned znovu Připojit – po nepovedeném párování si spoušť sama smaže staré páry a napodruhé to projde. Když ne: spoušť vypněte a zapněte vypínačem a odpojte ji v Chrome na Macu.': ['Connection failed. Press Connect again right away – after a failed pairing the trigger deletes its old pairings and the second try works. If not: switch the trigger off and on and disconnect it in Chrome on the Mac.', 'Verbindung fehlgeschlagen. Gleich nochmal Verbinden – nach fehlgeschlagener Kopplung löscht der Abzug alte Kopplungen, der zweite Versuch klappt. Sonst: Abzug aus- und einschalten und in Chrome am Mac trennen.', 'No se pudo conectar. Pulse Conectar de nuevo – tras un emparejamiento fallido el gatillo borra los antiguos y el segundo intento funciona. Si no: apague y encienda el gatillo y desconéctelo en Chrome del Mac.', 'Connessione non riuscita. Premi subito di nuovo Collega – dopo un abbinamento fallito il grilletto cancella i vecchi abbinamenti e il secondo tentativo funziona. Altrimenti: spegni e riaccendi il grilletto e scollegalo in Chrome sul Mac.'],
   'Párování se nepovedlo – spoušť smazala staré páry. Dejte znovu Připojit.': ['Pairing failed – the trigger deleted its old pairings. Press Connect again.', 'Kopplung fehlgeschlagen – der Abzug hat alte Kopplungen gelöscht. Nochmal Verbinden.', 'Emparejamiento fallido – el gatillo borró los antiguos. Pulse Conectar de nuevo.', 'Abbinamento fallito – il grilletto ha cancellato i vecchi abbinamenti. Premi di nuovo Collega.'],
+  'Spojení se nepodařilo (Bluefy nevrátil důvod). Úplně zavřete Bluefy, v iPhonu vypněte a zapněte Bluetooth, spoušť restartujte a zkuste znovu.': ['Connection failed (Bluefy gave no reason). Close Bluefy completely, switch Bluetooth off and on on the iPhone, restart the trigger and try again.', 'Verbindung fehlgeschlagen (Bluefy nannte keinen Grund). Bluefy ganz schließen, Bluetooth am iPhone aus- und einschalten, Abzug neu starten und erneut versuchen.', 'No se pudo conectar (Bluefy no dio motivo). Cierre Bluefy del todo, apague y encienda Bluetooth en el iPhone, reinicie el gatillo y vuelva a intentarlo.', 'Connessione non riuscita (Bluefy non ha dato il motivo). Chiudi del tutto Bluefy, spegni e riaccendi il Bluetooth sull\'iPhone, riavvia il grilletto e riprova.'],
+  '(starý – nahrajte nový)': ['(old – upload the new one)', '(alt – neue aufspielen)', '(antiguo – cargue el nuevo)', '(vecchio – carica il nuovo)'],
+  ' – připojuji znovu (': [' – reconnecting (', ' – verbinde erneut (', ' – reconectando (', ' – ricollego ('], 'Spojení spadlo': ['Connection lost', 'Verbindung verloren', 'Conexión perdida', 'Connessione persa'], 'Spoušť přestala odpovídat': ['Trigger stopped responding', 'Abzug antwortet nicht mehr', 'El gatillo dejó de responder', 'Il grilletto non risponde più'],
+  'Spojení obnoveno, pokračuji.': ['Connection restored, continuing.', 'Verbindung wiederhergestellt, weiter.', 'Conexión restablecida, continúo.', 'Connessione ripristinata, continuo.'], 'Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit.': ['Could not restore the connection. Switch the trigger off and on and press Connect.', 'Verbindung nicht wiederhergestellt. Abzug aus- und einschalten und Verbinden drücken.', 'No se pudo restablecer. Apague y encienda el gatillo y pulse Conectar.', 'Impossibile ripristinare. Spegni e riaccendi il grilletto e premi Collega.'],
   ' · Vysoká': [' · High', ' · Hochhaus', ' · Alta', ' · Alto'], ' · Nízká': [' · Low', ' · Niederhaus', ' · Baja', ' · Basso'], ' · Dvojterč': [' · Double', ' · Dublette', ' · Doblete', ' · Doppietto'],
 };
 let LANG = 'cs'; try { const l = localStorage.getItem('zaznam-lang'); if (LANGS.some(x => x[0] === l)) LANG = l; } catch (e) {}
@@ -921,28 +925,51 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
 function chybaText(e) {
-  const m = (e && (e.name + ' ' + e.message)) || String(e);
+  const m = (e && e.message ? e.name + ' ' + e.message : (e && e.name) || String(e || 'neznámá chyba'));
+  if (!e || !e.message) return 'Spojení se nepodařilo (Bluefy nevrátil důvod). Úplně zavřete Bluefy, v iPhonu vypněte a zapněte Bluetooth, spoušť restartujte a zkuste znovu.';
   if (/NotFound.*(service|UUID)|No Services|getPrimaryService/i.test(m)) return 'Spoušť nemá nový firmware s aplikací (krok 8). Nahrajte do ní SkeetTrigger.ino.';
   if (/Network|GATT|disconnect|connect/i.test(m)) return 'Spojení se nepodařilo. Zkuste hned znovu Připojit – po nepovedeném párování si spoušť sama smaže staré páry a napodruhé to projde. Když ne: spoušť vypněte a zapněte vypínačem a odpojte ji v Chrome na Macu.';
   if (/spoušť neodpovídá/i.test(m)) return 'Spoušť se připojila, ale neodpovídá. Vypněte ji a zapněte a zkuste znovu.';
   return 'Nepodařilo se připojit: ' + m;
 }
+// samo-oprava: po výpadku spojení (nebo když spoušť přestane odpovídat) se aplikace znovu připojí ke stejné spoušti a pokračuje
+let rucneOdpojeno = false, obnovuji = false;
+const pauza = ms => new Promise(r => setTimeout(r, ms));
+async function gattNahoru() {
+  let srv, chyba;
+  for (const cekej of [0, 800, 1600, 3000]) { if (cekej) await pauza(cekej);
+    try { srv = await dev.gatt.connect(); break; } catch (e) { chyba = e; log('! pokus o spojení: ' + ((e && e.message) || 'bez důvodu')); } }
+  if (!srv) throw chyba || new Error('Connection attempt failed');
+  const s = await srv.getPrimaryService(NUS);
+  rx = await s.getCharacteristic(RXU); tx = await s.getCharacteristic(TXU);
+  await tx.startNotifications();
+  if (!tx.__posluch) { tx.__posluch = true; tx.addEventListener('characteristicvaluechanged', e => { inBuf += dec.decode(e.target.value, { stream: true });
+    let i; while ((i = inBuf.indexOf('\n')) >= 0) { const l = inBuf.slice(0, i).replace(/\r$/, ''); inBuf = inBuf.slice(i + 1); if (l) onLine(l); } }); }
+  inBuf = ''; wq = Promise.resolve();
+  await ask('cas ' + Math.floor(Date.now() / 1000), ['S ']);
+  await ask('info', ['X ']);
+}
+async function obnov(proc) {
+  if (obnovuji || !dev || rucneOdpojeno) return false; obnovuji = true; let ok = false;
+  for (let kolo = 1; kolo <= 3 && !ok && !rucneOdpojeno; kolo++) {
+    connMsg(`${proc} – připojuji znovu (${kolo}/3)…`); log('… obnova spojení ' + kolo + '/3');
+    try { if (dev.gatt.connected) dev.gatt.disconnect(); await pauza(600 * kolo); await gattNahoru(); ok = true; }
+    catch (e) { log('! obnova: ' + ((e && e.message) || 'bez důvodu')); rx = null; await pauza(1500 * kolo); } }
+  obnovuji = false; showConn();
+  if (ok) { zMsg('Spojení obnoveno, pokračuji.'); if (LS.get('autoSync', true)) setTimeout(sync, 300); }
+  else connMsg('Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit.');
+  return ok;
+}
 async function connect(vse) {
-  if (connected()) { dev.gatt.disconnect(); return; }
+  if (connected()) { rucneOdpojeno = true; dev.gatt.disconnect(); return; }
+  rucneOdpojeno = false;
   if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
   try {
     connMsg(vse ? 'Vyberte spoušť ze seznamu všech zařízení…' : 'Vyberte „Skeet …“…');
     dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
-    dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); });
+    dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); if (!rucneOdpojeno && !obnovuji) obnov('Spojení spadlo'); });
     connMsg('Připojuji…');
-    let srv; try { srv = await dev.gatt.connect(); } catch (e1) { log('! 1. pokus: ' + e1.message); await new Promise(r => setTimeout(r, 800)); srv = await dev.gatt.connect(); }   // iOS občas napoprvé selže
-    const s = await srv.getPrimaryService(NUS);
-    rx = await s.getCharacteristic(RXU); tx = await s.getCharacteristic(TXU);
-    await tx.startNotifications();
-    tx.addEventListener('characteristicvaluechanged', e => { inBuf += dec.decode(e.target.value, { stream: true });
-      let i; while ((i = inBuf.indexOf('\n')) >= 0) { const l = inBuf.slice(0, i).replace(/\r$/, ''); inBuf = inBuf.slice(i + 1); if (l) onLine(l); } });
-    await ask('cas ' + Math.floor(Date.now() / 1000), ['S ']);
-    await ask('info', ['X ']);
+    await gattNahoru();
     await loadPv();
     showConn();
     if (LS.get('autoSync', true)) sync();
@@ -966,7 +993,7 @@ function showConn() {
   if (stav.klavesa && document.activeElement !== $('klavesa')) $('klavesa').value = stav.klavesa;
   if (document.activeElement !== $('usin')) { if (stav.usin != null) { $('usin').value = stav.usin; $('usin').disabled = false; } else $('usin').disabled = true; }
   if (document.activeElement !== $('nab')) { if (stav.nab) { $('nab').value = stav.nab; $('nab').disabled = false; } else { $('nab').disabled = true; $('nabMsg').textContent = 'Starý firmware ve spoušti – přepínač nabíjení funguje až s novým.'; } }
-  $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
+  $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · fw ${esc(stav.verze || '?')}${+stav.verze < 9 ? ' <span style="color:var(--bad)">(starý – nahrajte nový)</span>' : ''} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
 
 /* ---------- START / STOP ---------- */
@@ -992,7 +1019,7 @@ $('runBtn').onclick = async () => { if (runBusy) return; runBusy = true; showRun
 let syncing = false, syncAgain = false;
 function zMsg(t) { $('zMsg').textContent = t; }
 async function fetchRec(i) {
-  const lines = await collect('poslat ' + i, l => l.startsWith('R konec') || l.startsWith('R chyba'), 8000);
+  const lines = await collect('poslat ' + i, l => l.startsWith('R konec') || l.startsWith('R chyba'), 12000);
   const head = lines.find(l => /^R \d+ \d+$/.test(l)), end = lines[lines.length - 1];
   if (!head || !end.startsWith('R konec')) throw new Error('záznam ' + i + ' se nepřenesl');
   const total = +head.split(' ')[2], b = atob(lines.filter(l => l.startsWith('r ')).map(l => l.slice(2)).join(''));
@@ -1002,6 +1029,7 @@ async function fetchRec(i) {
 }
 async function sync() {
   if (!connected()) return { ok: false }; if (syncing) { syncAgain = true; return { ok: false, busy: true }; } syncing = true;
+  try { await saveRun; } catch (e) {}   // nejdřív dokončit rozdělané ukládání
   let res = { ok: false };
   try {
     const lines = await collect('zaznamy', l => l.startsWith('Z konec'), 6000);
@@ -1010,14 +1038,16 @@ async function sync() {
     for (const z of list) { const key = `${z.polozka}-${z.krok}-${z.unix}-${z.up}`;
       if (await DB.has(key)) continue;
       zMsg(`Stahuji záznam ${z.i + 1} z ${list.length}…`);
-      const u8 = await fetchRec(z.i); const r = AN.parse(u8);
+      let u8; try { u8 = await fetchRec(z.i); } catch (e1) { log('! ' + e1.message + ' – zkouším znovu'); await new Promise(r => setTimeout(r, 1500)); u8 = await fetchRec(z.i); }   // jednou zopakovat
+      const r = AN.parse(u8);
       await DB.put({ key, bytes: u8, hits: [], polozka: r.h.polozka, krok: r.h.krok, program: r.h.program, unix: r.h.unix0, up: r.h.up0, demo: false });
       n++; }
     zMsg(n ? `Staženo ${n} ${n === 1 ? 'nový záznam' : n < 5 ? 'nové záznamy' : 'nových záznamů'}.` : `Vše staženo (${list.length} ve spoušti).`);
     if (n) render();
     let vse = true; for (const z of list) if (!(await DB.has(`${z.polozka}-${z.krok}-${z.unix}-${z.up}`))) vse = false;
     res = { ok: vse, total: list.length };
-  } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message); }
+  } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message);
+    if (/neodpovídá|nepřenesl|poškozený|nepřipojeno/.test(e.message || '') && !rucneOdpojeno) { syncing = false; obnov('Spoušť přestala odpovídat'); return res; } }
   syncing = false; if (syncAgain) { syncAgain = false; sync(); }
   return res;
 }
@@ -1035,7 +1065,8 @@ const formVals = () => Object.fromEntries([...SELS, ...NUMS].map(k => [k, $(k).v
 async function sendForm(vals) { for (const k of [...SELS, ...NUMS]) await ask(`${k} ${vals[k]}`, ['C ', 'X ', '?']); }
 let saveT = 0, saveRun = Promise.resolve();
 async function saveNow() {
-  clearTimeout(saveT); const vals = formVals(); saving = true; $('saveMsg').textContent = 'Ukládám…';
+  clearTimeout(saveT); while (syncing) await new Promise(r => setTimeout(r, 300));   // neukládat uprostřed stahování
+  const vals = formVals(); saving = true; $('saveMsg').textContent = 'Ukládám…';
   try {
     await sendForm(vals); await ask('ulozit', ['OK ulozeno', 'CHYBA']); await ask('info', ['X ']); await ask('stav', ['S ']);
     const spatne = [...SELS, ...NUMS].filter(k => cfg[k] != null && Math.abs(+cfg[k] - +vals[k]) > 0.051);
