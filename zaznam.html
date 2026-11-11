@@ -222,6 +222,9 @@ fieldset:disabled{opacity:.5}
         <div class="row"><label for="nab">Nabíjení baterky přes USB-C</label>
           <select id="nab"><option value="100">100 mA – rychlejší (doporučeno)</option><option value="50">50 mA – šetrné, pro článek pod 100 mAh</option></select>
           <span class="hint">Článek 190–300 mAh se při 100 mA nabije za 2,5–3,5 h, při 50 mA za dvojnásobek. Uloží se hned a platí i po vypnutí.</span><span class="msg" id="nabMsg"></span></div>
+        <div class="row"><label for="usin">Vypnout po nečinnosti</label>
+          <select id="usin"><option value="10">10 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="0">Nikdy</option></select>
+          <span class="hint">Když se zbraní nikdo nehne, spoušť se úplně vypne a baterku nevybije. Pod 3,4 V se vypne vždy. Znovu ji zapnete vypínačem (vypnout a zapnout). S kabelem USB se nevypíná.</span><span class="msg" id="usinMsg"></span></div>
       </div>
       <div class="card fs">
         <h2>Předvolby</h2>
@@ -828,6 +831,10 @@ const PH = {
   ' · posun gyra ': [' · gyro offset ', ' · Gyro-Versatz ', ' · deriva del giróscopo ', ' · deriva giroscopio '], ' · mikrofon klid ': [' · microphone idle ', ' · Mikrofon Ruhe ', ' · micrófono en reposo ', ' · microfono a riposo '], ', práh HOP ': [', HOP threshold ', ', HOP-Schwelle ', ', umbral HOP ', ', soglia HOP '],
   ' · změna směru po 1. ráně ': [' · direction change after 1st shot ', ' · Richtungswechsel nach 1. Schuss ', ' · cambio de dirección tras el 1.er disparo ', ' · cambio di direzione dopo il 1° colpo '], ' · krok ': [' · step ', ' · Schritt ', ' · paso ', ' · passo '],
   ' · ukázková data': [' · demo data', ' · Beispieldaten', ' · datos de ejemplo', ' · dati di esempio'],
+  'Vypnout po nečinnosti': ['Switch off when idle', 'Bei Inaktivität ausschalten', 'Apagar por inactividad', 'Spegni se inattivo'], 'Nikdy': ['Never', 'Nie', 'Nunca', 'Mai'],
+  'Když se zbraní nikdo nehne, spoušť se úplně vypne a baterku nevybije. Pod 3,4 V se vypne vždy. Znovu ji zapnete vypínačem (vypnout a zapnout). S kabelem USB se nevypíná.': ['If nobody moves the gun, the trigger switches off completely and saves the battery. Below 3.4 V it always switches off. Turn it on again with the switch (off and on). With a USB cable it stays on.', 'Wenn die Flinte nicht bewegt wird, schaltet sich der Abzug ganz ab und schont den Akku. Unter 3,4 V immer. Mit dem Schalter wieder einschalten (aus und an). Mit USB-Kabel bleibt er an.', 'Si nadie mueve la escopeta, el gatillo se apaga del todo y ahorra batería. Por debajo de 3,4 V se apaga siempre. Se enciende con el interruptor (apagar y encender). Con cable USB no se apaga.', 'Se nessuno muove il fucile, il grilletto si spegne del tutto e risparmia la batteria. Sotto 3,4 V si spegne sempre. Si riaccende con l\'interruttore (spegni e accendi). Con il cavo USB resta acceso.'],
+  'Spoušť se vypnula – baterka je pod 3,4 V. Nabijte ji.': ['The trigger switched off – battery below 3.4 V. Charge it.', 'Abzug ausgeschaltet – Akku unter 3,4 V. Bitte laden.', 'El gatillo se apagó – batería por debajo de 3,4 V. Cárguela.', 'Il grilletto si è spento – batteria sotto 3,4 V. Ricaricala.'],
+  'Spoušť se vypnula po nečinnosti. Zapnete ji vypínačem.': ['The trigger switched off after being idle. Turn it on with the switch.', 'Abzug nach Inaktivität ausgeschaltet. Mit dem Schalter einschalten.', 'El gatillo se apagó por inactividad. Enciéndalo con el interruptor.', 'Il grilletto si è spento per inattività. Riaccendilo con l\'interruttore.'],
   ' · Vysoká': [' · High', ' · Hochhaus', ' · Alta', ' · Alto'], ' · Nízká': [' · Low', ' · Niederhaus', ' · Baja', ' · Basso'], ' · Dvojterč': [' · Double', ' · Dublette', ' · Doblete', ' · Doppietto'],
 };
 let LANG = 'cs'; try { const l = localStorage.getItem('zaznam-lang'); if (LANGS.some(x => x[0] === l)) LANG = l; } catch (e) {}
@@ -889,6 +896,7 @@ function onLine(l) {
   if (l.startsWith('S ')) { stav = kv(l); showConn(); }
   else if (l.startsWith('C ') || l.startsWith('X ')) { Object.assign(cfg, kv(l)); fillForm(); }
   else if (l.startsWith('N ')) { if (stav) { stav.zaznamu = (+stav.zaznamu || 0) + 1; stav.krok = (+stav.krok || 0) + 1; } showConn(); autoFetch(); }
+  else if (l.startsWith('E USPANI')) zMsg(l.includes('baterka') ? 'Spoušť se vypnula – baterka je pod 3,4 V. Nabijte ji.' : 'Spoušť se vypnula po nečinnosti. Zapnete ji vypínačem.');
   else if (l.startsWith('E PAMET_PLNA')) zMsg('Paměť spouště je plná. Stáhněte záznamy a smažte je ve spoušti.');
 }
 function kv(l) { const o = {}; l.slice(2).split(' ').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i)] = p.slice(i + 1); }); return o; }
@@ -953,6 +961,7 @@ function showConn() {
   const pr = (AN.PROGS[+stav.program] || {}).n || '';
   if (stav.jmeno && document.activeElement !== $('jmeno')) $('jmeno').value = stav.jmeno.replace(/_/g, ' ');
   if (stav.klavesa && document.activeElement !== $('klavesa')) $('klavesa').value = stav.klavesa;
+  if (document.activeElement !== $('usin')) { if (stav.usin != null) { $('usin').value = stav.usin; $('usin').disabled = false; } else $('usin').disabled = true; }
   if (document.activeElement !== $('nab')) { if (stav.nab) { $('nab').value = stav.nab; $('nab').disabled = false; } else { $('nab').disabled = true; $('nabMsg').textContent = 'Starý firmware ve spoušti – přepínač nabíjení funguje až s novým.'; } }
   $('connTxt').innerHTML = `<b>${esc(dev.name || 'Spoušť')} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
 }
@@ -1073,6 +1082,11 @@ $('nab').onchange = async () => { $('nabMsg').textContent = 'Ukládám…';
     $('nabMsg').textContent = l.startsWith('B ') ? `Uloženo ve spoušti ✓ (${kv(l).nab} mA)` : l.startsWith('?') ? 'Spoušť to neumí – nahrajte nový firmware.' : l;
     if (l.startsWith('B ') && stav) stav.nab = kv(l).nab; }
   catch (e) { $('nabMsg').textContent = 'Chyba: ' + e.message; } };
+$('usin').onchange = async () => { $('usinMsg').textContent = 'Ukládám…';
+  try { const l = await ask('usinani ' + $('usin').value, ['U ', '?', 'CHYBA']);
+    $('usinMsg').textContent = l.startsWith('U ') ? 'Uloženo ve spoušti ✓' : l.startsWith('?') ? 'Spoušť to neumí – nahrajte nový firmware.' : l;
+    if (l.startsWith('U ') && stav) stav.usin = kv(l).usin; }
+  catch (e) { $('usinMsg').textContent = 'Chyba: ' + e.message; } };
 $('jmenoBtn').onclick = async () => {
   const n = $('jmeno').value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^ -~]/g, '').replace(/\|/g, '').trim().slice(0, 20);
   $('jmeno').value = n;
