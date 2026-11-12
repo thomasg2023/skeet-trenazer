@@ -82,7 +82,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-2</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-3</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -112,7 +112,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <div class="seg" id="stSeg" aria-label="Stanoviště"></div>
         <div class="seg" id="modeSeg" aria-label="Druh terče"></div>
         <div class="seg"><button type="button" id="pullBtn">Terč (Pull)</button></div>
-        <div class="seg" id="zeroSeg" hidden><button type="button" id="zeroSave">Uložit korekci</button><button type="button" id="zeroReset">Vynulovat korekci</button>
+        <div class="seg" id="zeroSeg" hidden><button type="button" id="zeroSave">Uložit korekci</button><button type="button" id="zeroReset">Vynulovat korekci</button><button type="button" id="osaZrus">Zrušit kalibraci zbraně (držák)</button>
           <span id="zdSeg" style="display:flex;gap:4px"><button type="button" data-z="16">Tabule 16 m (osa)</button><button type="button" data-z="36.6">Tabule 36,6 m (obrazec)</button></span>
           <label class="small" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">Papír ze střelnice: hlaveň <select id="kalB"><option value="0">1.</option><option value="1">2.</option></select> v kruhu 76 cm <input type="number" id="kalPct" min="10" max="95" value="60" style="width:64px"> % na <input type="number" id="kalD" min="10" max="50" step="0.1" value="36.6" style="width:70px"> m <button type="button" id="kalBtn">Přizpůsobit čok</button></label></div>
         <div class="seg"><button type="button" id="bigBtn" aria-pressed="false">Zvýraznit terč</button></div>
@@ -205,6 +205,10 @@ const LANGS=[['cs','CZ'],['en','GB'],['es','ES'],['it','IT'],['de','DE']];
 const LI={en:0,de:1,es:2,it:3};
 // EX = jen celý text (krátká slova), PH = i jako část delší hlášky
 const EX={
+ 'Zrušit kalibraci zbraně (držák)':['Clear gun calibration (mount)','Waffenkalibrierung löschen (Halter)','Borrar calibración del arma (soporte)','Annulla calibrazione fucile (supporto)'],
+ 'KALIBRACE ZBRANĚ':['GUN CALIBRATION','WAFFE KALIBRIEREN','CALIBRAR ARMA','CALIBRA FUCILE'],'KALIBRACE ZBRANĚ ✓ (znovu)':['GUN CALIBRATED ✓ (again)','WAFFE KALIBRIERT ✓ (neu)','ARMA CALIBRADA ✓ (de nuevo)','FUCILE CALIBRATO ✓ (di nuovo)'],
+ 'OKO: PRAVÉ':['EYE: RIGHT','AUGE: RECHTS','OJO: DERECHO','OCCHIO: DESTRO'],'OKO: LEVÉ':['EYE: LEFT','AUGE: LINKS','OJO: IZQUIERDO','OCCHIO: SINISTRO'],'Zalícujte':['Mount the gun','Anschlagen','Encare','Imbraccia'],'Kalibrace zbraně za':['Gun calibration in','Kalibrierung in','Calibración en','Calibrazione tra'],
+ 'Zalícujte zbraň jako při střelbě – oko nad lištou':['Mount the gun as when shooting – eye over the rib','Waffe wie beim Schießen anschlagen – Auge über der Schiene','Encare como al disparar – ojo sobre la banda','Imbraccia come per sparare – occhio sulla bindella'],
  '📱 Záznam ze střelnice a nastavení spouště →':['📱 Range recordings & trigger settings →','📱 Schießstand-Aufzeichnung & Abzug-Einstellungen →','📱 Registros del campo y ajustes del gatillo →','📱 Registrazioni dal campo e impostazioni grilletto →'],
  'Zpoždění Bluetooth spouště':['Bluetooth trigger delay','Verzögerung des Bluetooth-Abzugs','Retardo del gatillo Bluetooth','Ritardo del grilletto Bluetooth'],
  'ROZBOR':['REVIEW','ANALYSE','ANÁLISIS','ANALISI'],'výsledek':['result','Ergebnis','resultado','risultato'],'terč':['target','Taube','plato','piattello'],'pohyb':['move','Bewegung','movimiento','movimento'],'rána':['shot','Schuss','disparo','colpo'],
@@ -543,7 +547,7 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.12-2';
+const VERZE='2026.11.12-3';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -1317,7 +1321,26 @@ function pull(){
 const tmpQ=new THREE.Quaternion();
 const corr={yaw:0,pitch:0};
 try{const c=JSON.parse(localStorage.getItem('skeet-corr')||'null'); if(c&&isFinite(c.yaw)&&isFinite(c.pitch)){corr.yaw=c.yaw;corr.pitch=c.pitch;}}catch(e){}
-function applyCorr(){ controllers.forEach(c=>c.userData.gun.rotation.set(corr.pitch,corr.yaw,0,'YXZ')); }
+function applyCorr(){ controllers.forEach(c=>c.userData.gun.rotation.set(corr.pitch,corr.yaw,0,'YXZ')); applyOsa(); }
+// ---------- Kalibrace zbraně v držáku: osa hlavně prochází okem střelce ----------
+// Ovladač sedí v držáku mimo osu lišty. Po zalícování se změří, kde je oko vůči ovladači; virtuální hlaveň se pak
+// vykreslí tak, aby lišta vedla přímo pod okem (stejný obraz při míření jako se skutečnou zbraní).
+const OSA={p:null,oko:'prave'}; try{ const o=JSON.parse(localStorage.getItem('skeet-osa')||'null'); if(o){ if(Array.isArray(o.p)) OSA.p=o.p; if(o.oko==='leve') OSA.oko='leve'; } }catch(e){}
+const OSA_POD=0.028, OSA_ZA=0.24;   // oko je 2,8 cm nad osou hlavní a 24 cm za pouzdrem závěru
+function applyOsa(){ controllers.forEach(c=>{ const g=c.userData.gun; if(!OSA.p){ g.position.set(0,0,0); return; }
+  const off=new V(0,-OSA_POD,-OSA_ZA).applyEuler(corrEuler()); g.position.set(OSA.p[0]+off.x,OSA.p[1]+off.y,OSA.p[2]+off.z); }); }
+function osaSave(){ try{localStorage.setItem('skeet-osa',JSON.stringify(OSA));}catch(e){} }
+function okoSvet(){ const e=new V(), q=new THREE.Quaternion(); camera.getWorldPosition(e); camera.getWorldQuaternion(q); return e.add(new V(OSA.oko==='leve'?-0.032:0.032,0,0).applyQuaternion(q)); }
+let osaOdpocet=0;
+function osaKalibruj(){ if(!st.inXR){ say('Kalibrace zbraně jde jen ve VR se zbraní v ruce'); return; } if(osaOdpocet) return; panelZavri();
+  let n=3; osaOdpocet=1; say('Zalícujte zbraň jako při střelbě – oko nad lištou'); mluv(tr('Zalícujte'),VOICE[LANG]||'cs-CZ',{prerusit:true});
+  const krok=()=>{ if(n>0){ say(tr('Kalibrace zbraně za')+' '+n+' s'); n--; setTimeout(krok,1000); return; }
+    const g=controllers.find(c=>isGun(c)); osaOdpocet=0; if(!g){ say('Ovladač s brokovnicí nenalezen'); return; }
+    g.updateMatrixWorld(true); const loc=g.worldToLocal(okoSvet()); OSA.p=[loc.x,loc.y,loc.z]; osaSave(); applyOsa();
+    say(`Zbraň zkalibrována: oko ${Math.round(Math.hypot(loc.x,loc.y)*100)} cm od osy ovladače`); sClick(); };
+  setTimeout(krok,1200); }
+function osaZrus(){ OSA.p=null; osaSave(); applyOsa(); say('Kalibrace zbraně zrušena – hlaveň zase podle ovladače'); }
+function setOko(o){ OSA.oko=o; osaSave(); say(o==='leve'?'Řídící oko: levé':'Řídící oko: pravé'); }
 const corrEuler=()=>new THREE.Euler(corr.pitch,corr.yaw,0,'YXZ');
 function fire(src,lagMs){
   audio();
@@ -1328,7 +1351,8 @@ function fire(src,lagMs){
   const a=ammoInfo(AMMO[gun.ammo]), rate=chokeRate(gun,barrel);
   const o=new V(), d=new V(0,0,-1);
   const hist=src&&lagMs>0?gunPast(lagMs):null;   // Bluetooth spoušť: směr hlavně v okamžiku stisku, ne až když zpráva dorazí
-  if(src){ if(hist){ o.copy(hist.o); tmpQ.copy(hist.q); } else { src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); } d.applyEuler(corrEuler()).applyQuaternion(tmpQ); o.addScaledVector(d,0.76);
+  if(src){ if(hist){ o.copy(hist.o); tmpQ.copy(hist.q); } else { src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); } d.applyEuler(corrEuler()).applyQuaternion(tmpQ);
+    if(OSA.p){ const gp=src.userData.gun.position; o.add(gp.clone().applyQuaternion(tmpQ)); } o.addScaledVector(d,0.76);
     const s=src.userData.src; const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0]; if(h&&h.pulse)h.pulse(1,70);}
   else{camera.getWorldPosition(o); camera.getWorldDirection(d);}
   if(st.mode==='N'){ zeroShot(o,d.normalize(),a,rate,barrel); return; }
@@ -1599,7 +1623,9 @@ function buildPanel(){
   pBtn(24,row(9),300,84,{vyp:'ROZBOR VYP',chyba:'ROZBOR PO CHYBĚ',vzdy:'ROZBOR VŽDY'}[st.rozbor],st.rozbor!=='vyp',()=>setRozbor({vyp:'chyba',chyba:'vzdy',vzdy:'vyp'}[st.rozbor]));
   pBtn(336,row(9),300,84,'PŘEHRÁT RÁNU',false,()=>rozborStart());
   pBtn(648,row(9),352,84,'NÍZKÉ DRŽENÍ = TEĎ',DRZ.low!=null,()=>drzKalibruj());
-  pBtn(24,row(10),476,70,tr('Zpoždění spouště')+' '+st.lag+' ms',st.lag>0,()=>setLag([0,20,40,60,80][([0,20,40,60,80].indexOf(st.lag)+1)%5]));
+  pBtn(336,row(10),380,70,OSA.p?'KALIBRACE ZBRANĚ ✓ (znovu)':'KALIBRACE ZBRANĚ',!!OSA.p,()=>osaKalibruj());
+  pBtn(728,row(10),272,70,OSA.oko==='leve'?'OKO: LEVÉ':'OKO: PRAVÉ',false,()=>setOko(OSA.oko==='leve'?'prave':'leve'));
+  pBtn(24,row(10),300,70,tr('Zpoždění spouště')+' '+st.lag+' ms',st.lag>0,()=>setLag([0,20,40,60,80][([0,20,40,60,80].indexOf(st.lag)+1)%5]));
   pBtn(728,row(8),272,84,st.squad.length>1?st.squad[st.sq].name:'1 STŘELEC',st.squad.length>1,()=>{ if(st.squad.length>1){ st.sq=(st.sq+1)%st.squad.length; renderSquad(); say(tr('Na řadě')+': '+st.squad[st.sq].name); } });
   pBtn(648,row(4),352,84,'Vynulovat výsledky',false,()=>{st.stats.forEach(x=>{x.H=[0,0];x.L=[0,0];x.D=[0,0];x.T=[0,0];x.W=[0,0];x.lead=[];x.leadT=[];}); renderScore(); say('Výsledky vynulovány');});
 }
@@ -1922,6 +1948,7 @@ $('zdSeg').onclick=e=>{const b=e.target.closest('button'); if(b) setZD(+b.datase
 $('kalBtn').onclick=()=>kalibrace(+$('kalB').value,+$('kalPct').value,+$('kalD').value);
 setZD(16);
 $('zeroSave').onclick=()=>zSave(); $('zeroReset').onclick=()=>zReset(); applyCorr();
+{ const zb=$('osaZrus'); if(zb) zb.onclick=()=>osaZrus(); }
 function fillSel(id,obj,val,flt){$(id).innerHTML=Object.entries(obj).filter(([k,o])=>!flt||flt(o)).map(([k,o])=>`<option value="${k}"${k===val?' selected':''}>${tr(o.n)}</option>`).join('');}
 // karta zbraně: upravuje se profil zvolený nahoře (skeet / trap), ve hře se použije profil zvolené disciplíny
 st.gunEdit=st.disc; const GE=()=>GUNS[st.gunEdit];
