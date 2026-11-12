@@ -80,6 +80,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-1</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -278,6 +279,13 @@ const PH={
  'Druhá ruka · spoušť':['Other hand · trigger','Andere Hand · Abzug','Otra mano · gatillo','Altra mano · grilletto'],
  '„Pull“ – vypuštění terče':['“Pull” – release the clay','„Pull“ – Taube werfen','«Pull» – lanzar el plato','«Pull» – lancio del piattello'],
  'Stisk páčky':['Press thumbstick','Stick drücken','Pulsar joystick','Premi levetta'],
+ 'Graf dráhy: VYP – stiskem zapnout':['Shot graph: OFF – press to turn on','Schussgrafik: AUS – drücken zum Einschalten','Gráfico: NO – pulse para activar','Grafico: OFF – premi per attivare'],
+ 'Graf dráhy: ZAP (po chybě) – stiskem vypnout':['Shot graph: ON (after a miss) – press to turn off','Schussgrafik: EIN (nach Fehler) – drücken zum Ausschalten','Gráfico: SÍ (tras fallo) – pulse para desactivar','Grafico: ON (dopo errore) – premi per disattivare'],
+ 'Graf dráhy: ZAP (vždy) – stiskem vypnout':['Shot graph: ON (always) – press to turn off','Schussgrafik: EIN (immer) – drücken zum Ausschalten','Gráfico: SÍ (siempre) – pulse para desactivar','Grafico: ON (sempre) – premi per disattivare'],
+ 'Nastavení – stiskem otevřít':['Settings – press to open','Einstellungen – drücken zum Öffnen','Ajustes – pulse para abrir','Impostazioni – premi per aprire'],
+ 'Nastavení – stiskem zavřít':['Settings – press to close','Einstellungen – drücken zum Schließen','Ajustes – pulse para cerrar','Impostazioni – premi per chiudere'],
+ 'Zvuk vrhačky: ZAP':['Trap machine sound: ON','Maschinengeräusch: EIN','Sonido de máquina: SÍ','Suono macchina: ON'],
+ 'Zvuk vrhačky: VYP':['Trap machine sound: OFF','Maschinengeräusch: AUS','Sonido de máquina: NO','Suono macchina: OFF'],
  'přehodit brokovnici do druhé ruky (výchozí pravá)':['move the shotgun to the other hand (default right)','Flinte in die andere Hand (Standard rechts)','pasar la escopeta a la otra mano (por defecto derecha)','passa il fucile all\'altra mano (predefinita destra)'],
  'Quest · grip / A':['Quest · grip / A','Quest · Grip / A','Quest · grip / A','Quest · grip / A'],
  '„Pull“ – vypuštění terče (náhodné zpoždění 0,2–3 s podle ISSF)':['“Pull” – clay release (random delay 0.2–3 s per ISSF)','„Pull“ – Taube (Zufallsverzögerung 0,2–3 s nach ISSF)','«Pull» – lanzamiento (retardo aleatorio 0,2–3 s según ISSF)','«Pull» – lancio (ritardo casuale 0,2–3 s secondo ISSF)'],
@@ -438,6 +446,7 @@ const PH={
  'Poslat / uložit soubor':['Send / save file','Senden / Datei speichern','Enviar / guardar archivo','Invia / salva file'],'Nová položka':['New round','Neue Runde','Serie nueva','Nuova serie'],'Smazat VR rány':['Delete VR shots','VR-Schüsse löschen','Borrar disparos RV','Elimina colpi VR'],'Opravdu smazat?':['Really delete?','Wirklich löschen?','¿Borrar?','Eliminare?'],
  'Zatím žádné VR rány':['No VR shots yet','Noch keine VR-Schüsse','Aún no hay disparos RV','Ancora nessun colpo VR'],'Odesláno – v aplikaci Záznam: Načíst ze souboru':['Sent – in the Log app: Load from file','Gesendet – in der App: Aus Datei laden','Enviado – en la app: Cargar de archivo','Inviato – nell\'app: Carica da file'],
  'Soubor uložen – v aplikaci Záznam: Načíst ze souboru':['File saved – in the Log app: Load from file','Datei gespeichert – in der App: Aus Datei laden','Archivo guardado – en la app: Cargar de archivo','File salvato – nell\'app: Carica da file'],'Nová položka VR ':['New VR round ','Neue VR-Runde ','Nueva serie RV ','Nuova serie VR '],'VR rány smazány':['VR shots deleted','VR-Schüsse gelöscht','Disparos RV borrados','Colpi VR eliminati'],
+ 'verze ':['version ','Version ','versión ','versione '],
  'Lovecké kolo':['Sporting round','Jagdrunde','Ronda de caza','Giro di caccia'],
 };
 let LANG='cs'; try{ const l=localStorage.getItem('skeet-lang'); if(LANGS.some(x=>x[0]===l)) LANG=l; }catch(e){}
@@ -515,6 +524,9 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
+const VERZE='2026.11.12-1';
+// chyba v programu: ukázat i s verzí, ať jde dohledat
+window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
 try{ const tr=JSON.parse(localStorage.getItem('skeet-trap')||'null'); if(tr){ if(['at','ata','dtl','ot','ut'].includes(tr.kind)) st.trapKind=tr.kind; if(tr.arc>=40&&tr.arc<=90) st.trapArc=tr.arc; if(tr.yd>=16&&tr.yd<=27) st.ataYd=tr.yd; } }catch(e){}
 
@@ -939,7 +951,7 @@ const rCan=document.createElement('canvas'); rCan.width=1024; rCan.height=512; c
 const rBoard=new THREE.Mesh(new THREE.PlaneGeometry(1.0,0.5),new THREE.MeshBasicMaterial({map:rTex,transparent:true,fog:false,depthTest:false}));
 rBoard.renderOrder=20; rBoard.position.set(-0.55,1.25,-1.15); rBoard.rotation.y=0.45; rBoard.visible=false; dolly.add(rBoard);
 let rStart=0;
-function rozborStart(){ if(!ROZ){ say('Zatím není co přehrát – vystřelte'); return; } rStart=performance.now()/1000; rBoard.visible=st.inXR; const c=$('rozCan'); if(c) c.hidden=false; }
+function rozborStart(){ if(!ROZ){ say('Zatím není co přehrát – vystřelte'); return; } rStart=performance.now()/1000; rBoard.visible=st.inXR; if(st.inXR) panelZavri(); const c=$('rozCan'); if(c) c.hidden=false; }
 function rozborTick(){ if(!rStart) return; const el=performance.now()/1000-rStart, SLOW=4, R=ROZ, dur=(R.tc+0.25-(R.t0-1.4));
   const tt=Math.min(R.tc+0.25,(R.t0-1.4)+el/SLOW); rozborDraw(tt); if(el>dur*SLOW+3.5){ rStart=0; rBoard.visible=false; const c=$('rozCan'); if(c) c.hidden=true; } }
 function rozborDraw(tt){ const R=ROZ, x=rCan.getContext('2d'), W=1024, H=512, f=R.sh.d, o=R.sh.o;
@@ -977,7 +989,9 @@ function rozborDraw(tt){ const R=ROZ, x=rCan.getContext('2d'), W=1024, H=512, f=
     const t1=I.hit?`${tr('zásah')} · ${I.pellets} ${tr('broků')}`:`${I.lead>=0?tr('před terčem'):tr('za terčem')} ${Math.round(Math.abs(I.lead)*100)} cm${Math.abs(I.vert)>0.1?(I.vert>0?', '+tr('nad')+' ':', '+tr('pod')+' ')+Math.round(Math.abs(I.vert)*100)+' cm':''}`;
     x.fillText(t1,T.x+10,T.y+T.h-14); }
   rTex.needsUpdate=true; const c=$('rozCan'); if(c&&!c.hidden){ c.getContext('2d').drawImage(rCan,0,0,c.width,c.height); } }
-function setRozbor(v){ st.rozbor=v; try{localStorage.setItem('skeet-rozbor',v);}catch(e){} document.querySelectorAll('#rozborSeg button[data-r]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===v)); say({vyp:'Rozbor rány vypnut',chyba:'Rozbor rány po chybě',vzdy:'Rozbor rány po každé ráně'}[v]); if(typeof panel!=='undefined'&&panel.visible) drawPanel(); }
+let rozborZap='chyba'; try{ const r=localStorage.getItem('skeet-rozbor-zap'); if(r==='chyba'||r==='vzdy') rozborZap=r; }catch(e){}
+function toggleGraf(){ if(st.rozbor==='vyp') setRozbor(rozborZap); else { setRozbor('vyp'); rStart=0; rBoard.visible=false; } drawHud(); }
+function setRozbor(v){ st.rozbor=v; if(v!=='vyp'){ rozborZap=v; try{localStorage.setItem('skeet-rozbor-zap',v);}catch(e){} } try{localStorage.setItem('skeet-rozbor',v);}catch(e){} document.querySelectorAll('#rozborSeg button[data-r]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===v)); say({vyp:'Rozbor rány vypnut',chyba:'Rozbor rány po chybě',vzdy:'Rozbor rány po každé ráně'}[v]); if(typeof panel!=='undefined'&&panel.visible) drawPanel(); }
 
 /* ---------- VR rány do aplikace Záznam: stejný formát jako ze spouště (gyro, zrychlení, mikrofon 100 Hz) ---------- */
 const VRR={ring:[],recs:[],pol:1,cur:null};
@@ -1102,6 +1116,7 @@ function launch(which){ if(st.terc==='zajic') return launchRabbit(); if(which===
 function noBirdMaybe(t){ if(Math.random()<0.015){ t.alive=false; t.p.addScaledVector(t.v,0.03); shatter(t,'kusy'); st.noBird=true; } }
 
 function pull(){
+  panelZavri(); if(rStart){ rStart=0; rBoard.visible=false; const c=$('rozCan'); if(c) c.hidden=true; }
   if(st.mode==='N'){ zClear(); return; }
   if(st.targets.some(t=>t.alive)||st.pending.length) return;
   const dvoj=st.mode==='D'||st.mode==='W';
@@ -1357,6 +1372,12 @@ const PW=1024, PH=1176, pCan=document.createElement('canvas'); pCan.width=PW; pC
 const pTex=new THREE.CanvasTexture(pCan);
 const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.28,1.47),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false}));
 panel.position.set(0,1.3,1.25); panel.rotation.y=Math.PI; panel.visible=false; dolly.add(panel);
+// tabule nastavení: otevře se ozubeným kolem na malém panelu, vždy před střelcem ve směru pohledu; zavře se terčem nebo grafem
+function panelOtevri(){ const q=camera.quaternion, d=new THREE.Vector3(0,0,-1).applyQuaternion(q); d.y=0; if(d.lengthSq()<1e-4) d.set(0,0,-1); d.normalize();
+  panel.position.set(camera.position.x+d.x*1.25, 1.3, camera.position.z+d.z*1.25); panel.rotation.set(0,Math.atan2(-d.x,-d.z),0);
+  panel.visible=true; panelOpen=true; drawPanel(); drawHud(); }
+function panelZavri(){ if(!panel.visible) return; panel.visible=false; panelOpen=false; pHover=-1; drawHud(); }
+function togglePanel(){ if(panel.visible) panelZavri(); else panelOtevri(); }
 let pBtns=[], pHover=-1;
 function pBtn(x,y,w,h,txt,on,act){ pBtns.push({x,y,w,h,txt,on,act}); }
 function buildPanel(){
@@ -1432,6 +1453,23 @@ function drawSpeaker(x,X,Y,w,h,on,hover){
   if(on){ [1,1.7].forEach(k=>{ x.beginPath(); x.arc(cx+s*0.7,cy,s*k,-0.8,0.8); x.stroke(); }); }
   else { x.strokeStyle='#ff6a4d'; x.lineWidth=9; x.beginPath(); x.moveTo(X+10,Y+h-10); x.lineTo(X+w-10,Y+10); x.stroke(); }
 }
+// ikonová tlačítka malého panelu – pevné indexy 0–2 (zbytek tlačítek se přidává za ně)
+var iGearH=0, iGrafH=1, iSpkH=2, panelOpen=false;
+function hudIkony(){ const W=1024; hBtns[iGearH]={x:W-36-358,y:150,w:110,h:110,act:()=>togglePanel()};
+  hBtns[iGrafH]={x:W-36-234,y:150,w:110,h:110,act:()=>toggleGraf()}; hBtns[iSpkH]={x:W-36-110,y:150,w:110,h:110,act:()=>toggleThrowSnd()}; }
+function drawGraf(x,X,Y,w,h,on,hover){
+  x.fillStyle=hover?'#3c5a4a':(on?'#24362c':'#5a2a24'); x.fillRect(X,Y,w,h);
+  x.strokeStyle='#fff'; x.lineWidth=5; x.lineCap='round'; x.lineJoin='round';
+  x.beginPath(); x.moveTo(X+22,Y+22); x.lineTo(X+22,Y+h-22); x.lineTo(X+w-18,Y+h-22); x.stroke();          // osy
+  x.strokeStyle='#e8662a'; x.beginPath(); x.moveTo(X+28,Y+h-34); x.quadraticCurveTo(X+w*0.5,Y+14,X+w-22,Y+h*0.45); x.stroke();   // dráha
+  if(!on){ x.strokeStyle='#ff6a4d'; x.lineWidth=9; x.beginPath(); x.moveTo(X+10,Y+h-10); x.lineTo(X+w-10,Y+10); x.stroke(); }
+}
+function drawGear(x,X,Y,w,h,open,hover){
+  x.fillStyle=hover?'#3c5a4a':(open?'#e8662a':'#24362c'); x.fillRect(X,Y,w,h);
+  const cx=X+w/2, cy=Y+h/2, r1=h*0.30, r2=h*0.38, n=8; x.fillStyle='#fff'; x.beginPath();
+  for(let i=0;i<n*2;i++){ const a0=i*Math.PI/n, a1=(i+1)*Math.PI/n, r=i%2?r1:r2; x.arc(cx,cy,r,a0,a1); }
+  x.closePath(); x.fill(); x.fillStyle=hover?'#3c5a4a':(open?'#e8662a':'#24362c'); x.beginPath(); x.arc(cx,cy,h*0.13,0,7); x.fill();
+}
 let spoustTep=-1e9, spoustBat=null;
 const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
@@ -1447,21 +1485,25 @@ function drawHud(){
   // hláška – zkrácená a zmenšená, aby se vždy vešla
   let m=LANG==='cs'?st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za')
     :tr(st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,''));
-  const MW=W-72-170;   // vpravo je tlačítko reproduktoru
+  const MW=W-72-372;   // vpravo jsou tři ikonová tlačítka
+  const HOVT={[iGrafH]:st.rozbor==='vyp'?'Graf dráhy: VYP – stiskem zapnout':'Graf dráhy: ZAP ('+(st.rozbor==='vzdy'?'vždy':'po chybě')+') – stiskem vypnout',[iGearH]:panelOpen?'Nastavení – stiskem zavřít':'Nastavení – stiskem otevřít',[iSpkH]:throwSnd?'Zvuk vrhačky: ZAP':'Zvuk vrhačky: VYP'};
+  if(HOVT[hHover]!=null) m=tr(HOVT[hHover]);
   let fs=60; x.font=`700 ${fs}px Barlow Condensed, Arial`; while(x.measureText(m).width>MW&&fs>30){fs-=4; x.font=`700 ${fs}px Barlow Condensed, Arial`;}
   if(x.measureText(m).width>MW){ while(m.length>4&&x.measureText(m+'…').width>MW) m=m.slice(0,-1); m+='…'; }
   x.fillStyle=st.lastMsg.startsWith('Zásah')?'#7fe0a0':(st.lastMsg.startsWith('Vedle')?'#ffb08a':'#ffffff'); x.fillText(m,36,230);
   // tlačítka: přepnutí druhu terče
-  hBtns=[]; const lab=st.disc==='trap'?[['T','TERČ'],['W','DVOJ'],['N','NÁSTŘEL']]:[['H','V'],['L','N'],['D','D'],['N','NÁSTŘEL']], bw=st.disc==='trap'?[200,200,250]:[140,140,140,250];
+  hudIkony();
+  hBtns.length=3; const lab=st.disc==='trap'?[['T','TERČ'],['W','DVOJ'],['N','NÁSTŘEL']]:[['H','V'],['L','N'],['D','D'],['N','NÁSTŘEL']], bw=st.disc==='trap'?[200,200,250]:[140,140,140,250];
   let bx=36; lab.forEach(([k,t],i)=>{ hBtns.push({x:bx,y:300,w:bw[i],h:110,act:()=>setMode(k)}); 
-    x.fillStyle=st.mode===k?'#e8662a':(i===hHover?'#3c5a4a':'#24362c'); x.fillRect(bx,300,bw[i],110);
+    x.fillStyle=st.mode===k?'#e8662a':(3+i===hHover?'#3c5a4a':'#24362c'); x.fillRect(bx,300,bw[i],110);
     x.fillStyle='#fff'; const tt2=tr(t); fitFont(x,tt2,bw[i]-20,64); x.textAlign='center'; x.fillText(tt2,bx+bw[i]/2,378); x.textAlign='left'; bx+=bw[i]+20; });
   const lastT=tr(st.mode==='N'?(st.zAlign?'MIŘTE…':'OSA'):st.disc==='trap'?'HOP':'PULL');
   const iPull=hBtns.length; hBtns.push({x:bx,y:300,w:W-36-bx,h:110,act:()=>st.mode==='N'?zAlignArm():callPull()});
   x.fillStyle=(hHover===iPull)?'#3c5a4a':(st.zAlign?'#e8662a':'#2f7d4a'); x.fillRect(bx,300,W-36-bx,110); x.fillStyle='#fff'; fitFont(x,lastT,W-56-bx,64); x.textAlign='center'; x.fillText(lastT,bx+(W-36-bx)/2,378); x.textAlign='left';
   // reproduktor – zvuk vrhačky zapnout / vypnout (přeškrtnutý = vypnuto)
-  const iSpk=hBtns.length; hBtns.push({x:W-36-140,y:150,w:140,h:110,act:()=>toggleThrowSnd()});
-  drawSpeaker(x,W-36-140,150,140,110,throwSnd,hHover===iSpk);
+  drawSpeaker(x,W-36-110,150,110,110,throwSnd,hHover===iSpkH);
+  drawGraf(x,W-36-234,150,110,110,st.rozbor!=='vyp',hHover===iGrafH);
+  drawGear(x,W-36-358,150,110,110,panelOpen,hHover===iGearH);
   hudTex.needsUpdate=true;
 }
 function totals(){let h=0,n=0;st.stats.forEach(s=>(st.disc==='trap'?['T','W']:['H','L','D']).forEach(k=>{h+=s[k][0];n+=s[k][1];}));return `${h}/${n}`;}
@@ -1561,8 +1603,8 @@ vrBtn.onclick=async()=>{
   try{
     const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
     camera.position.set(0,0,0); camera.rotation.set(0,0,0);
-    await renderer.xr.setSession(s); panel.visible=true; drawPanel(); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent=tr('Ukončit VR');
-    s.addEventListener('end',()=>{st.inXR=false; panel.visible=false; hudMesh.visible=false; vrBtn.textContent=tr('Vstoupit do VR'); resize(); placeDolly();});
+    await renderer.xr.setSession(s); setTimeout(panelOtevri,600); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent=tr('Ukončit VR');
+    s.addEventListener('end',()=>{st.inXR=false; panel.visible=false; panelOpen=false; hudMesh.visible=false; vrBtn.textContent=tr('Vstoupit do VR'); resize(); placeDolly();});
     placeDolly(); say('Grip nebo A = terč');
   }catch(e){vrNote.textContent=tr('VR se nespustilo')+' ('+(e&&e.message?e.message:'?')+'). '+tr('Zkuste stránku otevřít přímo v Meta Quest Browser.');}
 };
