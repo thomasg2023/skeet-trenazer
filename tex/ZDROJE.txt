@@ -1,1 +1,2 @@
-Fotografické textury (trava, pisek, hlina) a obloha (nebe/, TropicalSunnyDay): Babylon.js Assets, https://github.com/BabylonJS/Assets – licence CC0.
+Fotografické textury: trava, pisek, hlina – Babylon.js Assets (CC0); omitka, beton, asfalt, sterk, preklizka – Poly Haven (CC0).
+Modely v ../modely: Poly Haven (CC0).

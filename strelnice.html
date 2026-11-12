@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.12-12</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.12-13</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -145,9 +145,11 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
     </section>
   </div>
   <div class="tabp" id="tab-denik" hidden></div>
-  <p class="small" style="margin:0">Fotografické textury a obloha: Babylon.js Assets (CC0).</p>
+  <p class="small" style="margin:0">Fotografické textury: Babylon.js Assets a Poly Haven (CC0). Oblohy a krajiny 360°: Poly Haven (CC0).</p>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="pozadi.js"></script>
 <script>
 'use strict';
 /* =========================================================================
@@ -998,28 +1000,80 @@ realScene(scene); rovnePlochy(scene); Object.values(GUNS).forEach(g=>realScene(g
 
 /* ================= FOTOGRAFICKÉ PODKLADY (Babylon.js Assets, CC0) ================= */
 // obloha: fotorealistický skybox (jen za jasného dne venku), povrchy: fotky trávy a písku
-const FOTO={on:LS.get('st-foto',true), cube:null};
-const BGCOL=scene.background;   // barva pozadí, se kterou počítá zbytek kódu (mlha, noc, hala)
+if(!window.POZADI) window.POZADI={list:[],cur:null,mesh:null,init(){},nacti:async()=>[],vypni(){},nastav:async()=>false,natoc(){},sleduj(){},pridejVlastni:async()=>'',smazVlastni:async()=>{}};   // náhrada, kdyby se pozadi.js nenačetlo
+const FOTO={on:LS.get('st-foto',true)};
 const ANISO=renderer.capabilities.getMaxAnisotropy?renderer.capabilities.getMaxAnisotropy():4;
 function fotoTex(url,cil,rep,tint,envs){ new THREE.TextureLoader().load(url,t=>{ cil.image=t.image; cil.anisotropy=ANISO; cil.repeat.set(rep,rep); cil.needsUpdate=true;
   envs.forEach(k=>{ if(ENVSET[k]) ENVSET[k].gc=tint; }); if(envs.includes(ST.env)) ground.material.color.setHex(tint).convertSRGBToLinear(); }); }
 fotoTex('tex/trava.jpg',grassTex,1400,0xd2dcc4,['les','stadion']);
 fotoTex('tex/pisek.jpg',sandTex,1600,0xf2e6d0,['poust']);
-new THREE.CubeTextureLoader().setPath('tex/nebe/').load(['px.jpg','nx.jpg','py.jpg','ny.jpg','pz.jpg','nz.jpg'],c=>{ c.encoding=THREE.sRGBEncoding; FOTO.cube=c; fotoNebe(); });
-function fotoNebeOK(){ const E=ENVSET[ST.env]; return FOTO.on&&FOTO.cube&&E&&!E.uvnitr&&!NOC&&ST.doba==='den'&&!['mlha','dest','snih'].includes(ST.pocasi); }
-function fotoNebe(){ if(fotoNebeOK()){ scene.background=FOTO.cube; PSKY.visible=false; CLOUDS.forEach(c=>c.visible=false); scene.fog.color.setHex(0xdfe9ef).convertSRGBToLinear(); }
-  else if(scene.background!==BGCOL) scene.background=BGCOL; }
+// obloha: knihovna fotografií 360° (pozadi.js, pozadi/seznam.json) – automaticky podle denní doby, nebo vybraná ručně
+const NEBE_AUTO={den:'kloofendal_48d_partly_cloudy_puresky',zlata:'kloppenheim_06_puresky',soumrak:'qwantani_dusk_2_puresky'};
+FOTO.volba=LS.get('st-nebe','auto'); let nebePmrem=null;
+function fotoNebeOK(){ const E=ENVSET[ST.env]; return FOTO.on&&FOTO.volba!=='proc'&&E&&!E.uvnitr&&!NOC&&ST.pocasi!=='mlha'; }
+function nebeVzhled(it){ PSKY.visible=false; CLOUDS.forEach(c=>c.visible=false); if(it.typ==='krajina') HORY.forEach(h=>h.visible=false);
+  if(it.horizont){ scene.fog.color.setRGB(...it.horizont).convertSRGBToLinear(); }
+  if(nebePmrem&&nebePmrem.id===it.id) scene.environment=nebePmrem.rt.texture; }
+POZADI.init(scene,(on,it)=>{ if(!on) return; if(!nebePmrem||nebePmrem.id!==it.id){ try{ if(nebePmrem) nebePmrem.rt.dispose(); const t=POZADI.tex; t.mapping=THREE.EquirectangularReflectionMapping; nebePmrem={id:it.id,rt:pmrem.fromEquirectangular(t)}; t.mapping=THREE.UVMapping; }catch(e){ nebePmrem=null; } } nebeVzhled(it); },2000);
+function fotoNebe(){ if(!fotoNebeOK()){ POZADI.vypni(); return; } const id=FOTO.volba==='auto'?(['dest','snih'].includes(ST.pocasi)?'overcast_soil_puresky':NEBE_AUTO[ST.doba]||NEBE_AUTO.den):FOTO.volba;
+  if(POZADI.cur&&POZADI.cur.id===id){ POZADI.mesh.visible=true; nebeVzhled(POZADI.cur); } else POZADI.nastav(id); }
+POZADI.nacti().then(()=>{ nebeSelRender(); fotoNebe(); });
 for(const n of ['setEnv','pocasiApply','nocNastav','oblohaNastav']){ const o=window[n]; if(typeof o!=='function') continue;
-  window[n]=function(...a){ scene.background=BGCOL; const r=o.apply(this,a); fotoNebe(); return r; }; }
+  window[n]=function(...a){ const r=o.apply(this,a); fotoNebe(); return r; }; }
 // valy a dopadiště: fotka trávy a hlíny místo jednolité barvy
 function fotoMat(tag,url,rep,tint){ new THREE.TextureLoader().load(url,t=>{ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rep,rep); t.encoding=THREE.sRGBEncoding; t.anisotropy=ANISO;
   scene.traverse(o=>{ const m=o.material; if(m&&m.userData&&m.userData.foto===tag&&!m.map){ m.map=t; m.color.setHex(tint).convertSRGBToLinear(); m.needsUpdate=true; } }); }); }
 fotoMat('trava','tex/trava.jpg',10,0xb8c8a8); fotoMat('hlina','tex/hlina.jpg',6,0xe0d0b8);
 // přepínač v Podmínkách
 (()=>{ const box=document.querySelector('#tab-podminky .card'); if(!box) return; const d=document.createElement('div'); d.className='opt';
-  d.innerHTML=`<span class="ol">Vzhled</span><div class="seg"><button type="button" id="fotoBtn">Fotografická obloha a povrchy</button></div>`; box.appendChild(d);
+  d.innerHTML=`<span class="ol">Vzhled</span><div class="seg"><button type="button" id="fotoBtn">Fotografická obloha a povrchy</button>
+    <select id="nebeSel" aria-label="Obloha"></select><label class="btn" style="cursor:pointer">Nahrát vlastní 360° fotku<input type="file" id="nebeFile" accept="image/jpeg,image/png" hidden></label>
+    <label class="small" style="display:flex;gap:6px;align-items:center">natočení <input type="range" id="nebeYaw" min="-180" max="180" step="5" value="${LS.get('st-nebe-yaw',0)}"></label></div>`; box.appendChild(d);
   const sync=()=>$('fotoBtn').setAttribute('aria-pressed',String(FOTO.on)); sync();
-  $('fotoBtn').onclick=()=>{ FOTO.on=!FOTO.on; LS.set('st-foto',FOTO.on); sync(); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); }; })();
+  $('fotoBtn').onclick=()=>{ FOTO.on=!FOTO.on; LS.set('st-foto',FOTO.on); sync(); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); };
+  $('nebeSel').onchange=async e=>{ const v=e.target.value; if(v.startsWith('del:')){ await POZADI.smazVlastni(v.slice(4)); FOTO.volba='auto'; } else FOTO.volba=v; LS.set('st-nebe',FOTO.volba); nebeSelRender(); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); };
+  $('nebeFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ FOTO.volba=await POZADI.pridejVlastni(f); LS.set('st-nebe',FOTO.volba); nebeSelRender(); setEnv(ST.env); say('Vlastní pozadí uloženo v tomto zařízení'); }catch(err){ say('Fotku nejde uložit: '+err.message); } e.target.value=''; };
+  POZADI.natoc(+LS.get('st-nebe-yaw',0)); $('nebeYaw').oninput=e=>{ POZADI.natoc(+e.target.value); LS.set('st-nebe-yaw',+e.target.value); }; })();
+
+function nebeSelRender(){ const el=$('nebeSel'); if(!el) return; const l=POZADI.list, opt=(v,t)=>`<option value="${esc(v)}"${v===FOTO.volba?' selected':''}>${esc(t)}</option>`;
+  el.innerHTML=opt('auto','Obloha: podle denní doby')+opt('proc','Obloha: počítaná (bez fotky)')+`<optgroup label="Obloha">${l.filter(x=>x.typ==='nebe').map(x=>opt(x.id,x.n)).join('')}</optgroup><optgroup label="Krajina 360°">${l.filter(x=>x.typ==='krajina'&&!x.vlastni).map(x=>opt(x.id,x.n)).join('')}</optgroup>`
+   +(l.some(x=>x.vlastni)?`<optgroup label="Vlastní (jen v tomto zařízení)">${l.filter(x=>x.vlastni).map(x=>opt(x.id,x.n)).join('')}${l.filter(x=>x.vlastni).map(x=>opt('del:'+x.id,'✕ smazat '+x.n.slice(2))).join('')}</optgroup>`:''); }
+
+/* ================= FOTOGRAFICKÉ MATERIÁLY ZDÍ A 3D REKVIZITY (Poly Haven, CC0) ================= */
+// zdi: omítka (dům), beton (venku), překližka (barikády) – textura + normálová mapa + drsnost, UV podle skutečných rozměrů
+const PBR={};
+function pbr(jm,tile){ if(PBR[jm]) return PBR[jm]; const L=new THREE.TextureLoader(), t=f=>{ const x=L.load('tex/'+jm+'_'+f+'.jpg'); x.wrapS=x.wrapT=THREE.RepeatWrapping; x.anisotropy=ANISO; return x; };
+  const d=t('d'); d.encoding=THREE.sRGBEncoding; const m=new THREE.MeshStandardMaterial({map:d,normalMap:t('n'),roughnessMap:t('r'),roughness:1,metalness:0,envMapIntensity:0.5});
+  m.userData.real=true; m.userData.tile=tile||1.5; return PBR[jm]=m; }
+function boxUV(geo,tile){ const p=geo.parameters, w=p.width, h=p.height, d=p.depth, uv=geo.attributes.uv; const S=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]], per=uv.count/6;
+  for(let f=0;f<6;f++) for(let i=0;i<per;i++){ const k=f*per+i; uv.setXY(k,uv.getX(k)*S[f][0]/tile,uv.getY(k)*S[f][1]/tile); } uv.needsUpdate=true; }
+function zdiMaterial(){ if(!FOTO.on) return; const S=ST.stage, dum=S&&S.cat==='cqb'&&['dum','roh','noc'].includes(S.id);
+  for(const w of WALLS){ if(w.userData.auto||w.userData.pbr||!w.geometry||!w.geometry.parameters) continue; const hex=w.material&&w.material.color?w.material.color.clone().convertLinearToSRGB().getHex():0;
+    const jm=Math.abs(((hex>>16)&255)-0x7a)<12&&Math.abs(((hex>>8)&255)-0x5a)<12?'preklizka':dum?'omitka':'beton'; const m=pbr(jm,jm==='preklizka'?1.2:1.6);
+    boxUV(w.geometry,m.userData.tile); w.material=m; w.userData.pbr=true; w.castShadow=w.receiveShadow=true; } }
+// asfalt ve městě a štěrk na stanovišti
+new THREE.TextureLoader().load('tex/asfalt_d.jpg',t=>{ asphaltTex.image=t.image; asphaltTex.anisotropy=ANISO; asphaltTex.repeat.set(900,900); asphaltTex.needsUpdate=true; if(ENVSET.mesto) ENVSET.mesto.gc=0xc8c8c8; if(ST.env==='mesto') ground.material.color.setHex(0xc8c8c8).convertSRGBToLinear(); });
+
+// ---- 3D modely (GLB) ----
+const MODELY={}, GLTF=typeof THREE.GLTFLoader==='function'?new THREE.GLTFLoader():null;
+function model(id){ if(!GLTF) return Promise.resolve(null); return MODELY[id]||(MODELY[id]=new Promise(res=>GLTF.load('modely/'+id+'.glb',g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; if(o.material){ o.material.userData.real=true; o.material.envMapIntensity=0.6; } } }); res(g.scene); },undefined,()=>res(null)))); }
+async function postav(id,x,y,z,ry,cil,kolize){ const m=await model(id); if(!m) return null; const k=m.clone(true); k.position.set(x,y,z); k.rotation.y=ry||0; cil.add(k);
+  if(kolize){ const c=new THREE.Mesh(new THREE.BoxGeometry(kolize[0],kolize[1],kolize[2]),new THREE.MeshBasicMaterial()); c.visible=false; c.position.set(x,kolize[1]/2,z); c.rotation.y=ry||0; c.userData.auto=true; cil.add(c); if(cil===TGROUP) WALLS.push(c); else ENVCOL.push({env:cil.userData.env,x,z,ry:ry||0,w:kolize[0],d:kolize[2]}); }
+  return k; }
+// rekvizity k jednotlivým cvičením (smažou se se změnou cvičení spolu s terči)
+async function rekvizity(S){ const tag=S.id+':'+Date.now(); rekvizity.tag=tag; const ok=()=>rekvizity.tag===tag&&ST.stage===S; const p=[];
+  if(S.cat==='mirena'&&S.id!=='biatlon'){ p.push(['old_military_crate',0.95,0,0.15,-0.3]); p.push(['ammo_box',0.95,0.255,0.15,1.2]); }
+  if(S.cat==='dyn'||S.cat==='drill'){ p.push(['Barrel_02',-4.6,0,-1.5,0,[0.5,0.9,0.5]],['Barrel_02',-5.2,0,-1.0,1,[0.5,0.9,0.5]],['plastic_crate_01',4.4,0,-0.8,0.3],['plastic_crate_01',4.4,0.264,-0.8,0.1],['wooden_crate_01',5.0,0,-2.2,1.2],['ammo_box',4.4,0.53,-0.8,0.6]); }
+  if(S.id==='auto'){ p.push(['concrete_road_barrier',3.6,0,-9,0.1,[1.6,0.85,0.6]],['concrete_road_barrier_02',-3.8,0,-20,-0.15,[1.6,1.1,0.45]],['covered_car',-7.5,0,-31,0.4,[1.9,1.4,4.4]],['Barrel_02',6.5,0,-14,0]); }
+  if(S.mode==='idpa'){ p.push(['wooden_crate_01',-1.2,0,-1.2,0.2],['ammo_box',-1.2,0.35,-1.2,0.9]); }
+  for(const a of p){ if(!ok()) return; await postav(a[0],a[1],a[2],a[3],a[4],TGROUP,a[5]); } }
+// trvalé rekvizity prostředí: stolek se židlemi a krabice nábojů za stanovištěm, sudy v poušti
+(async()=>{ ENV.les.userData.env='les'; ENV.stadion.userData.env='stadion'; ENV.poust.userData.env='poust';
+  await postav('outdoor_table_chair_set_01',3.2,0,3.2,0.6,ENV.les); await postav('ammo_box',3.1,0.79,3.0,0.3,ENV.les); await postav('tree_stump_01',-7,0,6,0.5,ENV.les);
+  await postav('wooden_picnic_table',-4,0,5,1.57,ENV.stadion);
+  const b=await model('Barrel_02'); if(b){ const nahr=[]; ENV.poust.traverse(o=>{ const g=o.geometry; if(o.isMesh&&g&&g.type==='CylinderGeometry'&&Math.abs(g.parameters.radiusTop-0.3)<0.01&&Math.abs(g.parameters.height-0.9)<0.01) nahr.push(o); });
+    for(const o of nahr){ o.visible=false; const k=b.clone(true); k.position.set(o.position.x,0,o.position.z); k.rotation.y=Math.random()*6.28; ENV.poust.add(k); } } })();
+const _vyberR=vyberCviceni; vyberCviceni=function(id){ _vyberR(id); try{ zdiMaterial(); }catch(e){} if(ST.stage&&FOTO.on) rekvizity(ST.stage); };
 
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.
@@ -1323,7 +1377,7 @@ function loop(){ const now=performance.now(), dt=Math.min(0.05,(now-last)/1000);
   if(ST.reloading&&now/1000>ST.reloading){ ST.reloading=0; ST.mag=ST.magCap; say('Přebito'); }
   if(ST.phase==='run'&&ST.stage&&now/1000-ST.t0>ST.stage.cas){ say('Čas vypršel'); konec('cas'); }
   // otočné terče: otočí se čelem, když střelec vejde do zóny nebo když uplyne čas od pípnutí
-  const h=new V(); camera.getWorldPosition(h); const tRun=ST.phase==='run'?now/1000-ST.t0:-1;
+  const h=new V(); camera.getWorldPosition(h); if(window.POZADI) POZADI.sleduj(h); const tRun=ST.phase==='run'?now/1000-ST.t0:-1;
   if(NOC&&gunModel!==SVITILNA.parent) nocNastav(true);
   for(const t of TG){ if(t.skryty&&ST.phase==='run'&&((t.akt&&Math.hypot(h.x-t.akt.cx,h.z-t.akt.cz)<t.akt.r)||(t.aktT!=null&&tRun>=t.aktT))){ t.skryty=false; t.otoc=0; noise(0.15,900,0.2,0.05); }
     if(t.mov){ const p=t.m.position; p.x+=t.mov.v*t.mov.dir*dt; if(p.x>t.mov.x1){ p.x=t.mov.x1; t.mov.dir=-1; } if(p.x<t.mov.x0){ p.x=t.mov.x0; t.mov.dir=1; } }

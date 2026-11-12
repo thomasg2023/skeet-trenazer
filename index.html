@@ -82,7 +82,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-4</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-5</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -128,6 +128,8 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <p class="small" style="margin:0;width:100%;color:var(--muted)">Zpráva z Bluetooth spouště dorazí o 30–60 ms později, než stisknete. Při švihu zbraň mezitím uteče dopředu a ve VR pak stačí menší předstih než na střelnici. Kompenzace bere směr hlavně z okamžiku stisku.</p>
         <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Druh terče <select id="tercSel" style="flex:1"><option value="standard">Standard 110 mm</option><option value="midi">Midi 90 mm</option><option value="mini">Mini 60 mm</option><option value="battue">Battue (plochý, padá)</option><option value="zajic">Zajíc (běží po zemi)</option></select></label>
         <div class="seg"><button type="button" id="panoBtn" aria-pressed="true">Krajina: Mělník foto</button></div>
+        <div class="seg" style="align-items:center"><select id="pozSel" aria-label="Obloha a krajina 360°" style="max-width:100%"></select><label class="btn" style="cursor:pointer">Nahrát vlastní 360° fotku<input type="file" id="pozFile" accept="image/jpeg,image/png" hidden></label></div>
+        <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Natočení oblohy <input type="range" id="pozYaw" min="-180" max="180" step="5" style="flex:1"></label>
         <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Natočení fotky <input type="range" id="panoYaw" min="-180" max="180" step="1" style="flex:1"></label>
         <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Šířka záběru <input type="range" id="panoFov" min="120" max="360" step="2" style="flex:1"></label>
         <div class="seg"><button type="button" id="autoBtn" aria-pressed="false">Automat</button></div>
@@ -161,6 +163,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
     <section class="panel">
       <h2>Zbraň a náboj</h2>
       <div class="seg" id="gunSeg" aria-label="Zbraň" style="margin-bottom:10px"><button type="button" data-g="skeet">Skeet</button><button type="button" data-g="trap">Trap</button></div>
+      <div class="field"><label for="gunModel">Model zbraně (vzhled, délka hlavní)</label><select id="gunModel"></select></div>
       <div class="field"><label for="gunName">Název zbraně</label><input type="text" id="gunName" maxlength="40" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
       <div class="field"><label for="gunPopis">Popis</label><input type="text" id="gunPopis" maxlength="120" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
       <div class="field"><label for="ch1">Čok 1. rána (spodní hlaveň)</label><select id="ch1"></select></div>
@@ -200,6 +203,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="pozadi.js"></script>
 <script>
 /* ---------- Jazyky: čeština je zdroj, ostatní [en, de, es, it] ---------- */
 const LANGS=[['cs','CZ'],['en','GB'],['es','ES'],['it','IT'],['de','DE']];
@@ -532,8 +536,8 @@ function ammoInfo(a){const r=a.dmm/2000, m=4/3*Math.PI*Math.pow(a.dmm/20,3)*a.rh
   return {...a, mass:m, count:Math.round(a.g/1000/m), k:1.2*0.5*3/(8*r*a.rho*1000)};}
 const CLAY_AREA=0.0065, E_MIN=0.6;
 // zvlášť zbraň pro skeet a pro trap
-const GUNS={skeet:{name:'Zoli – skeet',popis:'12/70, hlaveň 71 cm, plochá lišta, skeetové čoky',ch:['SK2','CL'],ammo:'pb24_95',poi:50,odpad:null},
-            trap:{name:'Trapová brokovnice',popis:'12/70, hlaveň 76 cm, vyšší lišta, bije výš',ch:['M','IM'],ammo:'fi24_24',poi:60,odpad:null}};
+const GUNS={skeet:{name:'Zoli – skeet',popis:'12/70, hlaveň 71 cm, plochá lišta, skeetové čoky',ch:['SK2','CL'],ammo:'pb24_95',poi:50,odpad:null,model:'kozlice76'},
+            trap:{name:'Trapová brokovnice',popis:'12/70, hlaveň 76 cm, vyšší lišta, bije výš',ch:['M','IM'],ammo:'fi24_24',poi:60,odpad:null,model:'trap76'}};
 const GUN_KEY={skeet:'skeet-gun',trap:'skeet-gun-trap'};
 for(const d of ['skeet','trap']) try{const sv=JSON.parse(localStorage.getItem(GUN_KEY[d])||'null'); if(sv&&CHOKES[sv.ch?.[0]]&&CHOKES[sv.ch?.[1]]&&AMMO[sv.ammo]&&AMMO[sv.ammo].disc===d)Object.assign(GUNS[d],sv);}catch(e){}
 let gun=GUNS.skeet;
@@ -549,7 +553,7 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.12-4';
+const VERZE='2026.11.12-5';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -750,7 +754,7 @@ function trapMachines(){ if(st.mode==='W') return [-1,1];
   if(st.trapKind==='ut') return [-2,-1,0,1,2].map(o=>o*1.1); return [0]; }
 function trapMarks(){ const xs=st.disc==='trap'&&st.mode!=='N'?trapMachines():[]; TRAP_MARKS.forEach((c,i)=>{ c.visible=i<xs.length; if(i<xs.length) c.position.x=xs[i]; }); }
 function labelsSync(){ const n=st.mode!=='N'; stLabels.forEach(l=>l.visible=n&&st.disc==='skeet'); trapLabels.forEach(l=>l.visible=n&&st.disc==='trap'); trapMarks(); }
-function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d==='trap'; gun=GUNS[d]; st.gunEdit=d; if(typeof gunUi==='function') gunUi();
+function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d==='trap'; gun=GUNS[d]; if(typeof controllers!=='undefined') gunModelApply(); st.gunEdit=d; if(typeof gunUi==='function') gunUi();
   SKEET_OBJS.forEach(o=>o.visible=!isTr); TRAP_GROUP.visible=isTr; labelsSync(); flagPlace();
   st.mode=isTr?'T':'H'; st.station=isTr?2:3; clearField(); placeDolly(); labelsSync(); buildSeg(); syncSeg(); renderScore();
   if(typeof panel!=='undefined'&&panel.visible) drawPanel(); say((isTr?`Trap · ${trapKindTxt()}`:'Skeet')+' · '+gun.name); }
@@ -936,7 +940,20 @@ let blesk=0, bleskT=8;
 function weatherTick(dt){ if(st.pocasi!=='bourka'){ blesk=0; return; } bleskT-=dt;
   if(bleskT<=0){ bleskT=6+Math.random()*12; blesk=0.18; const d=0.8+Math.random()*2.5; setTimeout(()=>{ noise(2.2,180,0.9,0.7); noise(0.6,600,0.4,0.15); },d*1000); }
   if(blesk>0){ blesk-=dt; hemi.intensity=blesk>0?2.6:SVETLO[KRAJ.svetlo].hi*0.6; scene.background.setHex(blesk>0?0xdde4f0:0x4a5258); } }
-function krajApply(){ const L=SVETLO[KRAJ.svetlo]; const noc=KRAJ.svetlo==='noc';
+// ---------- fotografická obloha / krajina 360° (pozadi.js, pozadi/seznam.json) ----------
+if(!window.POZADI) window.POZADI={list:[],cur:null,mesh:null,init(){},nacti:async()=>[],vypni(){},nastav:async()=>false,natoc(){},sleduj(){},pridejVlastni:async()=>'',smazVlastni:async()=>{}};   // náhrada, kdyby se pozadi.js nenačetlo
+const POZ={v:(()=>{try{const v=localStorage.getItem('skeet-poz'); return v==null?'kloofendal_48d_partly_cloudy_puresky':v;}catch(e){return 'kloofendal_48d_partly_cloudy_puresky';}})()};
+function pozVzhled(on,it){ if(!on) return; if(window._sky) window._sky.visible=false; if(window._sunSp) window._sunSp.visible=false; (window._clouds||[]).forEach(c=>c.visible=false);
+  if(it.typ==='krajina') (window._hills||[]).forEach(h=>h.visible=false);
+  if(it.horizont&&st.pocasi!=='mlha'&&st.pocasi!=='snih'&&st.pocasi!=='bourka'){ scene.fog.color.setRGB(...it.horizont); scene.background.setRGB(...it.horizont); } }
+POZADI.init(scene,pozVzhled,460,false);
+function pozApply(){ const it0=POZADI.list.find(x=>x.id===POZ.v), ok=POZ.v&&KRAJ.v!=='mesic'&&(KRAJ.svetlo==='noc')===(!!it0&&it0.doba==='noc')&&!['mlha','snih','bourka'].includes(st.pocasi);
+  if(!ok){ if(POZADI.cur) POZADI.vypni(); return; } if(POZADI.cur&&POZADI.cur.id===POZ.v){ POZADI.mesh.visible=true; pozVzhled(true,POZADI.cur); } else POZADI.nastav(POZ.v); }
+function pozSelRender(){ const el=document.getElementById('pozSel'); if(!el) return; const l=POZADI.list, o=(v,t)=>`<option value="${v}"${v===POZ.v?' selected':''}>${t}</option>`;
+  el.innerHTML=o('',tr('Obloha: kreslená'))+`<optgroup label="${tr('Obloha')}">${l.filter(x=>x.typ==='nebe').map(x=>o(x.id,x.n)).join('')}</optgroup><optgroup label="${tr('Krajina 360°')}">${l.filter(x=>x.typ==='krajina'&&!x.vlastni).map(x=>o(x.id,x.n)).join('')}</optgroup>`
+   +(l.some(x=>x.vlastni)?`<optgroup label="${tr('Vlastní')}">${l.filter(x=>x.vlastni).map(x=>o(x.id,x.n)).join('')}${l.filter(x=>x.vlastni).map(x=>o('del:'+x.id,'✕ '+x.n.slice(2))).join('')}</optgroup>`:''); }
+function krajApply(){ krajApply0(); if(typeof pozApply==='function') pozApply(); }
+function krajApply0(){ const L=SVETLO[KRAJ.svetlo]; const noc=KRAJ.svetlo==='noc';
   scene.background.setHex(L.bg); scene.fog.color.setHex(L.bg); scene.fog.near=L.fog[0]; scene.fog.far=L.fog[1];
   if(st.pocasi==='mlha'){ scene.fog.near=12; scene.fog.far=110; const c=noc?0x1a1e26:0xc9cdd0; scene.fog.color.setHex(c); scene.background.setHex(c); }
   else if(st.pocasi==='dest'){ scene.fog.near=40; scene.fog.far=220; }
@@ -1230,18 +1247,35 @@ async function vrrExport(){ if(!VRR.recs.length){ say('Zatím žádné VR rány'
   const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); say('Soubor uložen – v aplikaci Záznam: Načíst ze souboru'); }
 
 /* ---------- Brokovnice na ovladači ---------- */
-function makeGun(){const g=new THREE.Group(), steel=mat(0x262a2c), wood=mat(0x6b3f22);
-  for(const y of [0.012,-0.008]){const b=new THREE.Mesh(new THREE.CylinderGeometry(0.0095,0.0105,0.72,10),steel); b.rotation.x=Math.PI/2; b.position.set(0,y,-0.40); g.add(b);}
-  const rib=new THREE.Mesh(new THREE.BoxGeometry(0.008,0.004,0.72),steel); rib.position.set(0,0.024,-0.40); g.add(rib);
-  const bead=new THREE.Mesh(new THREE.SphereGeometry(0.0035,8,6),mat(0xf2f2f2)); bead.position.set(0,0.029,-0.755); g.add(bead);
-  const fore=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.035,0.22),wood); fore.position.set(0,-0.022,-0.22); g.add(fore);
-  const rec=new THREE.Mesh(new THREE.BoxGeometry(0.042,0.06,0.10),steel); rec.position.set(0,-0.005,-0.02); g.add(rec);
+// modely brokovnic (vzhled a délka hlavní; lišta a muška jsou u všech ve stejné výšce, aby seděla kalibrace míření)
+const GUN_MODELY={
+  kozlice76:{n:'Kozlice sportovní, hlavně 76 cm',L:0.76,pouzdro:0xb9bcc0,pazba:0x6b3f22,hlavne:0x1d2124,dve:true,lista:'vent'},
+  kozlice81:{n:'Kozlice sportovní, hlavně 81 cm',L:0.81,pouzdro:0xb9bcc0,pazba:0x5a3218,hlavne:0x1d2124,dve:true,lista:'vent'},
+  kozlice71:{n:'Kozlice lovecká, hlavně 71 cm',L:0.71,pouzdro:0x2a2d30,pazba:0x7a4a28,hlavne:0x22262a,dve:true,lista:'plna'},
+  trap76:{n:'Trapová kozlice, vysoká lišta 76 cm',L:0.76,pouzdro:0x2b2f33,pazba:0x4a2a14,hlavne:0x15181b,dve:true,lista:'vysoka'},
+  poloautomat:{n:'Poloautomat, hlaveň 71 cm',L:0.71,pouzdro:0x1b1d1f,pazba:0x26282a,hlavne:0x1b1e21,dve:false,lista:'vent'} };
+function makeGun(id){ const M=GUN_MODELY[id]||GUN_MODELY.kozlice76, g=new THREE.Group(), L=M.L, zc=-0.04-L/2;
+  const ocel=new THREE.MeshPhongMaterial({color:M.hlavne,shininess:70,specular:0x555555}), pz=new THREE.MeshPhongMaterial({color:M.pouzdro,shininess:90,specular:0x888888}), dr=new THREE.MeshPhongMaterial({color:M.pazba,shininess:35,specular:0x332211});
+  const hl=(y,r)=>{ const b=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.08,L,14),ocel); b.rotation.x=Math.PI/2; b.position.set(0,y,zc); g.add(b); const u=new THREE.Mesh(new THREE.RingGeometry(r*0.72,r,14),new THREE.MeshBasicMaterial({color:0x050505,side:THREE.DoubleSide})); u.position.set(0,y,zc-L/2-0.0005); g.add(u); };
+  if(M.dve){ hl(0.012,0.0095); hl(-0.008,0.0095); const sp=new THREE.Mesh(new THREE.BoxGeometry(0.004,0.008,L*0.96),ocel); sp.position.set(0,0.002,zc); g.add(sp); }
+  else { hl(0.006,0.0105); const mag=new THREE.Mesh(new THREE.CylinderGeometry(0.0095,0.0095,L*0.55,12),ocel); mag.rotation.x=Math.PI/2; mag.position.set(0,-0.016,-0.04-L*0.3); g.add(mag); }
+  // lišta: horní plocha vždy v y = 0,026 (záměrná); ventilovaná = sloupky
+  const lh=M.lista==='vysoka'?0.012:0.004, lista=new THREE.Mesh(new THREE.BoxGeometry(0.009,0.003,L),ocel); lista.position.set(0,0.0245,zc); g.add(lista);
+  if(M.lista!=='plna') for(let k=0;k<Math.round(L/0.05);k++){ const s2=new THREE.Mesh(new THREE.BoxGeometry(0.006,lh,0.006),ocel); s2.position.set(0,0.023-lh/2,-0.06-k*0.05); g.add(s2); }
+  else { const pl=new THREE.Mesh(new THREE.BoxGeometry(0.008,0.004,L),ocel); pl.position.set(0,0.021,zc); g.add(pl); }
+  const muska=new THREE.Mesh(new THREE.SphereGeometry(0.0032,10,8),new THREE.MeshBasicMaterial({color:0xff5a1a})); muska.position.set(0,0.029,-0.04-L+0.005); g.add(muska);
+  const stred=new THREE.Mesh(new THREE.SphereGeometry(0.0018,8,6),new THREE.MeshBasicMaterial({color:0xeeeeee})); stred.position.set(0,0.0275,-0.04-L*0.5); g.add(stred);
+  const pred=new THREE.Mesh(new THREE.BoxGeometry(0.044,0.034,0.24),dr); pred.position.set(0,-0.024,-0.23); g.add(pred);
+  const rec=new THREE.Mesh(new THREE.BoxGeometry(0.044,0.062,0.11),pz); rec.position.set(0,-0.006,-0.005); g.add(rec);
+  const luc=new THREE.Mesh(new THREE.TorusGeometry(0.018,0.003,6,14,Math.PI),pz); luc.rotation.set(0,Math.PI/2,Math.PI); luc.position.set(0,-0.038,0.02); g.add(luc);
+  const krk=new THREE.Mesh(new THREE.BoxGeometry(0.036,0.05,0.12),dr); krk.position.set(0,-0.03,0.11); krk.rotation.x=-0.25; g.add(krk);
   return g;}
+window._gunDbg={GUN_MODELY:()=>GUN_MODELY,makeGun:id=>makeGun(id)};
 function makeLaser(){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.0015,0.0015,60,4),new THREE.MeshBasicMaterial({color:0xff3b2f,transparent:true,opacity:0.5}));
   l.rotation.x=Math.PI/2; l.position.z=-30.76; l.visible=false; return l;}
 
 const controllers=[0,1].map(i=>{const c=renderer.xr.getController(i);
-  const gunM=makeGun(); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); gunM.add(las); c.userData.laser=las;
+  const gunM=makeGun(gun.model); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); gunM.add(las); c.userData.laser=las;
   c.addEventListener('connected',e=>{c.userData.src=e.data; syncHands();});
   c.addEventListener('disconnected',()=>{c.userData.src=null; syncHands();});
   c.addEventListener('selectstart',()=>{ if(isGun(c)){fire(c);return;} const h=panelHit(c); if(h){ if(h.i>=0){ pBtns[h.i].act(); drawPanel(); } return; } const g=hudHit(c); if(g){ if(g.i>=0){ hBtns[g.i].act(); drawHud(); } return; } if(st.auto) setAuto(false); pull(); });
@@ -1888,7 +1922,7 @@ function step(dt){
   }
   st.shots=st.shots.filter(s=>!s.done);
 }
-function tick(){
+function tick(){ if(window.POZADI) POZADI.sleduj(dolly.position);
   lampsTick();
   if(panoMesh){ panoMesh.position.set(dolly.position.x,panoMesh.userData.cy,dolly.position.z); }
   autoTick(); panelTick(); krajTick(0.016); flagTick(performance.now()/1000); rainTick(0.016); weatherTick(0.016); hlasTick(); recTick(); drzTick(); rozborTick(); vrrTick();
@@ -1917,6 +1951,10 @@ new ResizeObserver(resize).observe(stage);
 $('pullBtn').onclick=()=>{audio();pull();};
 $('panoYaw').value=PANO.yaw; $('panoFov').value=PANO.fov; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=tr(PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená');
 $('panoBtn').onclick=()=>{PANO.on=!PANO.on; $('panoBtn').setAttribute('aria-pressed',PANO.on); $('panoBtn').textContent=tr(PANO.on?'Krajina: Mělník foto':'Krajina: vymyšlená'); panoBuild(); panoSave();};
+$('pozSel').onchange=async e=>{ const v=e.target.value; if(v.startsWith('del:')){ await POZADI.smazVlastni(v.slice(4)); POZ.v=''; } else POZ.v=v; try{localStorage.setItem('skeet-poz',POZ.v);}catch(err){} pozSelRender(); krajApply(); if(typeof pocasiApply==='function') pocasiApply(); };
+$('pozFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ POZ.v=await POZADI.pridejVlastni(f); try{localStorage.setItem('skeet-poz',POZ.v);}catch(err){} pozSelRender(); krajApply(); }catch(err){ say('Fotku nejde uložit'); } e.target.value=''; };
+{ let y=0; try{ y=+localStorage.getItem('skeet-poz-yaw')||0; }catch(e){} $('pozYaw').value=y; POZADI.natoc(y); $('pozYaw').oninput=e=>{ POZADI.natoc(+e.target.value); try{localStorage.setItem('skeet-poz-yaw',e.target.value);}catch(err){} }; }
+POZADI.nacti().then(()=>{ pozSelRender(); krajApply(); });
 $('panoYaw').oninput=e=>{PANO.yaw=+e.target.value; panoBuild(); panoSave();};
 $('panoFov').oninput=e=>{PANO.fov=+e.target.value; panoBuild(); panoSave();};
 $('autoBtn').onclick=()=>{audio(); setAuto(!st.auto);};
@@ -1956,9 +1994,11 @@ function fillSel(id,obj,val,flt){$(id).innerHTML=Object.entries(obj).filter(([k,
 st.gunEdit=st.disc; const GE=()=>GUNS[st.gunEdit];
 function gunUi(){ const G=GE(); document.querySelectorAll('#gunSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===st.gunEdit));
   if(document.activeElement!==$('gunName')) $('gunName').value=G.name; if(document.activeElement!==$('gunPopis')) $('gunPopis').value=G.popis;
+  $('gunModel').innerHTML=Object.entries(GUN_MODELY).map(([k,m])=>`<option value="${k}"${k===(G.model||'kozlice76')?' selected':''}>${tr(m.n)}</option>`).join('');
   fillSel('ch1',CHOKES,G.ch[0]); fillSel('ch2',CHOKES,G.ch[1]); fillSel('ammo',AMMO,G.ammo,o=>o.disc===st.gunEdit); $('poi').value=G.poi;
   $('ammoDesc').textContent=tr(AMMO[G.ammo].d||'');
   $('odpad').value=odpadOf(G)*100; $('odpadO').textContent=(odpadOf(G)*100).toFixed(1).replace('.',',')+' %'; renderPattern(); }
+function gunModelApply(){ controllers.forEach(c=>{ const old=c.userData.gun, n=makeGun(gun.model); n.visible=old.visible; const las=c.userData.laser; old.remove(las); n.add(las); c.remove(old); c.add(n); c.userData.gun=n; n.position.copy(old.position); n.rotation.copy(old.rotation); n.scale.copy(old.scale); }); if(typeof applyOsa==='function') applyOsa(); }
 function gunSave(){ for(const d of ['skeet','trap']) try{localStorage.setItem(GUN_KEY[d],JSON.stringify(GUNS[d]));}catch(e){} }
 function renderPattern(){const G=GE(), a=ammoInfo(AMMO[G.ammo]);
   $('patBody').innerHTML=[0,1].map(i=>{const rate=chokeRate(G,i);
@@ -1968,6 +2008,7 @@ function renderPattern(){const G=GE(), a=ammoInfo(AMMO[G.ammo]);
   gunSave(); drawHud();}
 $('gunSeg').onclick=e=>{const b=e.target.closest('button'); if(b){ st.gunEdit=b.dataset.g; gunUi(); }};
 $('gunName').oninput=e=>{GE().name=e.target.value; gunSave();};
+$('gunModel').onchange=e=>{ GE().model=e.target.value; gunSave(); if(st.gunEdit===st.disc) gunModelApply(); };
 $('gunPopis').oninput=e=>{GE().popis=e.target.value; gunSave();};
 $('ch1').onchange=e=>{GE().ch[0]=e.target.value; if(GE().adj) GE().adj[0]=1; renderPattern();};
 $('ch2').onchange=e=>{GE().ch[1]=e.target.value; if(GE().adj) GE().adj[1]=1; renderPattern();};
