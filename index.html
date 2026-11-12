@@ -82,13 +82,14 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-3</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-4</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
       <select id="langSel" aria-label="Jazyk / Language" style="font:600 14px var(--body);padding:6px 8px;border-radius:6px;margin-bottom:8px"><option value="cs">CZ · Čeština</option><option value="en">GB · English</option><option value="es">ES · Español</option><option value="it">IT · Italiano</option><option value="de">DE · Deutsch</option></select>
       <button class="vrbtn" id="vrBtn" type="button">Vstoupit do VR</button>
       <a class="navlink" href="zaznam.html">📱 Záznam ze střelnice a nastavení spouště →</a>
+      <a class="navlink" href="strelnice.html">🔫 Střelnice: pistole, puška, IPSC, CQB →</a>
       <div class="vrnote" id="vrNote">Otevřete tuto stránku v prohlížeči v Questu.</div>
     </div>
   </header>
@@ -205,6 +206,7 @@ const LANGS=[['cs','CZ'],['en','GB'],['es','ES'],['it','IT'],['de','DE']];
 const LI={en:0,de:1,es:2,it:3};
 // EX = jen celý text (krátká slova), PH = i jako část delší hlášky
 const EX={
+ '🔫 Střelnice: pistole, puška, IPSC, CQB →':['🔫 Range: pistol, rifle, IPSC, CQB →','🔫 Schießstand: Pistole, Gewehr, IPSC, CQB →','🔫 Galería: pistola, rifle, IPSC, CQB →','🔫 Poligono: pistola, carabina, IPSC, CQB →'],
  'Zrušit kalibraci zbraně (držák)':['Clear gun calibration (mount)','Waffenkalibrierung löschen (Halter)','Borrar calibración del arma (soporte)','Annulla calibrazione fucile (supporto)'],
  'KALIBRACE ZBRANĚ':['GUN CALIBRATION','WAFFE KALIBRIEREN','CALIBRAR ARMA','CALIBRA FUCILE'],'KALIBRACE ZBRANĚ ✓ (znovu)':['GUN CALIBRATED ✓ (again)','WAFFE KALIBRIERT ✓ (neu)','ARMA CALIBRADA ✓ (de nuevo)','FUCILE CALIBRATO ✓ (di nuovo)'],
  'OKO: PRAVÉ':['EYE: RIGHT','AUGE: RECHTS','OJO: DERECHO','OCCHIO: DESTRO'],'OKO: LEVÉ':['EYE: LEFT','AUGE: LINKS','OJO: IZQUIERDO','OCCHIO: SINISTRO'],'Zalícujte':['Mount the gun','Anschlagen','Encare','Imbraccia'],'Kalibrace zbraně za':['Gun calibration in','Kalibrierung in','Calibración en','Calibrazione tra'],
@@ -547,7 +549,7 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.12-3';
+const VERZE='2026.11.12-4';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
