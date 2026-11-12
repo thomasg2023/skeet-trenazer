@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.12-11</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.12-12</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -145,6 +145,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
     </section>
   </div>
   <div class="tabp" id="tab-denik" hidden></div>
+  <p class="small" style="margin:0">Fotografické textury a obloha: Babylon.js Assets (CC0).</p>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -200,7 +201,6 @@ const grassTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#6d9a49';x.fillRect(0,0,
 const asphaltTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#55585a';x.fillRect(0,0,w,h);for(let i=0;i<7000;i++){const l=25+Math.random()*25;x.fillStyle=`hsl(200,3%,${l}%)`;x.globalAlpha=0.4;x.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}},[300,300]);
 const sandTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#d9b77e';x.fillRect(0,0,w,h);for(let i=0;i<5000;i++){x.fillStyle=`hsl(${34+Math.random()*8},50%,${58+Math.random()*18}%)`;x.globalAlpha=0.4;x.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}},[300,300]);
 const gravelTex=canvasTex(128,128,(x,w,h)=>{x.fillStyle='#bdb5a3';x.fillRect(0,0,w,h);for(let i=0;i<1600;i++){x.fillStyle=`hsl(40,${8+Math.random()*10}%,${50+Math.random()*30}%)`;x.fillRect(Math.random()*w,Math.random()*h,2,2);}},[8,8]);
-new THREE.TextureLoader().load('tex/trava.jpg',t=>{ grassTex.image=t.image; grassTex.needsUpdate=true; ['les','stadion'].forEach(k=>{ if(ENVSET[k]) ENVSET[k].gc=0xe6eedf; }); if(ENVSET[ST.env]&&ENVSET[ST.env].gc) ground.material.color.setHex(ENVSET[ST.env].gc); });
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),new THREE.MeshLambertMaterial({map:grassTex})); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 const snowTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#eef2f5';x.fillRect(0,0,w,h);for(let i=0;i<4000;i++){x.fillStyle=`rgba(${170+Math.random()*60},${190+Math.random()*50},${215+Math.random()*40},0.35)`;x.fillRect(Math.random()*w,Math.random()*h,2,2);}},[300,300]);
 const concreteTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#8d8f8c';x.fillRect(0,0,w,h);for(let i=0;i<6000;i++){x.fillStyle=`hsl(90,2%,${45+Math.random()*20}%)`;x.globalAlpha=0.3;x.fillRect(Math.random()*w,Math.random()*h,2,2);} x.globalAlpha=0.5; x.strokeStyle='#6f716e'; for(let i=0;i<=4;i++){ x.beginPath(); x.moveTo(i*64,0); x.lineTo(i*64,h); x.stroke(); }},[60,60]);
@@ -222,9 +222,23 @@ function say(t){ $('fb').textContent=t; if(typeof drawHud==='function') drawHud(
 /* ================= PROSTŘEDÍ ================= */
 const ENV={les:new THREE.Group(),mesto:new THREE.Group(),stadion:new THREE.Group(),poust:new THREE.Group(),hala:new THREE.Group(),hory:new THREE.Group()};
 Object.values(ENV).forEach(g=>{g.visible=false; scene.add(g);});
-const WALLS=[], ENVCOL=[];   // ENVCOL: pevné překážky prostředí (auta ve městě)   // kolize a kryt (CQB dům, barikády)
+const WALLS=[], ENVCOL=[];
+const carLak=c=>new THREE.MeshStandardMaterial({color:c,roughness:0.32,metalness:0.3}), carSklo=()=>new THREE.MeshStandardMaterial({color:0x0d141a,roughness:0.05,metalness:0.6}), carGuma=()=>new THREE.MeshStandardMaterial({color:0x151515,roughness:0.9});
+// osobní auto (sedan 4,6 × 1,8 m): bok vytažený z profilu, prosklená kabina, střecha, světla, nárazníky, kola s disky
+function profil(pts,hl,bev){ const sh=new THREE.Shape(); pts.forEach(([x,y],i)=>i?sh.lineTo(x,y):sh.moveTo(x,y)); sh.closePath(); const g=new THREE.ExtrudeGeometry(sh,{depth:hl,bevelEnabled:!!bev,bevelSize:bev||0,bevelThickness:bev||0,bevelSegments:2,curveSegments:4}); g.translate(0,0,-hl/2); return g; }
+const CARG={ telo:profil([[-2.25,0.3],[2.25,0.3],[2.32,0.52],[2.28,0.78],[1.05,0.95],[-1.65,1.0],[-2.25,0.95],[-2.32,0.6]],1.7,0.05),
+  kab:profil([[1.06,0.94],[0.45,1.38],[-0.9,1.42],[-1.64,0.99]],1.56,0.03), str:profil([[0.4,1.37],[0.44,1.43],[-0.93,1.47],[-0.89,1.41]],1.5,0.02) };
+function makeCar(c){ const g=new THREE.Group(), lak=carLak(c); const t=new THREE.Mesh(CARG.telo,lak), k=new THREE.Mesh(CARG.kab,carSklo()), r=new THREE.Mesh(CARG.str,lak); [t,k,r].forEach(m=>{ m.castShadow=true; m.receiveShadow=true; g.add(m); });
+  const sv=(x,zz,col)=>{ const l=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.11,0.34),new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:0.5,roughness:0.15})); l.position.set(x,0.72,zz); g.add(l); };
+  sv(2.3,0.6,0xfff6dd); sv(2.3,-0.6,0xfff6dd); sv(-2.32,0.62,0xb01010); sv(-2.32,-0.62,0xb01010);
+  const pm=new THREE.MeshStandardMaterial({color:0x1d1d1f,roughness:0.65}); for(const x of [2.34,-2.36]){ const p=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.16,1.82),pm); p.position.set(x,0.38,0); g.add(p); }
+  const zrc=new THREE.MeshStandardMaterial({color:0x111111,roughness:0.3,metalness:0.6}); for(const s of [1,-1]){ const z=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.08,0.1),zrc); z.position.set(0.95,0.98,s*0.93); g.add(z); }
+  for(const [ax,az] of [[1.4,0.84],[1.4,-0.84],[-1.42,0.84],[-1.42,-0.84]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,0.24,20),carGuma()); w.rotation.x=Math.PI/2; w.position.set(ax,0.34,az); w.castShadow=true; g.add(w);
+    const di=new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.21,0.25,16),new THREE.MeshStandardMaterial({color:0xb8bcc0,roughness:0.3,metalness:0.9})); di.rotation.x=Math.PI/2; di.position.copy(w.position); g.add(di); }
+  return g; }
+   // ENVCOL: pevné překážky prostředí (auta ve městě)   // kolize a kryt (CQB dům, barikády)
 // --- LESNÍ STŘELNICE: krytá palebná čára, valy mezi střelišti, zastřelovací val, rámy terčů, les okolo ---
-{ const G=ENV.les, wood=mat(0x7a5a3a), roofM=mat(0x4b5a50), berm=mat(0x5f8a45), sandM=mat(0xb59a6a);
+{ const G=ENV.les, wood=mat(0x7a5a3a), roofM=mat(0x4b5a50), berm=mat(0x5f8a45), sandM=mat(0xb59a6a); berm.userData.foto='trava'; sandM.userData.foto='hlina';
   // krytá palebná čára (12 stavů)
   for(const px of [-12.4,-7.75,-4.65,4.65,7.75,12.4]){ box(0.18,2.8,0.18,wood,px,1.4,-1.2,G); box(0.18,2.8,0.18,wood,px,1.4,3,G); }
   const roof=box(25,0.15,5.2,roofM,0,2.9,0.9,G); roof.rotation.x=0.06;
@@ -265,7 +279,7 @@ const towerTex=canvasTex(64,256,(x,w,h)=>{ x.fillStyle='#7f93a3'; x.fillRect(0,0
   // kontejnery, auta, lampy
   const kont=(x,z,ry,c)=>{ const k=box(6,2.6,2.44,mat(c),x,1.3,z,G); k.rotation.y=ry; };
   kont(-22,-60,0.1,0x2f6b9a); kont(22,-75,-0.2,0xb0452b); kont(-20,-95,1.5,0x4f7a3a);
-  const auto=(x,z,ry,c)=>{ const g=new THREE.Group(); box(4.2,0.8,1.8,mat(c),0,0.6,0,g); box(2.2,0.6,1.6,mat(0x2a3540),-0.2,1.25,0,g); for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.25,12),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.35,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; G.add(g); ENVCOL.push({env:'mesto',x,z,ry,w:4.3,d:1.9}); };
+  const auto=(x,z,ry,c)=>{ const g=makeCar(c); g.position.set(x,0,z); g.rotation.y=ry; G.add(g); ENVCOL.push({env:'mesto',x,z,ry,w:4.5,d:1.9}); };
   auto(-23,-30,0.2,0x9a2020); auto(23,-42,1.4,0xdedede); auto(-24,-120,-0.1,0x203a6a);
   for(let i=0;i<10;i++){ for(const s of [-1,1]){ box(0.15,6,0.15,mat(0x3a3f44),s*25,3,-10-i*18,G); box(1.4,0.15,0.3,mat(0x3a3f44),s*24.4,6,-10-i*18,G); } }
   // chodník
@@ -591,8 +605,7 @@ function buildDum(){ const c=0xd8d2c4;
   T(-4.5,-16.8,{name:'C1',zbranKresba:true},0,-10); T(1.4,-17,{noshoot:true,name:'C-civ'},0,-10); const c2=T(4.4,-16.8,{name:'C2',zbranKresba:true},2.5,-12); aktivator(c2,1.5,-12.5,2.5);
   // podlaha uvnitř
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(12,14),mat(0x9a8f7c)); fl.rotation.x=-Math.PI/2; fl.position.set(0,0.03,-11); TGROUP.add(fl); }
-function buildUlice(){ const auto=(x,z,ry,c)=>{ const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.BoxGeometry(4.2,0.9,1.8),mat(c)); b.position.y=0.65; g.add(b); const k=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.65,1.6),mat(0x2a3540)); k.position.set(-0.2,1.4,0); g.add(k);
-    for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.36,0.25,14),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.36,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g); g.updateMatrixWorld(true); const col=new THREE.Mesh(new THREE.BoxGeometry(4.3,1.7,1.9),new THREE.MeshBasicMaterial()); col.visible=false; col.position.set(x,0.85,z); col.rotation.y=ry; col.userData.auto=true; TGROUP.add(col); WALLS.push(col); };
+function buildUlice(){ const auto=(x,z,ry,c)=>{ const g=makeCar(c); g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g); g.updateMatrixWorld(true); const col=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.5,1.85),new THREE.MeshBasicMaterial()); col.visible=false; col.position.set(x,0.75,z); col.rotation.y=ry; col.userData.auto=true; TGROUP.add(col); WALLS.push(col); };
   auto(0,-0.6,0,0x9a2020); auto(-6,-14,0.5,0x203a6a); auto(5.5,-18,-0.3,0xdedede); auto(-2,-26,0.1,0x3a6b2f);
   const T=(x,y,z,o,t)=>{ const tg=ipscTarget(x,y,z,Object.assign({ry:face(x,z,0,2)},nahodnaRole(o))); if(ST.nahodne) t=Math.max(0.8,t+(Math.random()-0.5)*2); tg.skryty=true; tg.aktT=t; tg.cil0=tg.m.rotation.y; tg.m.rotation.y=tg.cil0+Math.PI/2; return tg; };
   T(-6.5,1.45,-15.5,{name:'U1',zbranKresba:true},1.5); T(5.8,1.45,-19.8,{noshoot:true,name:'U-civ'},3.0); T(6.2,1.45,-20.2,{name:'U2',zbranKresba:true},4.2); T(-2.3,1.45,-28,{name:'U3',zbranKresba:true},6.0);
@@ -917,7 +930,7 @@ function oblohaNastav(){ const D=DOBA_SKY[ST.doba]||DOBA_SKY.den, E=ENVSET[ST.en
 function realMaterial(m){ if(!m||m.userData.real) return m; let n=m;
   if(m.isMeshLambertMaterial){ n=new THREE.MeshStandardMaterial({color:m.color,map:m.map,transparent:m.transparent,opacity:m.opacity,alphaTest:m.alphaTest,side:m.side,vertexColors:m.vertexColors,flatShading:m.flatShading,roughness:0.88,metalness:0,envMapIntensity:REAL.env}); n.color.copy(m.color); }
   if(n.color&&!n.isShaderMaterial) n.color.convertSRGBToLinear(); if(n.emissive) n.emissive.convertSRGBToLinear();
-  if(n.map){ n.map.encoding=THREE.sRGBEncoding; n.map.needsUpdate=true; } n.userData.real=true; n.needsUpdate=true; return n; }
+  if(n.map){ n.map.encoding=THREE.sRGBEncoding; n.map.needsUpdate=true; } n.userData.real=true; if(m.userData.foto) n.userData.foto=m.userData.foto; n.needsUpdate=true; return n; }
 function realScene(root){ root.traverse(o=>{ if(o===PSKY||o===envSky) return; if(o.material){ if(Array.isArray(o.material)) o.material=o.material.map(realMaterial); else o.material=realMaterial(o.material); }
   if(o.geometry&&o.geometry.attributes.color&&!o.geometry.userData.lin&&o.material&&o.material.vertexColors){ const c=o.geometry.attributes.color; for(let i=0;i<c.count;i++){ const k=new THREE.Color(c.getX(i),c.getY(i),c.getZ(i)).convertSRGBToLinear(); c.setXYZ(i,k.r,k.g,k.b); } o.geometry.userData.lin=true; c.needsUpdate=true; } }); }
 // kov: ocelové terče, zbraně
@@ -982,6 +995,31 @@ Object.values(ENV).forEach(plochySum);
 // rovné plochy (zem, trávník, podlahy) bez zrcadlení oblohy – jinak je na nich vidět šev mapy prostředí
 function rovnePlochy(root){ root.traverse(o=>{ if(o.isMesh&&o.geometry&&(o.geometry.type==='PlaneGeometry'||o.geometry.type==='RingGeometry'||o.geometry.type==='CircleGeometry')&&o.material&&o.material.isMeshStandardMaterial){ o.material.envMapIntensity=0; o.material.roughness=1; } }); }
 realScene(scene); rovnePlochy(scene); Object.values(GUNS).forEach(g=>realScene(g)); kovy(); if(typeof setEnv==='function') setEnv(ST.env);
+
+/* ================= FOTOGRAFICKÉ PODKLADY (Babylon.js Assets, CC0) ================= */
+// obloha: fotorealistický skybox (jen za jasného dne venku), povrchy: fotky trávy a písku
+const FOTO={on:LS.get('st-foto',true), cube:null};
+const BGCOL=scene.background;   // barva pozadí, se kterou počítá zbytek kódu (mlha, noc, hala)
+const ANISO=renderer.capabilities.getMaxAnisotropy?renderer.capabilities.getMaxAnisotropy():4;
+function fotoTex(url,cil,rep,tint,envs){ new THREE.TextureLoader().load(url,t=>{ cil.image=t.image; cil.anisotropy=ANISO; cil.repeat.set(rep,rep); cil.needsUpdate=true;
+  envs.forEach(k=>{ if(ENVSET[k]) ENVSET[k].gc=tint; }); if(envs.includes(ST.env)) ground.material.color.setHex(tint).convertSRGBToLinear(); }); }
+fotoTex('tex/trava.jpg',grassTex,1400,0xd2dcc4,['les','stadion']);
+fotoTex('tex/pisek.jpg',sandTex,1600,0xf2e6d0,['poust']);
+new THREE.CubeTextureLoader().setPath('tex/nebe/').load(['px.jpg','nx.jpg','py.jpg','ny.jpg','pz.jpg','nz.jpg'],c=>{ c.encoding=THREE.sRGBEncoding; FOTO.cube=c; fotoNebe(); });
+function fotoNebeOK(){ const E=ENVSET[ST.env]; return FOTO.on&&FOTO.cube&&E&&!E.uvnitr&&!NOC&&ST.doba==='den'&&!['mlha','dest','snih'].includes(ST.pocasi); }
+function fotoNebe(){ if(fotoNebeOK()){ scene.background=FOTO.cube; PSKY.visible=false; CLOUDS.forEach(c=>c.visible=false); scene.fog.color.setHex(0xdfe9ef).convertSRGBToLinear(); }
+  else if(scene.background!==BGCOL) scene.background=BGCOL; }
+for(const n of ['setEnv','pocasiApply','nocNastav','oblohaNastav']){ const o=window[n]; if(typeof o!=='function') continue;
+  window[n]=function(...a){ scene.background=BGCOL; const r=o.apply(this,a); fotoNebe(); return r; }; }
+// valy a dopadiště: fotka trávy a hlíny místo jednolité barvy
+function fotoMat(tag,url,rep,tint){ new THREE.TextureLoader().load(url,t=>{ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rep,rep); t.encoding=THREE.sRGBEncoding; t.anisotropy=ANISO;
+  scene.traverse(o=>{ const m=o.material; if(m&&m.userData&&m.userData.foto===tag&&!m.map){ m.map=t; m.color.setHex(tint).convertSRGBToLinear(); m.needsUpdate=true; } }); }); }
+fotoMat('trava','tex/trava.jpg',10,0xb8c8a8); fotoMat('hlina','tex/hlina.jpg',6,0xe0d0b8);
+// přepínač v Podmínkách
+(()=>{ const box=document.querySelector('#tab-podminky .card'); if(!box) return; const d=document.createElement('div'); d.className='opt';
+  d.innerHTML=`<span class="ol">Vzhled</span><div class="seg"><button type="button" id="fotoBtn">Fotografická obloha a povrchy</button></div>`; box.appendChild(d);
+  const sync=()=>$('fotoBtn').setAttribute('aria-pressed',String(FOTO.on)); sync();
+  $('fotoBtn').onclick=()=>{ FOTO.on=!FOTO.on; LS.set('st-foto',FOTO.on); sync(); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); }; })();
 
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.
