@@ -11,6 +11,7 @@
 body{margin:0}
 [hidden]{display:none!important}
 img{max-width:100%}
+.splist{display:grid;gap:6px;margin-bottom:8px}.spi{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:6px 10px}.spi b{font-family:var(--mono,monospace)}.spi .k{flex:1;min-width:0}.spi.on{border-color:var(--ok,#2f7d4a);box-shadow:inset 4px 0 0 var(--ok,#2f7d4a)}.sptag{display:inline-block;font-size:12px;font-weight:600;border:1px solid currentColor;border-radius:999px;padding:0 8px;margin-left:6px;opacity:.85;vertical-align:middle}.spfiltr{margin:8px 0}
 /* Layout: telefon (Bluefy) – lišta se spouští nahoře, záložky Záznamy / Nastavení, karty ran pod sebou; na širokém displeji dvě vedle sebe */
 :root{
   --bg:#F1F3F0; --card:#FFFFFF; --fg:#1A1F1C; --muted:#5D6761; --line:#D9DED9; --grid:#E8ECE8;
@@ -147,7 +148,7 @@ fieldset:disabled{opacity:.5}
 <body>
 
 <div class="wrap">
-  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-2</small></h1>
+  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-3</small></h1>
     <div style="display:flex;gap:8px;align-items:center"><select id="langSel" aria-label="Jazyk / Language"><option value="cs">CZ</option><option value="en">GB</option><option value="es">ES</option><option value="it">IT</option><option value="de">DE</option></select>
     <a href="index.html" class="btn" id="simLink" style="text-decoration:none;padding:6px 10px">🎯 Simulátor</a><div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
@@ -172,6 +173,7 @@ fieldset:disabled{opacity:.5}
       <button class="btn danger" id="clearAll">Smazat v aplikaci</button>
       <span class="msg" id="zMsg"></span>
     </div>
+    <div class="spfiltr" id="spFiltrBox" hidden><label for="spFiltr">Zobrazit záznamy</label> <select id="spFiltr"></select></div>
     <div id="list"></div>
   </section>
 
@@ -203,6 +205,17 @@ fieldset:disabled{opacity:.5}
         <div class="row"><label for="blokace">Blokace po výstřelu (ms)</label><div class="inl"><input type="range" id="blokace" min="50" max="2000" step="10"><output id="o_blokace"></output></div></div>
         <button class="btn pri" id="saveBtn">Uložit do spouště</button>
         <span class="msg" id="saveMsg"></span>
+      </div>
+      <div class="card fs">
+        <h2>Moje spouště</h2>
+        <p class="explain">Každá spoušť má své číslo (např. <b>Trigger 3A7F</b>). Zapište sem spouště, které tento telefon smí používat, a ke každé jméno střelce. Záznamy se pak ukládají a třídí podle spouště – když jsou na střelnici dvě, každý má své.</p>
+        <div id="spList" class="splist"></div>
+        <div class="row"><label for="spId">Číslo nebo jméno spouště</label>
+          <div class="inl"><input type="text" id="spId" maxlength="20" placeholder="Trigger 3A7F" style="flex:1;min-width:0"><input type="text" id="spKdo" maxlength="24" placeholder="střelec" style="flex:1;min-width:0"></div>
+          <button class="btn" id="spAdd">Přidat</button><button class="btn" id="spAddCur" disabled>Přidat připojenou</button><span class="msg" id="spMsg"></span></div>
+        <div class="row"><label for="spJen">Připojovat jen spouště ze seznamu</label>
+          <select id="spJen"><option value="1">Ano – cizí spoušť se nenabídne a nestáhne</option><option value="0">Ne – připojit kteroukoli „Skeet …“</option></select>
+          <span class="hint">Při „Ano“ ukáže Bluetooth jen vaše spouště. Záznamy z cizí spouště se nestáhnou.</span></div>
       </div>
       <div class="card fs">
         <h2>Tato spoušť</h2>
@@ -256,7 +269,7 @@ fieldset:disabled{opacity:.5}
         <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
       </div>
       <div class="card fs">
-        <p class="explain">Verze aplikace: <b>2026.11.12-2</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
+        <p class="explain">Verze aplikace: <b>2026.11.12-3</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
         <h2>Komunikace</h2>
         <div class="log" id="log"></div>
       </div>
@@ -769,6 +782,12 @@ const PH = {
   'Uložit do spouště': ['Save to trigger', 'Im Abzug speichern', 'Guardar en el gatillo', 'Salva nel grilletto'], 'Tato spoušť': ['This trigger', 'Dieser Abzug', 'Este gatillo', 'Questo grilletto'],
   'Jméno (začne vždy „Skeet “)': ['Name (always starts with “Skeet ”)', 'Name (beginnt immer mit „Skeet “)', 'Nombre (siempre empieza por «Skeet »)', 'Nome (inizia sempre con «Skeet »)'],
   'Podle jména rozeznáte spouště v Bluefy i v Questu. Platí po restartu spouště. Jen písmena bez háčků a číslice.': ['The name tells triggers apart in Bluefy and in the Quest. Applies after a restart. Plain letters and digits only.', 'Am Namen erkennen Sie die Abzüge in Bluefy und im Quest. Gilt nach Neustart. Nur Buchstaben ohne Akzente und Ziffern.', 'Por el nombre distingue los gatillos en Bluefy y en Quest. Vale tras reiniciar. Solo letras sin tildes y números.', 'Dal nome distingui i grilletti in Bluefy e nel Quest. Vale dopo il riavvio. Solo lettere senza accenti e cifre.'],
+  'Moje spouště': ['My triggers', 'Meine Abzüge', 'Mis gatillos', 'I miei grilletti'], 'Přidat': ['Add', 'Hinzufügen', 'Añadir', 'Aggiungi'],
+  'Přidat připojenou': ['Add connected', 'Verbundenen hinzufügen', 'Añadir el conectado', 'Aggiungi quello connesso'], 'Odebrat': ['Remove', 'Entfernen', 'Quitar', 'Rimuovi'],
+  'Všechny spouště': ['All triggers', 'Alle Abzüge', 'Todos los gatillos', 'Tutti i grilletti'], 'Zobrazit záznamy': ['Show records', 'Aufnahmen zeigen', 'Mostrar registros', 'Mostra registrazioni'],
+  'Číslo nebo jméno spouště': ['Trigger number or name', 'Nummer oder Name des Abzugs', 'Número o nombre del gatillo', 'Numero o nome del grilletto'],
+  'Připojovat jen spouště ze seznamu': ['Connect only listed triggers', 'Nur Abzüge aus der Liste verbinden', 'Conectar solo gatillos de la lista', 'Collega solo i grilletti in elenco'],
+  'Bez čísla (starší záznamy)': ['No number (older records)', 'Ohne Nummer (ältere Aufnahmen)', 'Sin número (registros antiguos)', 'Senza numero (registrazioni vecchie)'],
   'Uložit jméno a restartovat': ['Save name and restart', 'Name speichern und neu starten', 'Guardar nombre y reiniciar', 'Salva nome e riavvia'],
   'Co spoušť pošle při výstřelu': ['What the trigger sends on a shot', 'Was der Abzug beim Schuss sendet', 'Qué envía el gatillo al disparar', 'Cosa invia il grilletto allo sparo'],
   'F – Skeet simulátor (výchozí)': ['F – Skeet simulator (default)', 'F – Skeet-Simulator (Standard)', 'F – simulador Skeet (predeterminado)', 'F – simulatore Skeet (predefinito)'],
@@ -968,7 +987,7 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
-const VERZE = '2026.11.12-2';
+const VERZE = '2026.11.12-3';
 window.addEventListener('error', e => { try { log('! chyba programu (verze ' + VERZE + '): ' + (e.message || '?')); } catch (_) {} });
 // nejčastější příčina: telefon si pamatuje staré spárování, které spoušť už nezná („Peer removed pairing information“)
 const ZAPOMENOUT = 'Nejčastěji je to staré spárování: v iPhonu Nastavení → Bluetooth → Skeet Trigger → ⓘ → <u>Zapomenout toto zařízení</u> (na Macu Nastavení systému → Bluetooth → ⓘ → Zapomenout). Pak vypněte a zapněte Bluetooth, úplně zavřete Bluefy a dejte znovu Připojit; párování potvrďte. Ve Questu spoušť případně spárujte znovu.';
@@ -1008,14 +1027,37 @@ async function obnov(proc) {
   else connMsg('Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit. ' + ZAPOMENOUT);
   return ok;
 }
+/* ---------- moje spouště ---------- */
+const spNorm = n => String(n || '').replace(/_/g, ' ').replace(/^Skeet\s+/i, '').trim();
+function spoustId() { if (!connected() && !kabel()) return ''; if (stav && stav.jmeno) return spNorm(stav.jmeno); return dev ? spNorm(dev.name) : ''; }
+const spSeznam = () => LS.get('spouste', []);
+const spJen = () => LS.get('spJen', true) && spSeznam().length > 0;
+function spKdo(id) { const x = spSeznam().find(s => s.id.toLowerCase() === String(id || '').toLowerCase()); return x ? x.kdo : ''; }
+function spPovolena(id) { if (!spJen()) return true; return !!spSeznam().find(s => s.id.toLowerCase() === String(id || '').toLowerCase()); }
+function spUloz(l) { LS.set('spouste', l); spRender(); render(); }
+function spRender() {
+  const l = spSeznam(), cur = spoustId();
+  $('spList').innerHTML = l.length ? l.map((s, i) => `<div class="spi${cur && cur.toLowerCase() === s.id.toLowerCase() ? ' on' : ''}"><b>${esc(s.id)}</b><span class="k">${esc(s.kdo || '—')}${cur && cur.toLowerCase() === s.id.toLowerCase() ? ' · připojena' : ''}</span><button class="btn" data-spdel="${i}">Odebrat</button></div>`).join('') : '<p class="explain">Seznam je prázdný – aplikace přijme kteroukoli spoušť „Skeet …“.</p>';
+  $('spAddCur').disabled = !cur || !!l.find(s => s.id.toLowerCase() === cur.toLowerCase());
+  $('spJen').value = LS.get('spJen', true) ? '1' : '0';
+}
+function spPridej(id, kdo) { id = spNorm(id); if (!id) { $('spMsg').textContent = 'Zadejte číslo spouště.'; return; }
+  if (!/^[A-Za-z0-9 ._-]{1,20}$/.test(id)) { $('spMsg').textContent = 'Jen písmena bez háčků, číslice a mezera.'; return; }
+  const l = spSeznam().filter(s => s.id.toLowerCase() !== id.toLowerCase()); l.push({ id, kdo: String(kdo || '').trim() }); spUloz(l);
+  $('spMsg').textContent = `Přidáno: ${id}.`; if (id.toLowerCase() === spoustId().toLowerCase()) autoFetch(); $('spId').value = ''; $('spKdo').value = ''; }
+$('spAdd').onclick = () => spPridej($('spId').value, $('spKdo').value);
+$('spAddCur').onclick = () => spPridej(spoustId(), $('spKdo').value);
+$('spJen').onchange = e => { LS.set('spJen', e.target.value === '1'); spRender(); };
+$('spList').onclick = e => { const b = e.target.closest('[data-spdel]'); if (!b) return; const l = spSeznam(); l.splice(+b.dataset.spdel, 1); spUloz(l); };
+$('spFiltr').onchange = e => { LS.set('spFiltr', e.target.value); render(); };
 async function connect(vse) {
   if (kabel()) { await zavriKabel(); showConn(); return; }
   if (connected()) { rucneOdpojeno = true; dev.gatt.disconnect(); return; }
   rucneOdpojeno = false;
   if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
   try {
-    connMsg(vse ? 'Vyberte spoušť ze seznamu všech zařízení…' : 'Vyberte „Skeet …“…');
-    dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
+    connMsg(vse ? 'Vyberte spoušť ze seznamu všech zařízení…' : spJen() ? 'Vyberte svou spoušť (' + spSeznam().map(s => s.id).join(', ') + ')…' : 'Vyberte „Skeet …“…');
+    dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : spJen() ? { filters: spSeznam().map(s => ({ name: 'Skeet ' + s.id })), optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
     dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); if (!rucneOdpojeno && !obnovuji) obnov('Spojení spadlo'); });
     connMsg('Připojuji…');
     await gattNahoru();
@@ -1031,6 +1073,7 @@ async function connect(vse) {
 let stav = null; const cfg = {};
 function connMsg(t) { $('connTxt').innerHTML = `<b>${t}</b>`; }
 function showConn() {
+  try { spRender(); } catch (e) {}
   const on = connected(); $('dot').classList.toggle('on', on); $('connBtn').textContent = on ? 'Odpojit' : 'Připojit spoušť';
   $('kabBtn').hidden = on || !('serial' in navigator);
   $('fsN').disabled = !on; $('blinkBtn').hidden = !on; ['syncBtn', 'newRoundBtn', 'wipeBtn', 'testBtn'].forEach(id => $(id).disabled = !on);
@@ -1143,17 +1186,21 @@ async function sync() {
   try {
     const lines = await collect('zaznamy', l => l.startsWith('Z konec'), 6000);
     const list = lines.filter(l => /^Z \d+ /.test(l)).map(l => { const o = kv(l); o.i = +l.split(' ')[1]; return o; });
+    const sp = spoustId();
+    if (!spPovolena(sp)) { zMsg(`Spoušť „${sp}“ není v Moje spouště – záznamy nestahuji. Přidejte ji v Nastavení.`); syncing = false; return { ok: false, cizi: true }; }
+    const klic = z => { const k0 = `${z.polozka}-${z.krok}-${z.unix}-${z.up}`; return sp ? sp + '|' + k0 : k0; };
+    const mam = async z => (await DB.has(klic(z))) || (await DB.has(`${z.polozka}-${z.krok}-${z.unix}-${z.up}`));
     let n = 0;
-    for (const z of list) { const key = `${z.polozka}-${z.krok}-${z.unix}-${z.up}`;
-      if (await DB.has(key)) continue;
+    for (const z of list) { const key = klic(z);
+      if (await mam(z)) continue;
       zMsg(`Stahuji záznam ${z.i + 1} z ${list.length}…`);
       let u8; try { u8 = await fetchRec(z.i); } catch (e1) { log('! ' + e1.message + ' – zkouším znovu'); await new Promise(r => setTimeout(r, 1500)); u8 = await fetchRec(z.i); }   // jednou zopakovat
       const r = AN.parse(u8);
-      await DB.put({ key, bytes: u8, hits: [], polozka: r.h.polozka, krok: r.h.krok, program: r.h.program, unix: r.h.unix0, up: r.h.up0, demo: false });
+      await DB.put({ key, bytes: u8, hits: [], polozka: r.h.polozka, krok: r.h.krok, program: r.h.program, unix: r.h.unix0, up: r.h.up0, spoust: sp, demo: false });
       n++; }
     zMsg(n ? `Staženo ${n} ${n === 1 ? 'nový záznam' : n < 5 ? 'nové záznamy' : 'nových záznamů'}.` : `Vše staženo (${list.length} ve spoušti).`);
     if (n) render();
-    let vse = true; for (const z of list) if (!(await DB.has(`${z.polozka}-${z.krok}-${z.unix}-${z.up}`))) vse = false;
+    let vse = true; for (const z of list) if (!(await mam(z))) vse = false;
     res = { ok: vse, total: list.length };
   } catch (e) { zMsg('Chyba: ' + e.message); log('! ' + e.message);
     if (/neodpovídá|nepřenesl|poškozený|nepřipojeno/.test(e.message || '') && !rucneOdpojeno && !kabel()) { syncing = false; obnov('Spoušť přestala odpovídat'); return res; } }
@@ -1410,7 +1457,12 @@ async function render() {
   const all = await DB.all();
   if (!all.length) { $('list').innerHTML = `<div class="empty"><b>Zatím žádné záznamy</b>Připojte spoušť a stáhněte záznamy ze střelnice, nebo si prohlédněte ukázková data.</div>`; return; }
   const offs = LS.get('offs', {}), osa = LS.get('osa', ''), casOd = LS.get('casOd', '');
-  const groups = new Map(); all.forEach(o => { const g = String(o.polozka); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(o); });
+  const sps = [...new Set(all.map(o => o.spoust || ''))].filter(Boolean).sort(), fil = LS.get('spFiltr', '');
+  $('spFiltrBox').hidden = sps.length < 1;
+  $('spFiltr').innerHTML = `<option value="">Všechny spouště</option>${sps.map(s => `<option value="${esc(s)}"${s === fil ? ' selected' : ''}>${esc(s)}${spKdo(s) ? ' – ' + esc(spKdo(s)) : ''}</option>`).join('')}${all.some(o => !o.spoust) ? `<option value="-"${fil === '-' ? ' selected' : ''}>Bez čísla (starší záznamy)</option>` : ''}`;
+  const vid = all.filter(o => !fil || (fil === '-' ? !o.spoust : o.spoust === fil));
+  if (!vid.length) { $('list').innerHTML = `<div class="empty"><b>Pro tuto spoušť nejsou záznamy</b>Vyberte jinou nahoře.</div>`; return; }
+  const groups = new Map(); vid.forEach(o => { const g = (o.spoust ? o.spoust + '·' : '') + o.polozka; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(o); });
   const order = [...groups.keys()].sort((a, b) => Math.max(...groups.get(b).map(o => o.unix || o.up)) - Math.max(...groups.get(a).map(o => o.unix || o.up)));
   let html = ''; GROUPS = {};
   for (const g of order) {
@@ -1420,9 +1472,9 @@ async function render() {
         const st = stepInfo(o, offs[g]); const a = AN.analyze(r, { osa, casOd, trap: !!(AN.PROGS[o.program] || {}).trap, druh: druhPro(o, st, r.h.nRan) }); items.push({ o, a, st }); }
       catch (e) { log('! záznam ' + o.key + ': ' + e.message); } }
     const d = list[0].unix ? new Date(list[0].unix * 1000).toLocaleDateString('cs-CZ') : '';
-    const nazev = `${g.startsWith('demo') ? 'Ukázka · ' : 'Položka ' + g + ' · '}${P.n}${d ? ' · ' + d : ''}`;
+    const spo = list[0].spoust || '', nazev = `${String(list[0].polozka).startsWith('demo') ? 'Ukázka · ' : (spo ? (spKdo(spo) || spo) + ' · ' : '') + 'Položka ' + list[0].polozka + ' · '}${P.n}${d ? ' · ' + d : ''}`;
     GROUPS[g] = { items, nazev, list };
-    html += `<div class="round"><div class="rhead"><h2>${esc(nazev)}</h2>
+    html += `<div class="round"><div class="rhead"><h2>${esc(nazev)}${spo ? `<span class="sptag">${esc(spo)}</span>` : ''}</h2>
       <div class="ract">${P.seq ? `<span class="shift">posunout pořadí <button class="btn" data-shift="${esc(g)}" data-d="-1">−1</button><button class="btn" data-shift="${esc(g)}" data-d="1">+1</button></span>` : ''}
       <button class="btn" data-share="${esc(g)}">Poslat</button><button class="btn danger" data-delg="${esc(g)}">Smazat</button></div></div>
       ${roundSummary(items, prog)}<div class="cards">${items.slice().reverse().map(x => card(x.o, x.a, x.st)).join('')}</div></div>`;
