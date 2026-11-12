@@ -147,7 +147,7 @@ fieldset:disabled{opacity:.5}
 <body>
 
 <div class="wrap">
-  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.11-2</small></h1>
+  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-1</small></h1>
     <div style="display:flex;gap:8px;align-items:center"><select id="langSel" aria-label="Jazyk / Language"><option value="cs">CZ</option><option value="en">GB</option><option value="es">ES</option><option value="it">IT</option><option value="de">DE</option></select>
     <div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
@@ -225,6 +225,14 @@ fieldset:disabled{opacity:.5}
         <div class="row"><label for="usin">Vypnout po nečinnosti</label>
           <select id="usin"><option value="10">10 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="0">Nikdy</option></select>
           <span class="hint">Když se zbraní nikdo nehne, spoušť se úplně vypne a baterku nevybije. Pod 3,4 V se vypne vždy. Znovu ji zapnete vypínačem (vypnout a zapnout). S kabelem USB se nevypíná.</span><span class="msg" id="usinMsg"></span></div>
+        <div class="row"><label for="poklep">START / STOP poklepáním</label>
+          <select id="poklep"><option value="1">Zapnuto – 3× ťuknout = START, 2× = STOP</option><option value="0">Vypnuto</option></select>
+          <span class="hint">Rychle ťukněte prstem na krabičku (ťuky do půl sekundy po sobě). <b>3×</b> spustí záznam novou položkou – zelená LED svítí 1,5 s. <b>2×</b> záznam zastaví – svítí červená. Ťuky do 4 s po ráně se nepočítají (otevírání zbraně). Na střelnici mějte režim „záznam“, ne „VR + záznam“ – jinak se ťuk může vzít jako výstřel naprázdno. Pípnutí jen s piezo pípákem mezi D1 a GND.</span>
+          <span class="msg" id="poklepMsg"></span></div>
+        <div class="row"><label for="poklepG">Síla ťuku</label>
+          <select id="poklepG"><option value="0.8">Citlivé – od 0,8 g</option><option value="1.2">Střední – od 1,2 g</option><option value="1.8">Tvrdší – od 1,8 g</option><option value="2.5">Tvrdé – od 2,5 g</option></select>
+          <select id="poklepMax" aria-label="Nejvýš"><option value="3">nejvýš 3 g</option><option value="5">nejvýš 5 g</option><option value="8">nejvýš 8 g</option></select>
+          <span class="hint">Slabší ťuky se neberou, silnější rány (zavření zbraně) taky ne. Každé poklepání se vypíše do logu i se silou („T poklepani n=3 sila=2,1“) – podle toho meze nastavíte: ťuky musí být mezi, zavírání zbraně nad horní mezí.</span></div>
       </div>
       <div class="card fs">
         <h2>Předvolby</h2>
@@ -243,12 +251,12 @@ fieldset:disabled{opacity:.5}
           <select id="osa"><option value="">Zjistit z výstřelu (doporučeno)</option><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option>+Z</option><option>-Z</option></select>
           <span class="hint">Aplikace pozná směr hlavně ze zdvihu ústí při ráně. Pevnou osu zvolte, jen když stopa hlavně vychází nesmyslně.</span></div>
         <div class="row"><label for="casOd">Časy měřit od</label>
-          <select id="casOd"><option value="">Podle programu (trap od HOP, skeet od pohybu)</option><option value="hop">Vždy od HOP</option><option value="pohyb">Vždy od začátku pohybu</option></select>
-          <span class="hint">V trapu letí terč hned po HOP, takže čas od HOP do rány je to hlavní. Ve skeetu má vrhačka náhodné zpoždění 0–3 s, proto se tam časy počítají od prvního pohybu zbraně.</span></div>
+          <select id="casOd"><option value="">Od začátku pohybu zbraně (doporučeno)</option><option value="hop">Od HOP – jen v tichu, kde spoušť HOP slyší</option></select>
+          <span class="hint">Na střelnici je hluk a HOP volají i ostatní, takže ho spoušť spolehlivě nerozezná. Časy se proto počítají od prvního pohybu zbraně (v trapu = reakce na terč). Od HOP měřte jen při tréninku o samotě.</span></div>
         <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
       </div>
       <div class="card fs">
-        <p class="explain">Verze aplikace: <b>2026.11.11-2</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
+        <p class="explain">Verze aplikace: <b>2026.11.12-1</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
         <h2>Komunikace</h2>
         <div class="log" id="log"></div>
       </div>
@@ -410,7 +418,7 @@ function analyze(rec, opt = {}) {
 
   const trap = !!opt.trap;
   // od čeho se počítají časy: trap = od HOP (terč letí hned), skeet = od začátku pohybu (vrhačka má zpoždění 0–3 s)
-  const casOd = opt.casOd === 'hop' || opt.casOd === 'pohyb' ? opt.casOd : (opt.trap ? 'hop' : 'pohyb');
+  const casOd = opt.casOd === 'hop' ? 'hop' : 'pohyb';   // na střelnici HOP v hluku nejde rozeznat → výchozí od pohybu
   const base = casOd === 'hop' && hop >= 0 ? hop : pohyb;
   // směr terče podle švihu od začátku pohybu do 1. rány (yaw v rozboru: kladný = vpravo)
   const dYaw = yaw[clampI(s1 - 2, n)] - yaw[clampI(pohyb, n)], dPit = pitch[clampI(s1 - 2, n)] - pitch[clampI(pohyb, n)];
@@ -672,8 +680,23 @@ const EX = {
   'Kabel umí jen Chrome nebo Edge na počítači (Mac / PC). iPhone kabel neumí.': ['The cable only works in Chrome or Edge on a computer (Mac / PC). iPhone cannot use it.', 'Kabel nur in Chrome oder Edge am Computer (Mac / PC). iPhone kann das nicht.', 'El cable solo funciona en Chrome o Edge en un ordenador (Mac / PC). El iPhone no.', 'Il cavo funziona solo in Chrome o Edge su computer (Mac / PC). iPhone no.'],
   'Vyberte port spouště (XIAO nRF52840 / usbmodem)…': ['Choose the trigger port (XIAO nRF52840 / usbmodem)…', 'Port des Abzugs wählen (XIAO nRF52840 / usbmodem)…', 'Elija el puerto del gatillo (XIAO nRF52840 / usbmodem)…', 'Scegli la porta del grilletto (XIAO nRF52840 / usbmodem)…'],
   'Připojuji kabelem…': ['Connecting by cable…', 'Verbinde per Kabel…', 'Conectando por cable…', 'Connessione via cavo…'],
+  'START / STOP poklepáním': ['START / STOP by tapping', 'START / STOP durch Klopfen', 'START / STOP con toques', 'START / STOP con colpetti'],
+  'Zapnuto – 3× ťuknout = START, 2× = STOP': ['On – tap 3× = START, 2× = STOP', 'Ein – 3× klopfen = START, 2× = STOP', 'Activado – 3 toques = INICIO, 2 = PARAR', 'Attivo – 3 colpetti = AVVIO, 2 = STOP'],
+  'Vypnuto': ['Off', 'Aus', 'Desactivado', 'Disattivato'], 'Síla ťuku': ['Tap strength', 'Klopfstärke', 'Fuerza del toque', 'Forza del colpetto'],
+  'Citlivé – od 0,8 g': ['Sensitive – from 0.8 g', 'Empfindlich – ab 0,8 g', 'Sensible – desde 0,8 g', 'Sensibile – da 0,8 g'], 'Střední – od 1,2 g': ['Medium – from 1.2 g', 'Mittel – ab 1,2 g', 'Medio – desde 1,2 g', 'Medio – da 1,2 g'],
+  'Tvrdší – od 1,8 g': ['Firmer – from 1.8 g', 'Fester – ab 1,8 g', 'Más fuerte – desde 1,8 g', 'Più forte – da 1,8 g'], 'Tvrdé – od 2,5 g': ['Hard – from 2.5 g', 'Hart – ab 2,5 g', 'Fuerte – desde 2,5 g', 'Forte – da 2,5 g'],
+  'nejvýš 3 g': ['max 3 g', 'höchstens 3 g', 'máx. 3 g', 'max 3 g'], 'nejvýš 5 g': ['max 5 g', 'höchstens 5 g', 'máx. 5 g', 'max 5 g'], 'nejvýš 8 g': ['max 8 g', 'höchstens 8 g', 'máx. 8 g', 'max 8 g'],
+  'Od začátku pohybu zbraně (doporučeno)': ['From the start of gun movement (recommended)', 'Ab Beginn der Waffenbewegung (empfohlen)', 'Desde el inicio del movimiento (recomendado)', "Dall'inizio del movimento (consigliato)"],
+  'Od HOP – jen v tichu, kde spoušť HOP slyší': ['From PULL – only in quiet where the trigger hears it', 'Ab HOP – nur in Ruhe, wo der Abzug es hört', 'Desde HOP – solo en silencio', 'Da HOP – solo nel silenzio'],
+  'Poklepání umí až firmware 13.': ['Tapping needs firmware 13.', 'Klopfen erst ab Firmware 13.', 'Los toques requieren firmware 13.', 'I colpetti richiedono il firmware 13.'],
 };
 const PH = {
+  'Poklepání': ['Tapping', 'Klopfen', 'Toques', 'Colpetti'], '(síla': ['(strength', '(Stärke', '(fuerza', '(forza'],
+  'nepočítá se (po ráně / moc silné)': ['ignored (after a shot / too strong)', 'zählt nicht (nach Schuss / zu stark)', 'no cuenta (tras disparo / muy fuerte)', 'non conta (dopo lo sparo / troppo forte)'],
+  'nic (START = 3×, STOP = 2×)': ['nothing (START = 3×, STOP = 2×)', 'nichts (START = 3×, STOP = 2×)', 'nada (INICIO = 3×, PARAR = 2×)', 'niente (AVVIO = 3×, STOP = 2×)'],
+  'Nejčastěji je to staré spárování: v iPhonu Nastavení → Bluetooth → Skeet Trigger → ⓘ →': ['Usually an old pairing: on the iPhone Settings → Bluetooth → Skeet Trigger → ⓘ →', 'Meist eine alte Kopplung: am iPhone Einstellungen → Bluetooth → Skeet Trigger → ⓘ →', 'Suele ser un emparejamiento antiguo: en el iPhone Ajustes → Bluetooth → Skeet Trigger → ⓘ →', "Di solito un vecchio abbinamento: sull'iPhone Impostazioni → Bluetooth → Skeet Trigger → ⓘ →"],
+  'Zapomenout toto zařízení': ['Forget This Device', 'Dieses Gerät ignorieren', 'Omitir dispositivo', 'Dissocia questo dispositivo'],
+  '(na Macu Nastavení systému → Bluetooth → ⓘ → Zapomenout). Pak vypněte a zapněte Bluetooth, úplně zavřete Bluefy a dejte znovu Připojit; párování potvrďte. Ve Questu spoušť případně spárujte znovu.': ['(on the Mac System Settings → Bluetooth → ⓘ → Forget). Then switch Bluetooth off and on, fully close Bluefy and press Connect again; confirm pairing. Re-pair the trigger in the Quest if needed.', '(am Mac Systemeinstellungen → Bluetooth → ⓘ → Ignorieren). Dann Bluetooth aus/ein, Bluefy ganz schließen und erneut Verbinden; Kopplung bestätigen. In der Quest ggf. neu koppeln.', '(en el Mac Ajustes del Sistema → Bluetooth → ⓘ → Olvidar). Luego apague y encienda el Bluetooth, cierre Bluefy y pulse Conectar; confirme el emparejamiento. En la Quest vuelva a emparejar si hace falta.', '(sul Mac Impostazioni di Sistema → Bluetooth → ⓘ → Dissocia). Poi spegni e riaccendi il Bluetooth, chiudi Bluefy e premi Collega; conferma l\'abbinamento. Se serve, riabbina il grilletto nel Quest.'],
   'kabel USB': ['USB cable', 'USB-Kabel', 'cable USB', 'cavo USB'], 'Kabel – připojuji znovu': ['Cable – reconnecting', 'Kabel – verbinde erneut', 'Cable – reconectando', 'Cavo – ricollego'],
   'Kabelem se nepodařilo připojit': ['Could not connect by cable', 'Kabelverbindung fehlgeschlagen', 'No se pudo conectar por cable', 'Collegamento via cavo non riuscito'],
   // horní lišta a záložky
@@ -918,6 +941,9 @@ function onLine(l) {
   if (l.startsWith('S ')) { stav = kv(l); showConn(); }
   else if (l.startsWith('C ') || l.startsWith('X ')) { Object.assign(cfg, kv(l)); fillForm(); }
   else if (l.startsWith('N ')) { if (stav) { stav.zaznamu = (+stav.zaznamu || 0) + 1; stav.krok = (+stav.krok || 0) + 1; } showConn(); autoFetch(); }
+  else if (l.startsWith('T poklepani')) { const o = kv(l), n = o.n, co = l.split('-> ')[1] || '';
+    const t = `Poklepání ${n}× (síla ${(o.sila || '?').replace('.', ',')} g)` + (co === 'START' ? ' → START' : co === 'STOP' ? ' → STOP' : l.includes('po rane') ? ' – nepočítá se (po ráně / moc silné)' : ' – nic (START = 3×, STOP = 2×)');
+    $('poklepMsg').textContent = t; if (co === 'START' || co === 'STOP') zMsg(t); if (co === 'STOP') autoFetch(); }
   else if (l.startsWith('E PAROVANI_SELHALO')) zMsg('Párování se nepovedlo – spoušť smazala staré páry. Dejte znovu Připojit.');
   else if (l.startsWith('E USPANI')) zMsg(l.includes('baterka') ? 'Spoušť se vypnula – baterka je pod 3,4 V. Nabijte ji.' : 'Spoušť se vypnula po nečinnosti. Zapnete ji vypínačem.');
   else if (l.startsWith('E PAMET_PLNA')) zMsg('Paměť spouště je plná. Stáhněte záznamy a smažte je ve spoušti.');
@@ -941,13 +967,15 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
-const VERZE = '2026.11.11-2';
+const VERZE = '2026.11.12-1';
 window.addEventListener('error', e => { try { log('! chyba programu (verze ' + VERZE + '): ' + (e.message || '?')); } catch (_) {} });
+// nejčastější příčina: telefon si pamatuje staré spárování, které spoušť už nezná („Peer removed pairing information“)
+const ZAPOMENOUT = 'Nejčastěji je to staré spárování: v iPhonu Nastavení → Bluetooth → Skeet Trigger → ⓘ → <u>Zapomenout toto zařízení</u> (na Macu Nastavení systému → Bluetooth → ⓘ → Zapomenout). Pak vypněte a zapněte Bluetooth, úplně zavřete Bluefy a dejte znovu Připojit; párování potvrďte. Ve Questu spoušť případně spárujte znovu.';
 function chybaText(e) {
   const m = (e && e.message ? e.name + ' ' + e.message : (e && e.name) || String(e || 'neznámá chyba'));
-  if (!e || !e.message) return 'Spojení se nepodařilo (Bluefy nevrátil důvod). Úplně zavřete Bluefy, v iPhonu vypněte a zapněte Bluetooth, spoušť restartujte a zkuste znovu.';
+  if (!e || !e.message) return 'Spojení se nepodařilo (Bluefy nevrátil důvod). ' + ZAPOMENOUT;
   if (/NotFound.*(service|UUID)|No Services|getPrimaryService/i.test(m)) return 'Spoušť nemá nový firmware s aplikací (krok 8). Nahrajte do ní SkeetTrigger.ino.';
-  if (/Network|GATT|disconnect|connect/i.test(m)) return 'Spojení se nepodařilo. Zkuste hned znovu Připojit – po nepovedeném párování si spoušť sama smaže staré páry a napodruhé to projde. Když ne: spoušť vypněte a zapněte vypínačem a odpojte ji v Chrome na Macu.';
+  if (/Network|GATT|disconnect|connect|pairing|Unsupported/i.test(m)) return 'Spojení se nepodařilo. ' + ZAPOMENOUT;
   if (/spoušť neodpovídá/i.test(m)) return 'Spoušť se připojila, ale neodpovídá. Vypněte ji a zapněte a zkuste znovu.';
   return 'Nepodařilo se připojit: ' + m;
 }
@@ -976,7 +1004,7 @@ async function obnov(proc) {
     catch (e) { log('! obnova: ' + ((e && e.message) || 'bez důvodu')); rx = null; await pauza(1500 * kolo); } }
   obnovuji = false; showConn();
   if (ok) { zMsg('Spojení obnoveno, pokračuji.'); if (LS.get('autoSync', true)) setTimeout(sync, 300); }
-  else connMsg('Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit.');
+  else connMsg('Spojení se nepodařilo obnovit. Vypněte a zapněte spoušť a dejte Připojit. ' + ZAPOMENOUT);
   return ok;
 }
 async function connect(vse) {
@@ -1012,6 +1040,11 @@ function showConn() {
   const pr = (AN.PROGS[+stav.program] || {}).n || '';
   if (stav.jmeno && document.activeElement !== $('jmeno')) $('jmeno').value = stav.jmeno.replace(/_/g, ' ');
   if (stav.klavesa && document.activeElement !== $('klavesa')) $('klavesa').value = stav.klavesa;
+  if (stav.poklep != null) { ['poklep', 'poklepG', 'poklepMax'].forEach(id => $(id).disabled = false);
+    if (document.activeElement !== $('poklep')) $('poklep').value = stav.poklep;
+    if (document.activeElement !== $('poklepG')) $('poklepG').value = String(+stav.poklep_g);
+    if (document.activeElement !== $('poklepMax')) $('poklepMax').value = String(+stav.poklep_max); }
+  else { ['poklep', 'poklepG', 'poklepMax'].forEach(id => $(id).disabled = true); $('poklepMsg').textContent = 'Poklepání umí až firmware 13.'; }
   if (document.activeElement !== $('usin')) { if (stav.usin != null) { $('usin').value = stav.usin; $('usin').disabled = false; } else $('usin').disabled = true; }
   if (document.activeElement !== $('nab')) { if (stav.nab) { $('nab').value = stav.nab; $('nab').disabled = false; } else { $('nab').disabled = true; $('nabMsg').textContent = 'Starý firmware ve spoušti – přepínač nabíjení funguje až s novým.'; } }
   $('connTxt').innerHTML = `<b>${kabel() ? esc((stav.jmeno || 'Spoušť').replace(/_/g, ' ')) + ' · kabel USB' : esc(dev.name || 'Spoušť')} · fw ${esc(stav.verze || '?')}${+stav.verze < 9 ? ' <span style="color:var(--bad)">(starý – nahrajte nový)</span>' : ''} · ${rez}${+stav.zaznam ? ' · ' + pr : ''}</b><br>baterka ${+stav.bat < 0 ? '–' : stav.bat + ' %'} · záznamů ${stav.zaznamu}/${stav.kapacita} (${stav.pamet === 'QSPI' ? 'paměť desky' : stav.pamet === 'RAM' ? `<b style="color:var(--bad)">paměťový čip nenaběhl, jen 3 poslední záznamy v RAM (čip ${stav.flash || '?'}, sr2 ${stav.sr2 || '?'}, test ${stav.test ?? '?'})</b>` : stav.pamet}) · položka ${stav.polozka}, krok ${stav.krok}${stav.imu === '0' ? ' · <b style="color:var(--bad)">akcelerometr nenalezen</b>' : ''}`;
@@ -1179,7 +1212,7 @@ $('pvSave').onclick = async () => {
   saving = true; try { await sendForm(formVals()); } finally { saving = false; } await ask(`predvolba_uloz ${$('pvSlot').value} ${n}`, ['P ', '?', 'CHYBA']); await ask('stav', ['S ']); await loadPv(); $('pvName').value = '';
 };
 $('osa').value = LS.get('osa', ''); $('osa').onchange = () => { LS.set('osa', $('osa').value); render(); };
-$('casOd').value = LS.get('casOd', ''); $('casOd').onchange = () => { LS.set('casOd', $('casOd').value); render(); };
+if (LS.get('casOd', '') === 'pohyb') LS.set('casOd', ''); $('casOd').value = LS.get('casOd', ''); $('casOd').onchange = () => { LS.set('casOd', $('casOd').value); render(); };
 
 /* ---------- tlačítka ---------- */
 $('connBtn').onclick = () => connect(false);
@@ -1193,6 +1226,14 @@ $('nab').onchange = async () => { $('nabMsg').textContent = 'Ukládám…';
     $('nabMsg').textContent = l.startsWith('B ') ? `Uloženo ve spoušti ✓ (${kv(l).nab} mA)` : l.startsWith('?') ? 'Spoušť to neumí – nahrajte nový firmware.' : l;
     if (l.startsWith('B ') && stav) stav.nab = kv(l).nab; }
   catch (e) { $('nabMsg').textContent = 'Chyba: ' + e.message; } };
+async function poklepNastav(k, v) { $('poklepMsg').textContent = 'Ukládám…';
+  try { const l = await ask(k + ' ' + v, ['T poklep=', '?', 'CHYBA']);
+    if (l.startsWith('T poklep=')) { Object.assign(stav || {}, kv(l)); $('poklepMsg').textContent = 'Uloženo ve spoušti ✓'; showConn(); }
+    else $('poklepMsg').textContent = l.startsWith('?') ? 'Spoušť to neumí – nahrajte firmware 13.' : l; }
+  catch (e) { $('poklepMsg').textContent = 'Chyba: ' + e.message; } }
+$('poklep').onchange = () => poklepNastav('poklep', $('poklep').value);
+$('poklepG').onchange = () => poklepNastav('poklep_g', $('poklepG').value);
+$('poklepMax').onchange = () => poklepNastav('poklep_max', $('poklepMax').value);
 $('usin').onchange = async () => { $('usinMsg').textContent = 'Ukládám…';
   try { const l = await ask('usinani ' + $('usin').value, ['U ', '?', 'CHYBA']);
     $('usinMsg').textContent = l.startsWith('U ') ? 'Uloženo ve spoušti ✓' : l.startsWith('?') ? 'Spoušť to neumí – nahrajte nový firmware.' : l;
