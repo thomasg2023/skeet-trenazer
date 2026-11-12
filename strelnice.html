@@ -58,6 +58,22 @@ table{border-collapse:collapse;width:100%;font:500 13px var(--mono)}
 td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
 .tw{overflow-x:auto}
 .trener{border-left:4px solid var(--acc);padding:6px 10px;margin-top:10px;background:color-mix(in srgb,var(--acc) 7%,transparent)}
+.akce{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-top:-6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.akceInfo{min-width:0;flex:1 1 260px}.akceInfo b{font:700 22px/1.1 var(--display);letter-spacing:.02em}
+.chips{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}.chips span{font:500 12px var(--body);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chips span.ok{color:var(--ok);border-color:currentColor}
+.akceBtns{display:flex;flex-wrap:wrap;gap:6px}.btn.big{font-size:17px;padding:10px 26px;font-family:var(--display);letter-spacing:.06em}
+.napoveda{margin-top:-6px}.napoveda summary{cursor:pointer;font:600 13px var(--body);color:var(--muted)}
+.tabs{min-width:0;display:flex;gap:4px;border-bottom:1.5px solid var(--line);overflow-x:auto}
+.tabs button{font:700 18px var(--display);letter-spacing:.03em;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 14px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--acc)}
+.tabp{display:grid;gap:16px}.tabp.grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.opt{display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:start}.opt .ol{font:600 13px var(--body);color:var(--muted);padding-top:8px}
+@media (max-width:560px){.tabs button{padding:8px 9px;font-size:16px}.opt{grid-template-columns:1fr;gap:2px}.opt .ol{padding-top:0}}
+.stopaG{display:grid;grid-template-columns:minmax(0,300px) 1fr;gap:14px;align-items:start}@media (max-width:620px){.stopaG{grid-template-columns:1fr}}
+select{max-width:100%}
+#zbranCard label{min-width:0}#zbranCard select{width:100%}
+.seg button[aria-pressed="true"].btn{background:var(--acc2);border-color:var(--acc2);color:var(--surface)}
 kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
 </style>
 </head>
@@ -66,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.12-8</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.12-10</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -74,7 +90,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
       <div class="small" id="vrNote">Otevřete stránku v prohlížeči v Questu.</div>
       <a class="navlink" href="index.html">🎯 Skeet a trap →</a>
       <a class="navlink" href="zaznam.html">📱 Záznam ze střelnice →</a>
-      <a class="navlink" href="#denik">📈 Tréninkový deník</a>
+      <a class="navlink" href="#deník" data-tab="denik" id="denikLink">📈 Tréninkový deník</a>
     </div>
   </header>
 
@@ -83,32 +99,52 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
     <div class="cross" id="cross"></div>
     <div class="fb" id="fb">Vyberte cvičení a dejte START</div>
   </div>
-  <p class="small" style="margin:-8px 0 0">Počítač: klikněte do scény (myš míří), <kbd>klik</kbd> výstřel, <kbd>pravé tl.</kbd> přiblížení, <kbd>R</kbd> přebít, <kbd>W A S D</kbd> chůze, <kbd>Enter</kbd> start / hotovo. BLE spoušť na zbrani = výstřel (klávesa <kbd>F</kbd>, s vyrovnáním zpoždění). VR: spoušť ovladače = výstřel, druhý ovladač ukazuje do menu, <kbd>A/X</kbd> přebít, <kbd>B/Y</kbd> menu, levá páčka chůze, pravá páčka otočení.</p>
-
-  <div class="grid">
-    <section class="card">
-      <h2>Disciplína a cvičení</h2>
-      <div class="seg" id="catSeg"><button type="button" data-c="mirena">Mířená střelba</button><button type="button" data-c="dyn">IPSC</button><button type="button" data-c="drill">Drily</button><button type="button" data-c="cqb">Boj ve městě (CQB)</button></div>
-      <div class="stlist" id="stList"></div>
-    </section>
-    <section class="card">
-      <h2>Prostředí a nastavení</h2>
-      <div class="seg" id="envSeg"><button type="button" data-e="les">Lesní střelnice</button><button type="button" data-e="mesto">Město</button><button type="button" data-e="stadion">Stadion</button><button type="button" data-e="poust">Poušť</button><button type="button" data-e="hala">Krytá hala</button><button type="button" data-e="hory">Hory (biatlon)</button></div>
-      <div class="seg" id="pocasiSeg"><button type="button" data-p="jasno">Jasno</button><button type="button" data-p="dest">Déšť</button><button type="button" data-p="mlha">Mlha</button><button type="button" data-p="snih">Sníh</button><button type="button" data-p="vitr">Silný vítr</button></div>
-      <div class="seg" id="tlakSeg"><button type="button" data-t="klid">Klid</button><button type="button" data-t="zavod">Závod (diváci, rekordy)</button><button type="button" data-t="stres">Stres (tep, hluk, chvění)</button></div>
-      <div class="seg"><button type="button" id="nahodneBtn">Náhodné prezentace terčů</button><select id="vzdSel" hidden aria-label="Vzdálenost"></select></div>
-      <div class="seg" id="dobaSeg"><button type="button" data-d="den">Den</button><button type="button" data-d="zlata">Zlatá hodina</button><button type="button" data-d="soumrak">Soumrak</button></div>
-      <div class="seg" id="optSeg"><button type="button" id="vyukaBtn">Výuka před cvičením</button><button type="button" id="hlasBtn">Hlas rozhodčího a trenéra</button><button type="button" id="rukaBtn">Zbraň v pravé ruce</button></div>
-      <div class="seg"><button type="button" class="btn pri" id="startBtn">START</button><button type="button" class="btn" id="hotovoBtn">Hotovo</button><button type="button" class="btn" id="resetBtn">Znovu postavit terče</button></div>
-      <div class="lekce" id="lekce"></div>
-    </section>
+  <div class="akce">
+    <div class="akceInfo"><b id="akceNazev">—</b><div class="chips" id="akceChips"></div></div>
+    <div class="akceBtns"><button type="button" class="btn pri big" id="startBtn">START</button><button type="button" class="btn" id="hotovoBtn">Hotovo</button><button type="button" class="btn" id="resetBtn">Postavit terče</button></div>
   </div>
+  <details class="napoveda"><summary>Ovládání</summary>
+    <p class="small">Počítač: klikněte do scény (myš míří), <kbd>klik</kbd> výstřel, <kbd>pravé tl.</kbd> přiblížení, <kbd>R</kbd> přebít, <kbd>W A S D</kbd> chůze, <kbd>Enter</kbd> start / hotovo.
+    BLE spoušť na zbrani = výstřel (klávesa <kbd>F</kbd>, s vyrovnáním zpoždění). VR: spoušť ovladače = výstřel, druhý ovladač ukazuje do menu, <kbd>A/X</kbd> přebít, <kbd>B/Y</kbd> menu, levá páčka chůze, pravá páčka otočení.</p></details>
+
   <section class="card" id="vysl" hidden>
     <h2 id="vyslH">Výsledek</h2>
     <div id="vyslSum"></div>
     <div class="tw"><table id="vyslTab"></table></div>
     <div class="trener" id="vyslTr"></div>
   </section>
+
+  <nav class="tabs" id="tabs" aria-label="Části">
+    <button type="button" data-tab="cviceni">Cvičení</button><button type="button" data-tab="podminky">Podmínky</button><button type="button" data-tab="zbran">Zbraň a spoušť</button><button type="button" data-tab="denik">Deník</button>
+  </nav>
+  <div class="tabp grid" id="tab-cviceni">
+    <section class="card">
+      <h2>Disciplína a cvičení</h2>
+      <div class="seg" id="catSeg"><button type="button" data-c="mirena">Mířená střelba</button><button type="button" data-c="dyn">IPSC</button><button type="button" data-c="drill">Drily</button><button type="button" data-c="cqb">Boj ve městě (CQB)</button></div>
+      <div class="stlist" id="stList"></div>
+    </section>
+    <section class="card">
+      <h2>Výuka</h2>
+      <div class="lekce" id="lekce"></div>
+    </section>
+  </div>
+  <div class="tabp" id="tab-podminky" hidden>
+    <section class="card">
+      <h2>Podmínky na střelnici</h2>
+      <div class="opt"><span class="ol">Prostředí</span><div class="seg" id="envSeg"><button type="button" data-e="les">Lesní střelnice</button><button type="button" data-e="mesto">Město</button><button type="button" data-e="stadion">Stadion</button><button type="button" data-e="poust">Poušť</button><button type="button" data-e="hala">Krytá hala</button><button type="button" data-e="hory">Hory (biatlon)</button></div></div>
+      <div class="opt"><span class="ol">Denní doba</span><div class="seg" id="dobaSeg"><button type="button" data-d="den">Den</button><button type="button" data-d="zlata">Zlatá hodina</button><button type="button" data-d="soumrak">Soumrak</button></div></div>
+      <div class="opt"><span class="ol">Počasí</span><div class="seg" id="pocasiSeg"><button type="button" data-p="jasno">Jasno</button><button type="button" data-p="dest">Déšť</button><button type="button" data-p="mlha">Mlha</button><button type="button" data-p="snih">Sníh</button><button type="button" data-p="vitr">Silný vítr</button></div></div>
+      <div class="opt"><span class="ol">Psychický tlak</span><div class="seg" id="tlakSeg"><button type="button" data-t="klid">Klid</button><button type="button" data-t="zavod">Závod (diváci, rekordy)</button><button type="button" data-t="stres">Stres (tep, hluk, chvění)</button></div></div>
+      <div class="opt"><span class="ol">Terče</span><div class="seg"><button type="button" id="nahodneBtn">Náhodné prezentace terčů</button><select id="vzdSel" hidden aria-label="Vzdálenost"></select></div></div>
+    </section>
+  </div>
+  <div class="tabp" id="tab-zbran" hidden>
+    <section class="card">
+      <h2>Možnosti</h2>
+      <div class="seg" id="optSeg"><button type="button" id="vyukaBtn">Výuka před cvičením</button><button type="button" id="hlasBtn">Hlas rozhodčího a trenéra</button><button type="button" id="rukaBtn">Zbraň v pravé ruce</button></div>
+    </section>
+  </div>
+  <div class="tabp" id="tab-denik" hidden></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -173,12 +209,12 @@ let AC=null; function audio(){ if(!AC){ try{AC=new (window.AudioContext||window.
 function noise(dur,freq,vol,decay){ const a=audio(); if(!a) return; const n=Math.floor(a.sampleRate*dur), b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0);
   for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*decay)); const s=a.createBufferSource(); s.buffer=b; const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq; const g=a.createGain(); g.gain.value=vol; s.connect(f).connect(g).connect(a.destination); s.start(); }
 function tone(hz,dur,vol,typ){ const a=audio(); if(!a) return; const o=a.createOscillator(), g=a.createGain(), t=a.currentTime; o.type=typ||'square'; o.frequency.value=hz; g.gain.setValueAtTime(vol||0.25,t); g.gain.setValueAtTime(vol||0.25,t+dur-0.02); g.gain.linearRampToValueAtTime(0,t+dur); o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+0.02); }
-const sShot=r=>{ noise(0.35,r?5200:3800,r?1.1:0.9,r?0.05:0.035); noise(0.9,500,0.35,0.25); };
+const sShot=(r,Z)=>{ const k=Z&&Z.hlas||1; noise(0.35,(r?5200:3800)*(k<0.6?1.3:1),(r?1.1:0.9)*k,r?0.05:0.035); noise(0.9,500,0.35*k,0.25); };
 const sSteel=()=>{ tone(1650,0.25,0.18,'sine'); tone(2470,0.18,0.08,'sine'); };
 const sBeep=()=>tone(2900,0.32,0.25,'square');
 const sClick=()=>noise(0.03,4000,0.4,0.005);
 let HLASY=[]; try{ HLASY=speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>{HLASY=speechSynthesis.getVoices();}; }catch(e){}
-function mluv(t,o){ if(!ST.hlas) return; try{ const u=new SpeechSynthesisUtterance(t); u.lang='cs-CZ'; const v=HLASY.find(v=>v.lang==='cs-CZ')||HLASY.find(v=>/^cs/.test(v.lang)); if(v) u.voice=v; u.rate=(o&&o.rate)||1.05; u.pitch=(o&&o.pitch)||1;
+function mluv(t,o){ if(!ST.hlas) return; try{ const u=new SpeechSynthesisUtterance(t); u.lang=(o&&o.lang)||'cs-CZ'; const lp=u.lang.slice(0,2); const v=HLASY.find(v=>v.lang===u.lang)||HLASY.find(v=>v.lang.slice(0,2)===lp); if(v) u.voice=v; u.rate=(o&&o.rate)||1.05; u.pitch=(o&&o.pitch)||1;
   if(o&&o.prerusit) speechSynthesis.cancel(); speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){} }
 function say(t){ $('fb').textContent=t; if(typeof drawHud==='function') drawHud(); }
 
@@ -353,17 +389,19 @@ const ray=new THREE.Raycaster();
 const TG=[];        // aktivní terče cvičení
 const TGROUP=new THREE.Group(); scene.add(TGROUP);
 // kruhový terč: ISSF 25 m přesná pistole (10 = Ø 50 mm, krok 25 mm, 1 = Ø 500 mm, černá od 7) / puškový 100 m (10 = Ø 40 mm, krok 20 mm)
-function ringTarget(x,y,z,kind){ const R10=kind==='puska'?0.02:0.025, step=R10, size=kind==='puska'?0.5:0.55;
+// skutečné rozměry: pistole ISSF 25 m (10 = Ø50 mm, krok 25 mm, černá 7–10 Ø200), puška do 50 m ISSF 50 m (10 = Ø10,4, krok 8 mm, černá Ø112,4), dál ISSF 300 m (10 = Ø100, krok 50, černá Ø600)
+function ringTarget(x,y,z,kind){ const dist=Math.abs(z), T=kind!=='puska'?{R10:0.025,step:0.025,size:0.55,blk:0.1,bin:7}:dist<=50?{R10:0.0052,step:0.008,size:0.17,blk:0.0562,bin:4}:{R10:0.05,step:0.05,size:1.1,blk:0.3,bin:5};
+  const R10=T.R10, step=T.step, size=T.size;
   const N=1024, c=document.createElement('canvas'); c.width=c.height=N; const ctx=c.getContext('2d'), px=N/size;
-  const draw=()=>{ ctx.fillStyle='#f3efe4'; ctx.fillRect(0,0,N,N); ctx.fillStyle='#1b1b1b'; ctx.beginPath(); ctx.arc(N/2,N/2,(R10+step*3)*px,0,7); ctx.fill();
-    for(let r=1;r<=10;r++){ const rad=(R10+step*(10-r))*px; ctx.strokeStyle=r>=7?'#f3efe4':'#1b1b1b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(N/2,N/2,rad,0,7); ctx.stroke();
-      if(r<10&&r>0){ ctx.fillStyle=r>=7?'#f3efe4':'#1b1b1b'; ctx.font=`600 ${Math.round(step*px*0.55)}px Arial`; ctx.textAlign='center'; ctx.fillText(String(r),N/2,N/2-rad+step*px*0.7); } }
+  const draw=()=>{ ctx.fillStyle='#f3efe4'; ctx.fillRect(0,0,N,N); ctx.fillStyle='#1b1b1b'; ctx.beginPath(); ctx.arc(N/2,N/2,T.blk*px,0,7); ctx.fill();
+    for(let r=1;r<=10;r++){ const rad=(R10+step*(10-r))*px; ctx.strokeStyle=r>=T.bin?'#f3efe4':'#1b1b1b'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(N/2,N/2,rad,0,7); ctx.stroke();
+      if(r<10&&r>0){ ctx.fillStyle=r>=T.bin?'#f3efe4':'#1b1b1b'; ctx.font=`600 ${Math.round(step*px*0.55)}px Arial`; ctx.textAlign='center'; ctx.fillText(String(r),N/2,N/2-rad+step*px*0.7); } }
     ctx.strokeStyle='#f3efe4'; ctx.beginPath(); ctx.arc(N/2,N/2,R10*0.5*px,0,7); ctx.stroke(); };
   draw(); const tex=new THREE.CanvasTexture(c); tex.anisotropy=8;
   const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshLambertMaterial({map:tex})); m.position.set(x,y,z); TGROUP.add(m);
   stojan(x,y,z,size,size);
-  const t={typ:'ring',kind,m,c,ctx,tex,px,N,size,hits:[],R10,step,
-    score(l){ const r=Math.hypot(l.x,l.y); if(r<=R10+0.0045) return {pts:10,zona:r<=R10*0.5?'10x':'10'}; const s=10-Math.ceil((r-R10-0.0045)/step); return s>=1?{pts:s,zona:String(s)}:{pts:0,zona:'0'}; }};
+  const t={typ:'ring',kind,m,c,ctx,tex,px,N,size,hits:[],R10,step,blk:T.blk,bin:T.bin,
+    score(l){ const r=Math.hypot(l.x,l.y), rb=typeof zbr==='function'?zbr().r:0.0045; if(r<=R10+rb) return {pts:10,zona:r<=R10*0.5?'10x':'10'}; const s=10-Math.ceil((r-R10-rb)/step); return s>=1?{pts:s,zona:String(s)}:{pts:0,zona:'0'}; }};
   m.userData.t=t; TG.push(t); return t; }
 function stojan(x,y,z,w,h){ const wood=mat(0x8a6a44); box(0.05,y-h/2+0.05,0.05,wood,x-w/2-0.03,(y-h/2)/2,z-0.02,TGROUP); box(0.05,y-h/2+0.05,0.05,wood,x+w/2+0.03,(y-h/2)/2,z-0.02,TGROUP); }
 // IPSC terč (kartonový): A 15×28, C 30×48 (zkosené rohy), D zbytek; hlava 15×15 s A 10×5 cm
@@ -501,7 +539,7 @@ const STAGES=[
   setup(){ const z=[]; for(let i=0;i<10;i++){ const c=i%5, r=Math.floor(i/5); z.push({typ:'kruh',x:-0.16+c*0.08,y:0.08-r*0.16,r:0.025,nazev:String(i+1),popis:String(i+1)}); } kartaTarget(0,1.45,-3,0.46,0.4,z,{name:'DOT',nadpis:'DOT TORTURE'}); startPos(0,0,0); },
   vyhodnot(S,R,sh,T){ let ok=0; sh.forEach((s,i)=>{ if(s.zona===String(Math.floor(i/2)+1)) ok++; }); R.sum.push(['Zásahy',ok+' / 20'],['Čas',t2(T)+' s']); R.skore=ok;
     R.tr.push(ok>=20?'20/20 – čistá práce spouště.':ok>=16?'Dobrý výsledek, zbývá dotáhnout soustředění u každé rány.':'Pod 16/20: zpomal. Každá rána je samostatný výstřel – mířidla, spoušť, dodržení.'); return R; }},
- {id:'biatlon',cat:'mirena',n:'Biatlon 50 m – 5 terčů',zbran:'puska',env:'hory',mode:'drill',ran:5,mag:5,cas:60,
+ {id:'biatlon',raze:'22lr',nul:50,cat:'mirena',n:'Biatlon 50 m – 5 terčů',zbran:'puska',env:'hory',mode:'drill',ran:5,mag:5,cas:60,
   popis:'Biatlonová položka vstoje: 5 černých terčů Ø 11,5 cm na 50 m, 5 ran. Každý zásah překryje bílá klapka. Každé minutí = trestné kolo 150 m (počítáme +25 s).',
   lekce:['Vstoje: levý loket opři o bok, puška leží na dlani, ne ve svalu. Tělo stojí bokem.','Rytmus: nádech – výdech – rána, každá rána za 3–5 s. Nečekej moc dlouho, svaly se rozklepou.','Po ráně hned další terč zleva doprava. Klapka ukáže zásah, nesleduj ji – už míříš na další.'],
   setup(){ for(let i=0;i<5;i++) biatlonTerc(-0.5+i*0.25,1.6,-50,0.0575,'B'+(i+1)); box(1.5,0.4,0.05,mat(0xf4f4f4),0,1.6,-50.05,TGROUP); startPos(0,0.3,0); },
@@ -565,17 +603,17 @@ function buildRoh(){ zed(1,1,1,-14); zed(-1,1,-1,-12); zed(1,-14,-14,-14); zed(-
 let vitr=0;
 function vyberCviceni(id){ const S=STAGES.find(s=>s.id===id); if(!ST.stage||ST.stage.id!==id) ST.vzd=S.vzdal0||null; ST.stage=S; ST.cat=S.cat; clearTargets(); S.setup(); nahodnyPosun(); stinyNastav(TGROUP,true); if(typeof realScene==='function'){ plochySum(TGROUP); realScene(TGROUP); rovnePlochy(TGROUP); kovy(); } if(S.env&&!ST.envRucne) setEnv(S.env); else setEnv(ST.env); nocNastav(!!S.noc); pocasiApply(); syncReal();
   ST.magCap=S.magCap||S.mag; ST.mag=S.mag; ST.reloading=0; ST.phase='idle'; ST.shots=[]; ST.t0=0; ST.lekceVidena=false; vitr=S.vitr?(Math.random()<0.5?-1:1)*(2+Math.random()*3):0;
-  gunPlace(); renderList(); renderLekce(); drawHud(); say(S.n+' – '+(ST.vyuka?'START spustí výuku':'dejte START')); $('vysl').hidden=true; drawPanel(); LS.set('st-cv',id); }
+  gunPlace(); renderList(); renderLekce(); drawHud(); say(S.n+' – '+(ST.vyuka?'START spustí výuku':'dejte START')); $('vysl').hidden=true; drawPanel(); LS.set('st-cv',id); if(typeof zbrRender==='function') zbrRender(); }
 function start(){ audio(); const S=ST.stage; if(!S) return;
   if(ST.phase==='run'||ST.phase==='ready'){ konec('rucne'); return; }
   if(ST.vyuka&&!ST.lekceVidena){ ST.lekceVidena=true; showLekce(); return; }
   hidePanel(); if(ST.phase==='done'){ const id=S.id; vyberCviceni(id); ST.lekceVidena=true; }
   ST.shots=[]; ST.mag=S.mag; ST.reloading=0; ST.phase='ready';
   if(ST.tlak==='zavod') mluv('Na palebné čáře: '+S.n,{prerusit:true});
-  if(S.mode==='presna'){ mluv('Na palebnou čáru. Nabijte. Máte '+Math.round(S.cas/60)+' minut. Start.'); say('Střílejte – máte '+Math.round(S.cas/60)+' min'+(vitr?' · vítr '+Math.abs(vitr).toFixed(1)+' m/s '+(vitr>0?'zleva':'zprava'):'')); ST.phase='run'; ST.t0=performance.now()/1000; return; }
-  const v=['Nabijte a připravte se','Jste připraven?','Pozor'];
-  say(v[0]); mluv(v[0]); setTimeout(()=>{ if(ST.phase!=='ready') return; say(v[1]); mluv(v[1]); },1800);
-  setTimeout(()=>{ if(ST.phase!=='ready') return; say(v[2]); mluv(v[2]); const d=ST.tlak==='stres'?1000+Math.random()*5000:1500+Math.random()*2500; setTimeout(()=>{ if(ST.phase!=='ready') return; sBeep(); ST.phase='run'; ST.t0=performance.now()/1000; say(S.obrat?'Otočka a střílej!':'Střílej!'); if(S.par){ const t0=ST.t0; setTimeout(()=>{ if(ST.phase==='run'&&ST.t0===t0) sBeep(); },S.par*(ST.tlak==='stres'?0.8:1)*1000); } if(ST.tlak==='zavod') noise(1.2,900,0.18,0.4); },d); },3400); }
+  if(S.mode==='presna'){ const pv=povely().presna; povel(pv[0]); setTimeout(()=>povel(pv[1]),1500); if(ZBR.povely!=='en') mluv('Máte '+Math.round(S.cas/60)+' minut.'); say('Střílejte – máte '+Math.round(S.cas/60)+' min'+(vitr?' · vítr '+Math.abs(vitr).toFixed(1)+' m/s '+(vitr>0?'zleva':'zprava'):'')); ST.phase='run'; ST.t0=performance.now()/1000; return; }
+  const v=povely().start;   // IPSC: po „Pozor“ (Standby) pípne časovač za 1–4 s
+  povel(v[0]); setTimeout(()=>{ if(ST.phase!=='ready') return; povel(v[1]); },3000);
+  setTimeout(()=>{ if(ST.phase!=='ready') return; povel(v[2]); const d=ST.tlak==='stres'?1000+Math.random()*5000:1000+Math.random()*3000; setTimeout(()=>{ if(ST.phase!=='ready') return; sBeep(); ST.phase='run'; ST.t0=performance.now()/1000; say(S.obrat?'Otočka a střílej!':'Střílej!'); if(S.par){ const t0=ST.t0; setTimeout(()=>{ if(ST.phase==='run'&&ST.t0===t0) sBeep(); },S.par*(ST.tlak==='stres'?0.8:1)*1000); } if(ST.tlak==='zavod') noise(1.2,900,0.18,0.4); },d); },4800); }
 function reload(){ if(ST.reloading||!ST.stage) return; if(ST.mag===ST.magCap){ say('Zásobník je plný'); return; } ST.reloading=performance.now()/1000+(ST.stage.zbran==='puska'?1.6:1.1); sClick(); say('Přebíjím…'); }
 function aim(){ const o=new V(), d=new V(); if(ST.inXR){ const c=gunCtrl(); if(!c) return null; const q=new THREE.Quaternion(); c.getWorldQuaternion(q); d.set(0,0,-1).applyQuaternion(q);
     const mz=new V(0,gunModel.userData.mirH-0.02,-gunModel.userData.hlaven); gunModel.localToWorld(mz); o.copy(mz); if(ST.blePast&&ST.lag>0&&typeof gunPast==='function'){ const H=gunPast(ST.lag); if(H){ o.copy(H.o); d.copy(H.d); } } }
@@ -587,18 +625,18 @@ function fire(){ audio(); const now=performance.now()/1000, S=ST.stage;
   if(S&&ST.mag<=0){ sClick(); say('Prázdný zásobník – přebij (A/X, klávesa R)'); return; }
   if(ST.phase==='ready'){ say('Předčasný výstřel před pípnutím! Pokus se ruší.'); mluv('Stop! Předčasný výstřel.',{prerusit:true}); ST.phase='idle'; return; }
   const A=aim(); if(!A) return; if(S) ST.mag--; const puska=S&&S.zbran==='puska';
-  sShot(puska); ST.recoil+=puska?0.022:0.045; gunKick=puska?0.06:0.12;
+  const Zb=typeof zbr==='function'?zbr():null; sShot(puska,Zb); ST.recoil+=Zb?Zb.raz:(puska?0.022:0.045); gunKick=Zb?Zb.kop:(puska?0.06:0.12);
   try{ const c=gunCtrl(); const h=c&&c.userData.src&&c.userData.src.gamepad&&c.userData.src.gamepad.hapticActuators&&c.userData.src.gamepad.hapticActuators[0]; if(h&&h.pulse) h.pulse(1,60); }catch(e){}
-  ray.set(A.o,A.d); ray.far=1500; const hits=ray.intersectObjects(TGROUP.children,true); let zasah=null;
+  let hits; if(typeof balRay==='function') hits=balRay(A).hits; else { ray.set(A.o,A.d); ray.far=1500; hits=ray.intersectObjects(TGROUP.children,true); } let zasah=null;
   for(const h of hits){ const t=h.object.userData.t; if(!t){ break; } if(t.skryty) break;
     if(t.typ==='steel'||t.typ==='popper'||t.typ==='biatlon'){ if(t.down&&!t.stav) continue; zasah={t,sc:t.score(),dist:h.distance,p:h.point}; break; }
-    const l=t.m.worldToLocal(h.point.clone()); const vv=vitrCelkem(); if(vv) l.x+=vv*(S&&S.zbran==='puska'?0.12:0.05)*Math.pow(h.distance/100,2)+(S&&S.zbran!=='puska'?vv*0.002*h.distance/10:0);
+    const l=t.m.worldToLocal(h.point.clone()); const vv=vitrCelkem(); if(vv) l.x+=typeof bLag==='function'?vv*bLag(h.distance):vv*(S&&S.zbran==='puska'?0.12:0.05)*Math.pow(h.distance/100,2);
     const sc=t.score(l); if(!sc) continue; zasah={t,sc,l,dist:h.distance,p:h.point}; break; }
   if(typeof realVystrel==='function'){ realVystrel(A,puska); ozvena(puska); let mp=null; if(zasah) mp=zasah.p; else if(hits.length) mp=hits[0].point; else if(A.d.y<-0.001){ const k=-A.o.y/A.d.y; if(k<400) mp=A.o.clone().addScaledVector(A.d,k); }
-    if(mp){ const ty=zasah?(['steel','popper','biatlon'].includes(zasah.t.typ)?'ocel':'papir'):'prach'; const dl=(zasah?zasah.dist:A.o.distanceTo(mp))/800*1000; setTimeout(()=>realDopad(mp,ty),dl); if(zasah&&ty==='papir') setTimeout(()=>realDopad(mp.clone().addScaledVector(A.d,0.6),'prach'),dl+20); } }
+    if(mp){ const ty=zasah?(['steel','popper','biatlon'].includes(zasah.t.typ)?'ocel':'papir'):'prach'; const dx_=zasah?zasah.dist:A.o.distanceTo(mp), dl=(typeof bTof==='function'?bTof(dx_):dx_/800)*1000; setTimeout(()=>realDopad(mp,ty),dl); if(zasah&&ty==='papir') setTimeout(()=>realDopad(mp.clone().addScaledVector(A.d,0.6),'prach'),dl+20); } }
   const shot={t:ST.phase==='run'?now-ST.t0:null, dist:zasah?zasah.dist:null};
   if(zasah){ const t=zasah.t; shot.cil=t; shot.zona=zasah.sc.zona; shot.pts=zasah.sc.pts; t.hits.push(shot);
-    if(t.typ==='steel'||t.typ==='popper'||t.typ==='biatlon'){ t.down=true; const zp=(zasah.dist/343+zasah.dist/800)*1000; if(t.typ==='biatlon'){ t.kl.visible=true; setTimeout(()=>noise(0.06,2500,0.35,0.01),zp); } else setTimeout(sSteel,zp); if(t.stav){ const mm=t.m.material; mm.color.setHex(0xffd36a); setTimeout(()=>mm.color.setHex(t.stop?0xd23a2a:0xe9e9e4),300); } if(t.stop&&ST.phase==='run') setTimeout(()=>{ if(ST.phase==='run') konec('stop'); },50); }
+    if(t.typ==='steel'||t.typ==='popper'||t.typ==='biatlon'){ t.down=true; const zp=(zasah.dist/343+(typeof bTof==='function'?bTof(zasah.dist):zasah.dist/800))*1000; if(t.typ==='biatlon'){ t.kl.visible=true; setTimeout(()=>noise(0.06,2500,0.35,0.01),zp); } else setTimeout(sSteel,zp); if(t.stav){ const mm=t.m.material; mm.color.setHex(0xffd36a); setTimeout(()=>mm.color.setHex(t.stop?0xd23a2a:0xe9e9e4),300); } if(t.stop&&ST.phase==='run') setTimeout(()=>{ if(ST.phase==='run') konec('stop'); },50); }
     else { shot.l=zasah.l; drawHole(t,zasah.l); } }
   else { shot.zona='M'; shot.pts=0; }
   if(ST.phase==='run'){ ST.shots.push(shot); if(S.mode==='presna'&&shot.cil) say(`Rána ${ST.shots.length}: ${shot.zona} · celkem ${ST.shots.reduce((s,x)=>s+(x.pts||0),0)}`);
@@ -606,19 +644,20 @@ function fire(){ audio(); const now=performance.now()/1000, S=ST.stage;
   if(S&&ST.mag===0&&ST.phase==='run'&&!autoKonec()) say(S.mode==='presna'?'Konec série – přebijte (A/X, klávesa R)':'Prázdný zásobník – přebij!');
   drawHud(); if(ST.phase==='run'&&autoKonec()) setTimeout(()=>{ if(ST.phase==='run') konec('auto'); },S.mode==='presna'?600:250); }
 let gunKick=0;
-function drawHole(t,l){ const ctx=t.ctx, X=t.N/2+l.x*t.px, Y=(t.NH||t.N)/2-l.y*t.px, r=t.typ==='ring'?Math.max(3,0.0045*t.px):Math.max(4,0.0045*t.px*1.2);
+function drawHole(t,l){ const ctx=t.ctx, X=t.N/2+l.x*t.px, Y=(t.NH||t.N)/2-l.y*t.px, rb_=typeof zbr==='function'?zbr().r:0.0045, r=t.typ==='ring'?Math.max(3,rb_*t.px):Math.max(4,rb_*t.px*1.2);
   ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(X,Y,r,0,7); ctx.fill(); ctx.strokeStyle=t.typ==='ring'?'#e8662a':'#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,r+3,0,7); ctx.stroke(); t.tex.needsUpdate=true; }
 const t2=x=>x==null?'–':x.toFixed(2).replace('.',',');
 function autoKonec(){ const S=ST.stage; if(!S) return false;
   if(S.mode==='presna') return ST.shots.length>=S.ran;
   if(S.mode==='drill'&&S.id==='bill') return ST.shots.length>=6;
   if(S.id==='mozambik') return ST.shots.length>=3; if(S.id==='fast') return ST.shots.length>=6; if(S.id==='dot') return ST.shots.length>=20; if(S.id==='biatlon') return ST.shots.length>=5; if(S.id==='prs') return TG.filter(t=>t.stav).every(t=>t.hits.length>=2)||ST.shots.length>=12; if(S.id==='steel5') return false;
+  if(S.mode==='idpa') return TG.filter(t=>t.typ==='karta').every(t=>t.hits.length>=(S.zasahu||2));
   if(S.rukojmi) return ST.shots.length>=1&&TG.some(t=>t.name==='H'&&t.hits.length)||TG.some(t=>t.typ==='noshoot'&&t.hits.length);
   const papir=TG.filter(t=>t.typ==='ipsc'), ocel=TG.filter(t=>t.typ==='steel'||t.typ==='popper');
   const req=S.zasahu||2; return papir.every(t=>t.hits.filter(h=>h.zona!=='D').length>=req)&&ocel.every(t=>t.down); }
 function konec(proc){ const S=ST.stage; if(!S) return; const tEnd=ST.shots.length?Math.max(...ST.shots.map(s=>s.t||0)):(performance.now()/1000-ST.t0);
   if(ST.phase==='ready'){ ST.phase='idle'; say('Zrušeno'); return; }
-  ST.phase='done'; ST.tEnd=proc==='cas'?S.cas:tEnd; mluv('Pokud jste hotov, vybijte a ukažte prázdnou zbraň. Kohout dolů. Pouzdro.');
+  ST.phase='done'; ST.tEnd=proc==='cas'?S.cas:tEnd; (S.mode==='presna'?povely().presnaKonec:povely().konec).forEach(t=>mluv(t,{lang:ZBR.povely==='en'?'en-US':'cs-CZ'}));
   const R=vyhodnot(S); rekord(S,R); if(chveni>0.3) R.tr.push('Pod stresem se ruce chvějí – dech: 4 s nádech, 4 s zadržet, 4 s výdech (box breathing) před startem, a zkrať míření.'); ST.vysledek=R; renderVysledek(R); showVysledek(); setTimeout(()=>mluv(R.mluv,{prerusit:false}),2600); }
 
 // noc: zhasnout, svítilna na zbrani (kužel světla vede se zbraní)
@@ -749,6 +788,7 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
     let y=160+Math.ceil(R.sum.length/3)*86+10; x.font='500 22px IBM Plex Mono, monospace';
     R.radky.slice(0,10).forEach(r=>{ x.fillStyle=r[4]==='A'||r[4]==='10'||r[4]==='10x'||r[4]==='ocel'?'#7fe0a0':r[4]==='M'||r[4]==='NS'?'#ff8a7a':'#d8e4dc'; x.fillText(`${String(r[0]).padStart(2)}  ${String(r[1]).padStart(5)} s  ${String(r[2]).padStart(5)}  ${String(r[3]).padEnd(8)} ${r[4]}`,30,y); y+=30; });
     if(R.radky.length>10){ x.fillStyle='#9fb5a8'; x.fillText(`… a dalších ${R.radky.length-10}`,30,y); y+=30; }
+    if(ST.stopaCan&&ST.shots.some(s=>s.stopa)){ const y0=160+Math.ceil(R.sum.length/3)*86+10-24; x.drawImage(ST.stopaCan,664,y0,330,330); x.fillStyle='#9fb5a8'; x.font='500 20px IBM Plex Mono, monospace'; x.fillText('stopa míření',664,y0+352); y=Math.max(y,y0+370); x.font='500 22px IBM Plex Mono, monospace'; }
     y+=12; x.fillStyle='#ef6a4a'; x.font='700 32px Barlow Condensed, Arial'; x.fillText('TRENÉR',30,y); y+=38; x.fillStyle='#e6ede8'; x.font='400 26px IBM Plex Sans, Arial';
     for(const t of R.tr){ if(y>PHh-170) break; y=wrap(x,'• '+t,30,y,960,32)+6; }
     btn(30,PHh-130,480,100,'ZNOVU',true,()=>start(),'#2f7d4a'); btn(525,PHh-130,469,100,'MENU',false,()=>showMenu()); }
@@ -1003,7 +1043,7 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
   <div id="denikBody"></div>
   <div class="seg" style="margin-top:10px"><button type="button" class="btn" id="denikExp">Uložit deník do souboru</button><button type="button" class="btn" id="denikImp">Načíst deník</button><input type="file" id="denikFile" accept=".json,application/json" hidden><button type="button" class="btn" id="denikDel">Smazat deník</button><span class="small" id="denikMsg"></span></div>
   <p class="small" style="margin:6px 0 0">Doma: držák s ovladačem na vlastní (vybité nebo cvičné) zbrani, BLE spoušť pod lučíkem posílá „F“. Na střelnici: stejná spoušť zapisuje ostré rány do aplikace Záznam. Deník je jen v tomto prohlížeči – pro přenos ho uložte do souboru.</p>`;
-  const v=$('vysl'); v.parentNode.insertBefore(sec,v.nextSibling);
+  $('tab-denik').appendChild(sec);
   $('strelecIn').value=LS.get('st-strelec',''); $('strelecIn').onchange=e=>LS.set('st-strelec',e.target.value.trim());
   $('lagSel').value=String(ST.lag); $('lagSel').onchange=e=>{ ST.lag=+e.target.value; LS.set('st-lag',ST.lag); spoustInfo(); };
   $('denikExp').onclick=()=>{ const b=new Blob([JSON.stringify({format:'strelnice-denik',verze:1,strelec:LS.get('st-strelec',''),zaznamy:denik()},null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='strelnice-denik-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove(); };
@@ -1011,6 +1051,197 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
   $('denikFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ const j=JSON.parse(await f.text()); if(j.format!=='strelnice-denik') throw new Error('neznámý formát'); const m=new Map(denik().map(x=>[x.ts+x.id,x])); (j.zaznamy||[]).forEach(x=>m.set(x.ts+x.id,x)); LS.set('st-denik',[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-DENIK_MAX)); denikRender(); $('denikMsg').textContent='Načteno.'; }catch(err){ $('denikMsg').textContent='Soubor nejde načíst: '+err.message; } e.target.value=''; };
   $('denikDel').onclick=e=>{ const b=e.target; if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='Opravdu smazat?'; setTimeout(()=>{ delete b.dataset.sure; b.textContent='Smazat deník'; },4000); return; } LS.set('st-denik',[]); delete b.dataset.sure; b.textContent='Smazat deník'; denikRender(); };
   denikRender(); setInterval(spoustInfo,5000); })();
+
+/* ================= ZBRAŇ: ráže, mířidla, nastřelení + BALISTIKA ================= */
+// v0 = úsťová rychlost (m/s), L = délka, na které rychlost klesne na 1/e (zjednodušený odpor vzduchu),
+// r = poloměr střely (m) pro hodnocení dotyku kruhu, raz/kop/zotav = zpětný ráz, hlas = hlasitost výstřelu.
+const RAZE={
+  pistole:{ '22lr':{n:'.22 LR',v0:330,L:660,r:0.0028,raz:0.015,kop:0.04,zotav:0.07,hlas:0.45},
+            '9mm':{n:'9 mm Luger',v0:360,L:575,r:0.0045,raz:0.045,kop:0.12,zotav:0.12,hlas:1},
+            '45':{n:'.45 ACP',v0:255,L:1250,r:0.0057,raz:0.065,kop:0.16,zotav:0.16,hlas:1.05} },
+  puska:{ '22lr':{n:'.22 LR (malorážka)',v0:330,L:660,r:0.0028,raz:0.006,kop:0.02,zotav:0.06,hlas:0.45},
+          '223':{n:'.223 Rem / 5,56×45',v0:930,L:750,r:0.0028,raz:0.018,kop:0.05,zotav:0.10,hlas:1.1},
+          '762':{n:'7,62×39',v0:715,L:650,r:0.0039,raz:0.03,kop:0.07,zotav:0.13,hlas:1.15},
+          '308':{n:'.308 Win / 7,62×51',v0:820,L:1250,r:0.0039,raz:0.04,kop:0.09,zotav:0.16,hlas:1.25} } };
+const MIRIDLA={ pistole:{mech:{n:'Mechanická mířidla',h:0.02}, kol:{n:'Kolimátor (červený bod, bez zvětšení)',h:0.045}},
+                puska:{mech:{n:'Dioptr / mechanická',h:0.07}, kol:{n:'Kolimátor (červený bod, bez zvětšení)',h:0.075}} };
+const NUL={ pistole:[10,15,25,50], puska:[25,50,100,200,300] };
+const ZBR=Object.assign({ pistole:{raze:'9mm',mir:'mech',nul:25}, puska:{raze:'223',mir:'mech',nul:100}, povely:'cz' }, LS.get('st-zbr',{}));
+function zbrTyp(){ return ST.stage?ST.stage.zbran:'pistole'; }
+function zbr(){ const typ=zbrTyp(), S=ST.stage, z=ZBR[typ]; const raze=(S&&S.raze)||z.raze, nul=(S&&S.nul)||z.nul;
+  const R=RAZE[typ][raze]||RAZE[typ][Object.keys(RAZE[typ])[0]], M=MIRIDLA[typ][z.mir]||MIRIDLA[typ].mech; return Object.assign({typ,raze,mir:z.mir,nul,h:M.h},R); }
+// balistika: čas letu, pokles a dráha vůči záměrné (zamířeno přesně, nastřeleno na Z.nul)
+function bTof(x,Z){ Z=Z||zbr(); return Z.L/Z.v0*(Math.exp(x/Z.L)-1); }
+function bPokles(x,Z){ const t=bTof(x,Z); return 4.905*t*t; }
+function bDraha(x,Z){ Z=Z||zbr(); const z=Z.nul; return -bPokles(x,Z)-Z.h+(x/z)*(bPokles(z,Z)+Z.h); }   // m, + = nad záměrnou
+function bLag(x,Z){ Z=Z||zbr(); return bTof(x,Z)-x/Z.v0; }    // „zpoždění“ pro boční vítr (Didionův vzorec): drift = vítr × lag
+// paprsek střely: skloní se o dráhu na dané vzdálenosti, pohyblivé terče se posunou o čas letu
+function balRay(A){ const Z=zbr(); ray.set(A.o,A.d); ray.far=1500; let h0=ray.intersectObjects(TGROUP.children,true).find(h=>h.object.userData.t);
+  let x=h0?h0.distance:null; if(x==null){ let best=1e9; for(const t of TG){ const p=new V(); (t.g||t.m).getWorldPosition(p); const v=p.sub(A.o), along=v.dot(A.d); if(along<=0) continue; const off=Math.sqrt(Math.max(0,v.lengthSq()-along*along)); if(off<best){ best=off; x=along; } } }
+  x=x||25; const right=new V().crossVectors(A.d,new V(0,1,0)).normalize(), d=A.d.clone().applyAxisAngle(right,Math.atan2(bDraha(x,Z),x)).normalize();
+  const tof=bTof(x,Z), mv=TG.filter(t=>t.mov), bylo=mv.map(t=>t.m.position.x);
+  mv.forEach(t=>{ t.m.position.x=Math.max(t.mov.x0,Math.min(t.mov.x1,t.m.position.x+t.mov.v*t.mov.dir*tof)); t.m.updateMatrixWorld(true); });
+  ray.set(A.o,d); const hits=ray.intersectObjects(TGROUP.children,true);
+  mv.forEach((t,i)=>{ t.m.position.x=bylo[i]; t.m.updateMatrixWorld(true); });
+  return {hits,d,x,Z}; }
+
+// kolimátor: rámeček na zbrani + bod promítnutý „do nekonečna“ (50 m před zbraní, 2 MOA)
+function kolimator(g,h,z){ const k=new THREE.Group(), cm=mat(0x1d1f22);
+  box(0.004,0.026,0.006,cm,-0.013,h-0.003,z,k); box(0.004,0.026,0.006,cm,0.013,h-0.003,z,k); box(0.03,0.004,0.006,cm,0,h+0.011,z,k); box(0.03,0.01,0.03,cm,0,h-0.018,z+0.012,k);
+  const sk=new THREE.Mesh(new THREE.PlaneGeometry(0.022,0.02),new THREE.MeshBasicMaterial({color:0x88aacc,transparent:true,opacity:0.12,depthWrite:false})); sk.position.set(0,h-0.002,z); k.add(sk);
+  const bod=new THREE.Mesh(new THREE.SphereGeometry(0.0145,10,8),new THREE.MeshBasicMaterial({color:0xff2a1a,depthTest:false,depthWrite:false})); bod.position.set(0,h,-50); bod.renderOrder=999; k.add(bod); k.userData.bod=bod;
+  k.visible=false; g.add(k); return k; }
+const KOL={pistole:kolimator(GUNS.pistole,MIRIDLA.pistole.kol.h,-0.06), puska:kolimator(GUNS.puska,MIRIDLA.puska.kol.h,-0.2)};
+function zbrApply(){ for(const typ of ['pistole','puska']){ const kol=ZBR[typ].mir==='kol'; KOL[typ].visible=kol; GUNS[typ].userData.mirH=(kol?MIRIDLA[typ].kol:MIRIDLA[typ].mech).h; }
+  LS.set('st-zbr',ZBR); if(typeof gunPlace==='function') gunPlace(); zbrRender(); }
+function zbrTick(){ for(const typ in KOL) KOL[typ].userData.bod.visible=ST.inXR; }
+
+// povely rozhodčího – česky, nebo anglicky jako na závodech IPSC
+const POVELY={
+  cz:{start:['Nabijte a připravte se','Jste připraven?','Pozor'], konec:['Pokud jste hotov, vybijte a ukažte prázdnou zbraň','Pokud je prázdná, kohout dolů, do pouzdra','Střelnice je bezpečná'],
+      presna:['Na palebnou čáru. Nabijte.','Start!'], presnaKonec:['Stop. Vybijte a ukažte prázdnou zbraň.']},
+  en:{start:['Load and make ready','Are you ready?','Standby'], konec:['If you are finished, unload and show clear','If clear, hammer down, holster','Range is clear'],
+      presna:['Load.','Start!'], presnaKonec:['Stop. Unload. Show clear.']} };
+const POV_CZ={'Load and make ready':'Nabijte a připravte se','Are you ready?':'Jste připraven?','Standby':'Pozor','If you are finished, unload and show clear':'Pokud jste hotov, vybijte a ukažte','If clear, hammer down, holster':'Kohout dolů, pouzdro','Range is clear':'Střelnice je bezpečná','Load.':'Nabijte','Start!':'Start','Stop. Unload. Show clear.':'Stop, vybijte, ukažte'};
+function povely(){ return POVELY[ZBR.povely]||POVELY.cz; }
+function povel(t,o){ const en=ZBR.povely==='en'; say(en&&POV_CZ[t]?`${t} (${POV_CZ[t]})`:t); mluv(t,Object.assign({lang:en?'en-US':'cs-CZ'},o||{})); }
+
+// trenér: u pušky na dálku připomene dráhu střely
+const _vyhodnot=vyhodnot; vyhodnot=function(S){ // diagnostiku chyb střelce počítat až po odečtení balistiky (pokles a vítr nejsou chyba spouště)
+  const kor=[]; try{ if(S.zbran==='puska'){ const Z=zbr(), vv=vitrCelkem(); for(const s of ST.shots){ if(!s.l||!s.dist) continue; const dy=bDraha(s.dist,Z), dx=vv?vv*bLag(s.dist,Z):0; kor.push([s.l,dx,dy]); s.l.x-=dx; s.l.y-=dy; } } }catch(e){}
+  let R; try{ R=_vyhodnot(S); } finally{ for(const [l,dx,dy] of kor){ l.x+=dx; l.y+=dy; } } try{ const Z=zbr(); const cil=TG.find(t=>t.typ==='ring')||TG[0]; if(cil&&S.zbran==='puska'){ const p=new V(); (cil.g||cil.m).getWorldPosition(p); const e=new V(); camera.getWorldPosition(e); const x=Math.round(p.distanceTo(e));
+    const y=bDraha(x,Z)*100; if(Math.abs(y)>=2) R.tr.unshift(`${Z.n}, nastřeleno na ${Z.nul} m: na ${x} m jde střela ${Math.abs(y).toFixed(0)} cm ${y<0?'pod':'nad'} záměrnou (${(Math.abs(y)*10/x).toFixed(1)} mrad = ${(Math.abs(y)*10/x*3.438).toFixed(1)} MOA, ${Math.round(Math.abs(y)*100/x)} cvaků po 0,1 mrad). Miř ${y<0?'výš':'níž'} nebo přestav hledí – není to chyba spouště.`);
+    const vv=vitrCelkem(); if(vv){ const dr=Math.abs(vv*bLag(x,Z)*100); if(dr>=2) R.tr.push(`Vítr ${Math.abs(vv).toFixed(1)} m/s odnesl střelu na ${x} m asi o ${dr.toFixed(0)} cm.`); } } }catch(e){} return R; };
+
+// karta nastavení zbraně
+function zbrRender(){ const el=$('zbrTab'); if(!el) return; const typ=zbrTyp(), Z=zbr(), xs=typ==='puska'?[25,50,100,150,200,300]:[5,10,15,25,50];
+  el.innerHTML=`<tr><th>${typ==='puska'?'Puška':'Pistole'}: ${esc(Z.n)}, nastřeleno ${Z.nul} m</th>${xs.map(x=>`<th>${x} m</th>`).join('')}</tr>
+    <tr><td>dráha vůči záměrné</td>${xs.map(x=>{ const y=bDraha(x,Z)*100; return `<td>${y>=0?'+':'−'}${Math.abs(y).toFixed(Math.abs(y)<10?1:0)} cm</td>`; }).join('')}</tr>
+    <tr><td>čas letu</td>${xs.map(x=>`<td>${(bTof(x,Z)*1000).toFixed(0)} ms</td>`).join('')}</tr>
+    <tr><td>boční vítr 4 m/s</td>${xs.map(x=>`<td>${(4*bLag(x,Z)*100).toFixed(1)} cm</td>`).join('')}</tr>`;
+  const S=ST.stage; $('zbrNote').textContent=S&&S.raze?`Cvičení ${S.n} má pevnou ráži ${Z.n} (pravidla disciplíny).`:''; }
+(()=>{ const card=document.createElement('section'); card.className='card'; card.id='zbranCard';
+  const sel=(id,opts,val)=>`<select id="${id}" style="font:500 14px var(--body);padding:6px;border-radius:6px;max-width:100%">${opts.map(([v,n])=>`<option value="${v}"${String(v)===String(val)?' selected':''}>${n}</option>`).join('')}</select>`;
+  const lbl=(t,h)=>`<label class="small" style="display:grid;gap:2px">${t}${h}</label>`;
+  card.innerHTML=`<h2>Zbraň a balistika</h2>
+   <p class="small" style="margin:0 0 8px">Nastavte ráži a mířidla podle zbraně, na které je držák. Střela pak padá a letí jako skutečná: na dálku je potřeba mířit výš, na pohyblivý terč předsadit, vítr ji odnáší.</p>
+   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+    ${lbl('Pistole – ráže',sel('zPr',Object.entries(RAZE.pistole).map(([k,v])=>[k,v.n]),ZBR.pistole.raze))}
+    ${lbl('Pistole – mířidla',sel('zPm',Object.entries(MIRIDLA.pistole).map(([k,v])=>[k,v.n]),ZBR.pistole.mir))}
+    ${lbl('Pistole – nastřelena na',sel('zPn',NUL.pistole.map(x=>[x,x+' m']),ZBR.pistole.nul))}
+    ${lbl('Puška – ráže',sel('zKr',Object.entries(RAZE.puska).map(([k,v])=>[k,v.n]),ZBR.puska.raze))}
+    ${lbl('Puška – mířidla',sel('zKm',Object.entries(MIRIDLA.puska).map(([k,v])=>[k,v.n]),ZBR.puska.mir))}
+    ${lbl('Puška – nastřelena na',sel('zKn',NUL.puska.map(x=>[x,x+' m']),ZBR.puska.nul))}
+    ${lbl('Povely rozhodčího',sel('zPov',[['cz','Česky'],['en','Anglicky (závody IPSC)']],ZBR.povely))}
+   </div>
+   <div class="tw" style="margin-top:10px"><table id="zbrTab"></table></div><p class="small" id="zbrNote" style="margin:4px 0 0"></p>`;
+  $('tab-zbran').appendChild(card);
+  const on=(id,f)=>{ $(id).onchange=e=>{ f(e.target.value); zbrApply(); }; };
+  on('zPr',v=>ZBR.pistole.raze=v); on('zPm',v=>ZBR.pistole.mir=v); on('zPn',v=>ZBR.pistole.nul=+v);
+  on('zKr',v=>ZBR.puska.raze=v); on('zKm',v=>ZBR.puska.mir=v); on('zKn',v=>ZBR.puska.nul=+v); on('zPov',v=>ZBR.povely=v);
+  zbrApply(); })();
+
+/* ================= STOPA MÍŘENÍ (jako SCATT): kudy se pohybovala mířidla před ranou a po ní ================= */
+const STOPA=[];   // poslední ~2,5 s: paprsek mířidel bez zpětného rázu
+function stopaTick(){ const r=ST.recoil; ST.recoil=0; let A=null; try{ A=aim(); }catch(e){} ST.recoil=r; if(!A) return;
+  const t=performance.now(); STOPA.push({t,o:A.o.clone(),d:A.d.clone()}); while(STOPA.length&&t-STOPA[0].t>2500) STOPA.shift(); }
+function naTerc(m,o,d){ m.updateMatrixWorld(true); const a=m.worldToLocal(o.clone()), b=m.worldToLocal(o.clone().add(d)); const dz=b.z-a.z; if(Math.abs(dz)<1e-9) return null; const k=-a.z/dz; if(k<0) return null; return {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k}; }
+function stopaCil(sh){ if(sh.cil&&sh.cil.m) return sh.cil; const f=STOPA[STOPA.length-1]; if(!f) return null; let best=null, bd=1e9;
+  for(const t of TG){ if(!t.m||t.skryty) continue; const p=new V(); t.m.getWorldPosition(p); const v=p.sub(f.o), al=v.dot(f.d); if(al<=0) continue; const off=Math.sqrt(Math.max(0,v.lengthSq()-al*al))/al; if(off<bd){ bd=off; best=t; } } return bd<0.15?best:null; }
+function stopaZachyt(sh,tS){ const S=ST.stage; if(!S||!(S.mode==='presna'||['dot','rukojmi','biatlon','prs'].includes(S.id))) return; const t=stopaCil(sh); if(!t) return;
+  setTimeout(()=>{ const pts=[]; for(const f of STOPA){ const dt=(f.t-tS)/1000; if(dt<-1.5||dt>0.35) continue; const p=naTerc(t.m,f.o,f.d); if(p) pts.push({dt,x:p.x,y:p.y}); }
+    if(pts.length<3) return; const at0=pts.reduce((b,p)=>Math.abs(p.dt)<Math.abs(b.dt)?p:b,pts[0]);
+    if(sh.l&&sh.cil===t){ const ox=sh.l.x-at0.x, oy=sh.l.y-at0.y; pts.forEach(p=>{ p.x+=ox; p.y+=oy; }); }   // stopa končí v zásahu (pokles a vítr)
+    const p0={x:at0.x+(sh.l&&sh.cil===t?sh.l.x-at0.x:0),y:at0.y+(sh.l&&sh.cil===t?sh.l.y-at0.y:0)};
+    const okno=pts.filter(p=>p.dt>=-0.5&&p.dt<=0), cx=okno.reduce((s,p)=>s+p.x,0)/okno.length, cy=okno.reduce((s,p)=>s+p.y,0)/okno.length;
+    const stab=okno.length>=2?okno.reduce((s,p)=>s+Math.hypot(p.x-cx,p.y-cy),0)/okno.length:null;
+    const p02=pts.reduce((b,p)=>Math.abs(p.dt+0.2)<Math.abs(b.dt+0.2)?p:b,pts[0]), sdx=p0.x-p02.x, sdy=p0.y-p02.y;
+    const po=pts.filter(p=>p.dt>0); const dodrz=po.length?Math.max(...po.map(p=>Math.hypot(p.x-p0.x,p.y-p0.y))):null;
+    let ten=null; if(t.typ==='ring'){ const sek=pts.filter(p=>p.dt>=-1&&p.dt<=0), R=t.R10+zbr().r; ten=sek.length?sek.filter(p=>Math.hypot(p.x,p.y)<=R).length/sek.length:null; }
+    sh.stopa={t,pts,p0,scatt:{ten,stab:stab==null?null:stab*1000,stisk:Math.hypot(sdx,sdy)*1000,sdir:[sdx,sdy],dodrz:dodrz==null?null:dodrz*1000}};
+    if(ST.phase==='done') stopaPanel(); },380); }
+const _fireS=fire; fire=function(){ const n=ST.shots.length, tS=performance.now()-(ST.blePast?ST.lag:0); _fireS(); if(ST.shots.length>n) stopaZachyt(ST.shots[ST.shots.length-1],tS); };
+function smer(dx,dy){ const a=Math.atan2(dy,dx)*180/Math.PI, s=['vpravo','vpravo nahoru','nahoru','vlevo nahoru','vlevo','vlevo dolů','dolů','vpravo dolů']; return s[((Math.round(a/45)%8)+8)%8]; }
+// trenér: rozbor stopy
+const _vyhS=vyhodnot; vyhodnot=function(S){ const R=_vyhS(S); const sc=ST.shots.filter(s=>s.stopa).map(s=>s.stopa.scatt); if(sc.length<1) return R;
+  const avg=f=>{ const v=sc.map(f).filter(x=>x!=null); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; };
+  const stab=avg(s=>s.stab), stisk=avg(s=>s.stisk), dod=avg(s=>s.dodrz), ten=avg(s=>s.ten), dx=avg(s=>s.sdir[0]), dy=avg(s=>s.sdir[1]);
+  if(ten!=null) R.sum.push(['V desítce (posl. 1 s)',Math.round(ten*100)+' %']); if(stab!=null) R.sum.push(['Klid mířidel',stab.toFixed(1)+' mm']); R.sum.push(['Pohyb při stisku',stisk.toFixed(1)+' mm']); if(stab==null) return R;
+  const leve=ST.ruka==='left';
+  if(stisk>Math.max(1.5*stab,3)){ const sm=smer(dx,dy); R.tr.unshift(`Stopa: při stisku spouště uhne zbraň o ${stisk.toFixed(0)} mm (${sm}), při držení se hýbe jen o ${stab.toFixed(0)} mm. Chyba je ve stisku, ne v držení. `+(/dolů/.test(sm)?'Ruka „čeká“ ránu a tlačí zbraň dolů – suchý trénink s mincí na mušce.':/(vlevo)/.test(sm)!==leve?'Prst táhne do strany: spoušť jen bříškem posledního článku, tah rovně dozadu.':'Úchop se při stisku sevře – zpevni úchop už před stiskem, prst hýbej odděleně.'));
+  } else if(sc.length>=2) R.tr.push(`Stopa: stisk spouště je čistý (pohyb ${stisk.toFixed(0)} mm, stejný jako při držení).`);
+  if(dod!=null&&dod>Math.max(3*stab,8)) R.tr.push(`Po ráně mířidla hned odjedou (${dod.toFixed(0)} mm za 0,3 s). Dodržení: drž mířidla na terči a spoušť zmáčknutou ještě chvíli po ráně.`);
+  if(ten!=null&&ten<0.35&&S.mode==='presna') R.tr.push(`V poslední sekundě před ranou byla mířidla v desítce jen ${Math.round(ten*100)} % času. Neprodlužuj míření: když se obraz ustálí, do 4–6 s vystřel, jinak odlož a začni znovu.`);
+  return R; };
+// kreslení stopy
+const stopaCan=document.createElement('canvas'); stopaCan.width=stopaCan.height=600; ST.stopaCan=null; let stopaVyb=-1;
+function stopaKresli(sh){ const c=stopaCan, x=c.getContext('2d'), W=c.width, S=sh.stopa, t=S.t, P=S.pts; x.fillStyle='#f3efe4'; x.fillRect(0,0,W,W);
+  const ring=t.typ==='ring', cx0=ring?0:S.p0.x, cy0=ring?0:S.p0.y; let vr=Math.max(...P.map(p=>Math.hypot(p.x-cx0,p.y-cy0)))*1.15; vr=Math.max(vr,ring?t.R10*2.5:0.03); if(ring) vr=Math.min(vr,t.size/2);
+  const k=W/2/vr, X=v=>W/2+(v-cx0)*k, Y=v=>W/2-(v-cy0)*k;
+  if(ring){ x.fillStyle='#1b1b1b'; x.beginPath(); x.arc(W/2,W/2,t.blk*k,0,7); x.fill();
+    for(let r=10;r>=1;r--){ const rad=(t.R10+t.step*(10-r))*k, inb=r>=t.bin; if(rad>W) continue; x.strokeStyle=inb?'#ddd':'#777'; x.lineWidth=1.5; x.beginPath(); x.arc(W/2,W/2,rad,0,7); x.stroke(); x.fillStyle=inb?'#ddd':'#555'; x.font='600 18px Arial'; x.fillText(String(r),W/2+rad-16,W/2-4); } }
+  else { const krok=[0.005,0.01,0.02,0.05,0.1,0.2].find(s=>vr/s<=6)||0.5; x.strokeStyle='#bbb'; x.lineWidth=1; for(let r=krok;r<vr*1.5;r+=krok){ x.beginPath(); x.arc(W/2,W/2,r*k,0,7); x.stroke(); } x.fillStyle='#777'; x.font='600 18px Arial'; x.fillText(`kruhy po ${Math.round(krok*1000)} mm`,12,W-14); }
+  const barva=dt=>dt>0?'#d23a2a':dt>-0.2?'#e0a800':dt>-0.5?'#2f9e5a':'#9aa39e';
+  x.lineWidth=3; x.lineCap='round'; for(let i=1;i<P.length;i++){ x.strokeStyle=barva(P[i].dt); x.beginPath(); x.moveTo(X(P[i-1].x),Y(P[i-1].y)); x.lineTo(X(P[i].x),Y(P[i].y)); x.stroke(); }
+  const rb=Math.max(6,zbr().r*k); x.fillStyle='#111'; x.beginPath(); x.arc(X(S.p0.x),Y(S.p0.y),rb,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=2; x.stroke();
+  ST.stopaCan=c; }
+function stopaPanel(){ const box=$('stopaBox'); if(!box) return; const sh=ST.shots.filter(s=>s.stopa); if(!sh.length){ box.hidden=true; return; } box.hidden=false;
+  if(stopaVyb<0||stopaVyb>=sh.length) stopaVyb=sh.length-1; const s=sh[stopaVyb], q=s.stopa.scatt; stopaKresli(s);
+  $('stopaBtns').innerHTML=sh.map((x,i)=>`<button type="button" class="btn" aria-pressed="${i===stopaVyb}" data-i="${i}">${ST.shots.indexOf(x)+1}</button>`).join('');
+  $('stopaImg').src=stopaCan.toDataURL('image/png');
+  $('stopaTxt').innerHTML=`<b>Rána ${ST.shots.indexOf(s)+1}</b> · ${s.zona}${q.ten!=null?` · v desítce ${Math.round(q.ten*100)} % poslední sekundy`:''}<br>klid mířidel ${q.stab==null?'–':q.stab.toFixed(1)} mm · pohyb při stisku ${q.stisk.toFixed(1)} mm (${smer(q.sdir[0],q.sdir[1])})${q.dodrz!=null?` · po ráně ${q.dodrz.toFixed(1)} mm`:''}`;
+  if(typeof drawPanel==='function') drawPanel(); }
+(()=>{ const v=$('vysl'); const d=document.createElement('div'); d.id='stopaBox'; d.hidden=true; d.className='stopa';
+  d.innerHTML=`<h3 style="font:700 19px var(--display);margin:14px 0 6px">Stopa míření</h3>
+   <div class="stopaG"><img id="stopaImg" alt="Stopa mířidel na terči před ranou a po ní" width="300" height="300" style="width:100%;max-width:300px;height:auto;border-radius:8px;border:1px solid var(--line)">
+   <div style="min-width:0"><div class="seg" id="stopaBtns"></div><p class="small" id="stopaTxt" style="margin:4px 0 8px"></p>
+   <p class="small" style="margin:0"><span style="color:#9aa39e">■</span> míření 1,5–0,5 s před ranou · <span style="color:#2f9e5a">■</span> posledních 0,5 s · <span style="color:#e0a800">■</span> stisk (0,2 s) · <span style="color:#d23a2a">■</span> po ráně · ● zásah</p></div></div>`;
+  v.insertBefore(d,$('vyslTr')); $('stopaBtns').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; stopaVyb=+b.dataset.i; stopaPanel(); }; })();
+const _renderV=renderVysledek; renderVysledek=function(R){ _renderV(R); stopaVyb=-1; stopaPanel(); };
+
+/* ================= IDPA: terč s zónami −0 / −1 / −3, hodnocení čas + body dolů ================= */
+// rozměry terče IDPA (palce → m): karta 18×30", hlava −0 Ø4", hruď −0 Ø8", zóna −1 hlava 6" a trup 12×18", zbytek −3
+function idpaTarget(x,y,z,name){ const i=0.0254; const t=kartaTarget(x,y,z,18*i,30*i,[
+   {typ:'kruh',x:0,y:11*i,r:2*i,nazev:'-0'},{typ:'kruh',x:0,y:3*i,r:4*i,nazev:'-0'},
+   {typ:'kruh',x:0,y:11*i,r:3*i,nazev:'-1'},{typ:'rect',x:0,y:0.5*i,w:12*i,h:17*i,nazev:'-1'}],{name,nadpis:'IDPA',pozadi:'#d8b98c'}); const sc=t.score; t.score=l=>{ const r=sc(l); if(r&&r.zona==='mimo'){ r.zona='-3'; r.pts=1; } return r; }; return t; }
+function idpaVyhodnot(S,R,sh,T){ const req=S.zasahu||2, ter=TG.filter(t=>t.typ==='karta'), nt=TG.filter(t=>t.typ==='noshoot');
+  let pd=0, miss=0, z0=0, z1=0, z3=0; for(const t of ter){ const h=t.hits.map(x=>x.zona==='-0'?0:x.zona==='-1'?1:3).sort((a,b)=>a-b).slice(0,req); h.forEach(v=>{ pd+=v; if(v===0) z0++; else if(v===1) z1++; else z3++; }); miss+=Math.max(0,req-h.length); }
+  pd+=miss*5; const hnt=nt.filter(t=>t.hits.length).length, vysl=T+pd+hnt*5;
+  R.sum.push(['Čas',t2(T)+' s'],['Body dolů',pd+' (= +'+pd+' s)'],['Výsledek',t2(vysl)+' s'],['−0 / −1 / −3',`${z0} / ${z1} / ${z3}`],['Minutí',miss],['Zásah nevinného',hnt+(hnt?' (+'+5*hnt+' s)':'')]);
+  R.skore=+vysl.toFixed(2); R.nizsiLepsi=true;
+  if(hnt) R.tr.push('Zásah nevinného (+5 s) je v IDPA nejdražší chyba. U terče vedle nevinného zpomal a miř přesně do −0.');
+  if(miss) R.tr.push(`Minutí: ${miss} × 5 bodů dolů. Každý terč potřebuje ${req} zásahy, než přejdeš dál.`);
+  if(z1+z3>z0) R.tr.push('Víc zásahů mimo −0 než v ní. IDPA odměňuje přesnost: 1 bod dolů = 1 s. Zpomal o chlup a zasáhni −0.');
+  else R.tr.push('Přesnost dobrá. Čas zlepšíš plynulými přechody mezi terči a střelbou z krytu bez zbytečného vykukování.');
+  R.tr.push('V IDPA se střílí z krytu: aspoň polovina trupu za překážkou, přebíjí se v krytu. Za střelbu bez krytu dává rozhodčí procedurální chybu (+3 s).'); return R; }
+STAGES.push(
+ {id:'idpa1',cat:'dyn',n:'IDPA: 3 terče na 5 m (standard)',zbran:'pistole',env:'hala',mode:'idpa',ran:6,mag:10,cas:20,zasahu:2,
+  popis:'Tři terče IDPA na 5 m, dvě rány do každého. Výsledek = čas + body dolů (1 bod = 1 s). Terč: −0 (hruď Ø 8″, hlava Ø 4″), −1, zbytek −3.',
+  lekce:['Povely jako v IPSC: nabijte a připravte se → jste připraven? → pozor → pípnutí.','Dvě rány do každého terče, terče zleva doprava (tactical priority: bližší dřív, při stejné vzdálenosti po řadě).','Body dolů jsou čas: zásah v −1 stojí 1 s, v −3 tři sekundy, minutí 5 s.'],
+  setup(){ idpaTarget(-1.6,1.45,-5,'T1'); idpaTarget(0,1.45,-5,'T2'); idpaTarget(1.6,1.45,-5,'T3'); startPos(0,0,0); }, vyhodnot:idpaVyhodnot },
+ {id:'idpa2',cat:'dyn',n:'IDPA: Za krytem (barikáda)',zbran:'pistole',env:'mesto',mode:'idpa',ran:8,mag:10,cas:40,zasahu:2,
+  popis:'Barikáda uprostřed: dva terče vlevo, dva vpravo, mezi nimi nevinný. Střílí se z krytu přes levý a pravý okraj barikády.',
+  lekce:['Z krytu se vykloň jen tolik, abys viděl terč – zbraň u těla, ne napřed za roh.','Nejdřív terče z levé strany, pak přejdi doprava. Přebíjej za krytem.','Nevinný (bílé ruce) stojí mezi terči – zásah +5 s.'],
+  setup(){ zed(-0.7,-1.6,0.7,-1.6,2.2,0x7a5a3a,0.12); idpaTarget(-3.2,1.45,-8,'L1'); idpaTarget(-2,1.45,-11,'L2'); idpaTarget(2,1.45,-11,'P1'); idpaTarget(3.2,1.45,-8,'P2'); ipscTarget(0,1.45,-12,{noshoot:true,name:'NT'}); startPos(0,0,0); }, vyhodnot:idpaVyhodnot });
+/* ================= ROZHRANÍ: záložky, lišta s informacemi ================= */
+function tab(id){ document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===id)));
+  document.querySelectorAll('.tabp').forEach(p=>p.hidden=p.id!=='tab-'+id); LS.set('st-tab',id); }
+$('tabs').onclick=e=>{ const b=e.target.closest('button'); if(b) tab(b.dataset.tab); };
+$('denikLink').onclick=e=>{ e.preventDefault(); tab('denik'); $('tabs').scrollIntoView({behavior:'smooth',block:'start'}); };
+function tlacText(sel){ const b=document.querySelector(sel+' button[aria-pressed="true"]'); return b?b.textContent.replace(/\s*\(.*\)/,''):''; }
+function akceInfo(){ const S=ST.stage; $('akceNazev').textContent=S?S.n:'Vyberte cvičení';
+  const ch=[]; ch.push(ENVSET[ST.env]?ENVSET[ST.env].n:''); const doba=tlacText('#dobaSeg'), poc=tlacText('#pocasiSeg'), tl=tlacText('#tlakSeg'); if(doba) ch.push(doba); if(poc) ch.push(poc); if(tl) ch.push('tlak: '+tl.toLowerCase());
+  if(S&&ST.vzd) ch.push(ST.vzd+' m');
+  if(typeof zbr==='function'&&S){ const Z=zbr(); ch.push(Z.n+(Z.mir==='kol'?' · kolimátor':'')); }
+  const sp=typeof spoustOK==='function'&&spoustOK();
+  $('akceChips').innerHTML=ch.filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join('')+`<span class="${sp?'ok':''}">${sp?'spoušť BLE připojena':'spoušť: ovladač / myš'}</span>`;
+  const st=$('startBtn'); st.textContent=ST.phase==='run'||ST.phase==='ready'?'STOP':ST.phase==='done'?'ZNOVU':'START'; }
+const _drawHud=drawHud; drawHud=function(){ _drawHud(); try{ akceInfo(); }catch(e){} };
+// po vyhodnocení ukázat výsledek
+const _renderV2=renderVysledek; renderVysledek=function(R){ _renderV2(R); if(!ST.inXR){ const r=$('vysl').getBoundingClientRect(); if(r.top>innerHeight) $('vysl').scrollIntoView({behavior:'smooth',block:'nearest'}); } };
+['dobaSeg','pocasiSeg','tlakSeg','envSeg'].forEach(id=>$(id).addEventListener('click',()=>setTimeout(akceInfo,0)));
+document.addEventListener('change',e=>{ if(e.target.closest('#tab-zbran')) setTimeout(akceInfo,0); });
+tab(LS.get('st-tab','cviceni')); setTimeout(akceInfo,0); setInterval(akceInfo,5000);
 
 /* ================= OVLÁDÁNÍ, POHYB, SMYČKA ================= */
 const keys={};
@@ -1044,7 +1275,7 @@ function loop(){ const now=performance.now(), dt=Math.min(0.05,(now-last)/1000);
   else { pollPads(dt); if(typeof gunHistTick==='function') gunHistTick(); }
   // zpětný ráz: zvednutí mušky se vrací (~0,12 s pistole)
   srazkyTick(dt); tlakTick(dt,now); realTick(dt); const ch=chveniOffset(now/1000);
-  ST.recoil*=Math.exp(-dt/0.12); gunKick*=Math.exp(-dt/0.06); gunModel.rotation.x=gunKick+ch[1]; gunModel.rotation.y=ch[0]; gunModel.position.z=gunKick*0.15;
+  ST.recoil*=Math.exp(-dt/(typeof zbr==='function'?zbr().zotav:0.12)); if(typeof zbrTick==='function') zbrTick(); if(typeof stopaTick==='function') stopaTick(); gunKick*=Math.exp(-dt/0.06); gunModel.rotation.x=gunKick+ch[1]; gunModel.rotation.y=ch[0]; gunModel.position.z=gunKick*0.15;
   if(ST.reloading&&now/1000>ST.reloading){ ST.reloading=0; ST.mag=ST.magCap; say('Přebito'); }
   if(ST.phase==='run'&&ST.stage&&now/1000-ST.t0>ST.stage.cas){ say('Čas vypršel'); konec('cas'); }
   // otočné terče: otočí se čelem, když střelec vejde do zóny nebo když uplyne čas od pípnutí
