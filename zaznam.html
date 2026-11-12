@@ -148,9 +148,9 @@ fieldset:disabled{opacity:.5}
 <body>
 
 <div class="wrap">
-  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-3</small></h1>
+  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-4</small></h1>
     <div style="display:flex;gap:8px;align-items:center"><select id="langSel" aria-label="Jazyk / Language"><option value="cs">CZ</option><option value="en">GB</option><option value="es">ES</option><option value="it">IT</option><option value="de">DE</option></select>
-    <a href="index.html" class="btn" id="simLink" style="text-decoration:none;padding:6px 10px">🎯 Simulátor</a><div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
+    <a href="index.html" target="_blank" rel="noopener" title="Otevře se v nové kartě – spoušť zůstane připojená tady" class="btn" id="simLink" style="text-decoration:none;padding:6px 10px">🎯 Simulátor</a><div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
     <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn" id="kabBtn" hidden title="Chrome / Edge na Macu nebo PC">Kabel USB</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
 
@@ -269,7 +269,7 @@ fieldset:disabled{opacity:.5}
         <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
       </div>
       <div class="card fs">
-        <p class="explain">Verze aplikace: <b>2026.11.12-3</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
+        <p class="explain">Verze aplikace: <b>2026.11.12-4</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
         <h2>Komunikace</h2>
         <div class="log" id="log"></div>
       </div>
@@ -987,7 +987,7 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
-const VERZE = '2026.11.12-3';
+const VERZE = '2026.11.12-4';
 window.addEventListener('error', e => { try { log('! chyba programu (verze ' + VERZE + '): ' + (e.message || '?')); } catch (_) {} });
 // nejčastější příčina: telefon si pamatuje staré spárování, které spoušť už nezná („Peer removed pairing information“)
 const ZAPOMENOUT = 'Nejčastěji je to staré spárování: v iPhonu Nastavení → Bluetooth → Skeet Trigger → ⓘ → <u>Zapomenout toto zařízení</u> (na Macu Nastavení systému → Bluetooth → ⓘ → Zapomenout). Pak vypněte a zapněte Bluetooth, úplně zavřete Bluefy a dejte znovu Připojit; párování potvrďte. Ve Questu spoušť případně spárujte znovu.';
@@ -1032,13 +1032,17 @@ const spNorm = n => String(n || '').replace(/_/g, ' ').replace(/^Skeet\s+/i, '')
 function spoustId() { if (!connected() && !kabel()) return ''; if (stav && stav.jmeno) return spNorm(stav.jmeno); return dev ? spNorm(dev.name) : ''; }
 const spSeznam = () => LS.get('spouste', []);
 const spJen = () => LS.get('spJen', true) && spSeznam().length > 0;
-function spKdo(id) { const x = spSeznam().find(s => s.id.toLowerCase() === String(id || '').toLowerCase()); return x ? x.kdo : ''; }
-function spPovolena(id) { if (!spJen()) return true; return !!spSeznam().find(s => s.id.toLowerCase() === String(id || '').toLowerCase()); }
+// shoda i podle konce čísla: „4D“ = „Trigger 1A4D“
+const spShoda = (s, id) => { const a = s.id.toLowerCase(), b = String(id || '').toLowerCase(); return !!b && (a === b || b.endsWith(a) || a.endsWith(b)); };
+function spKdo(id) { const x = spSeznam().find(s => spShoda(s, id)); return x ? x.kdo : ''; }
+function spPovolena(id) { if (!spJen()) return true; return !!spSeznam().find(s => spShoda(s, id)); }
+// filtr Bluetooth: přesné jméno jen u celých čísel („Trigger 1A4D“), jinak všechny „Skeet …“ a kontrola po připojení
+const spFiltry = () => spSeznam().every(s => /^trigger [0-9a-f]{4}$/i.test(s.id)) ? spSeznam().map(s => ({ name: 'Skeet ' + s.id })) : [{ namePrefix: 'Skeet' }];
 function spUloz(l) { LS.set('spouste', l); spRender(); render(); }
 function spRender() {
   const l = spSeznam(), cur = spoustId();
-  $('spList').innerHTML = l.length ? l.map((s, i) => `<div class="spi${cur && cur.toLowerCase() === s.id.toLowerCase() ? ' on' : ''}"><b>${esc(s.id)}</b><span class="k">${esc(s.kdo || '—')}${cur && cur.toLowerCase() === s.id.toLowerCase() ? ' · připojena' : ''}</span><button class="btn" data-spdel="${i}">Odebrat</button></div>`).join('') : '<p class="explain">Seznam je prázdný – aplikace přijme kteroukoli spoušť „Skeet …“.</p>';
-  $('spAddCur').disabled = !cur || !!l.find(s => s.id.toLowerCase() === cur.toLowerCase());
+  $('spList').innerHTML = l.length ? l.map((s, i) => `<div class="spi${cur && spShoda(s, cur) ? ' on' : ''}"><b>${esc(s.id)}</b><span class="k">${esc(s.kdo || '—')}${cur && spShoda(s, cur) ? ' · připojena' : ''}</span><button class="btn" data-spdel="${i}">Odebrat</button></div>`).join('') : '<p class="explain">Seznam je prázdný – aplikace přijme kteroukoli spoušť „Skeet …“.</p>';
+  $('spAddCur').disabled = !cur || !!l.find(s => spShoda(s, cur));
   $('spJen').value = LS.get('spJen', true) ? '1' : '0';
 }
 function spPridej(id, kdo) { id = spNorm(id); if (!id) { $('spMsg').textContent = 'Zadejte číslo spouště.'; return; }
@@ -1057,7 +1061,7 @@ async function connect(vse) {
   if (!navigator.bluetooth) { connMsg('Tento prohlížeč neumí Bluetooth. V iPhonu otevřete stránku v aplikaci Bluefy, na Macu v Chrome.'); return; }
   try {
     connMsg(vse ? 'Vyberte spoušť ze seznamu všech zařízení…' : spJen() ? 'Vyberte svou spoušť (' + spSeznam().map(s => s.id).join(', ') + ')…' : 'Vyberte „Skeet …“…');
-    dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : spJen() ? { filters: spSeznam().map(s => ({ name: 'Skeet ' + s.id })), optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
+    dev = await navigator.bluetooth.requestDevice(vse ? { acceptAllDevices: true, optionalServices: [NUS] } : spJen() ? { filters: spFiltry(), optionalServices: [NUS] } : { filters: [{ namePrefix: 'Skeet' }], optionalServices: [NUS] });
     dev.addEventListener('gattserverdisconnected', () => { rx = null; stav = null; showConn(); if (!rucneOdpojeno && !obnovuji) obnov('Spojení spadlo'); });
     connMsg('Připojuji…');
     await gattNahoru();
