@@ -82,7 +82,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.12-5</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-1</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -120,7 +120,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <div class="seg" id="krajSeg" aria-label="Krajina"><button type="button" data-k="les">Les</button><button type="button" data-k="louka">Louka</button><button type="button" data-k="rybnik">Rybník</button><button type="button" data-k="poust">Poušť</button><button type="button" data-k="mesic">Měsíc</button></div>
         <div class="seg" id="svetloSeg" aria-label="Světlo"><button type="button" data-l="rano">Ráno (svítání)</button><button type="button" data-l="den">Den</button><button type="button" data-l="poledne">Poledne (ostré slunce)</button><button type="button" data-l="vecer">Večer proti slunci</button><button type="button" data-l="soumrak">Soumrak (modrá hodina)</button><button type="button" data-l="noc">Noc s reflektory</button><button type="button" data-l="zatazeno">Zataženo</button></div>
         <div class="seg" id="pocasiSeg" aria-label="Počasí"><button type="button" data-p="jasno">Jasno</button><button type="button" data-p="polojasno">Polojasno</button><button type="button" data-p="dest">Déšť</button><button type="button" data-p="bourka">Bouřka</button><button type="button" data-p="snih">Sníh</button><button type="button" data-p="mlha">Mlha</button></div>
-        <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Barva terče <select id="clayColSel" style="flex:1"><option value="oranz">Oranžový</option><option value="cerny">Černý</option><option value="zluty">Fluo žlutý</option><option value="bily">Bílý</option><option value="flash">Černý s růžovým prachem</option></select></label>
+        <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Barva terče <select id="clayColSel" style="flex:1"><option value="oranz">Fluo oranžový</option><option value="cernoor">Černý s oranžovou kupolí</option><option value="cerny">Černý</option><option value="zluty">Fluo žlutý</option><option value="bily">Bílý</option><option value="flash">Černý s růžovým prachem</option></select></label>
         <div class="seg" id="rozborSeg" aria-label="Rozbor rány"><button type="button" data-r="vyp">Rozbor: vyp</button><button type="button" data-r="chyba">Rozbor po chybě</button><button type="button" data-r="vzdy">Rozbor vždy</button><button type="button" id="rozborBtn">Přehrát poslední (R)</button></div>
         <div class="seg"><button type="button" id="drzBtn" aria-pressed="true">Kontrola držení (VR)</button></div>
         <div class="seg"><button type="button" id="rozhodciBtn" aria-pressed="false">Hlas rozhodčího</button><button type="button" id="trenerBtn" aria-pressed="false">Trenér (rady hlasem)</button><button type="button" id="hlasBtn" aria-pressed="false">Terč na hlas (mikrofon)</button></div>
@@ -553,7 +553,7 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.12-5';
+const VERZE='2026.11.13-1';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -1018,9 +1018,10 @@ const RAIN=(()=>{ const N=1800, g=new THREE.BufferGeometry(), pos=new Float32Arr
 function rainTick(dt){ if(!RAIN.visible) return; RAIN.position.set(dolly.position.x,0,dolly.position.z); const P=RAIN.geometry.attributes.position, a=P.array;
   const sn=st.pocasi==='snih', v=sn?1.2:st.pocasi==='bourka'?15:11, t=performance.now()/1000;
   for(let i=0;i<a.length;i+=6){ const dx=sn?Math.sin(t+i)*0.4*dt:0; a[i]+=dx; a[i+3]+=dx; a[i+1]-=dt*v; a[i+4]-=dt*v; if(a[i+4]<0){ a[i+1]+=18; a[i+4]+=18; } } P.needsUpdate=true; }
-const CLAYC={oranz:{n:'Oranžový',c:0xe8662a,p:[0xd9773f,0xc8622f]},cerny:{n:'Černý',c:0x1d1d1d,p:[0x3a3a3a,0x555555]},zluty:{n:'Fluo žlutý',c:0xd6ef1f,p:[0xd9e85a,0xc8d84a]},
+// fluorescenční barvy svítí i ve stínu (emisivní složka) – na skutečné střelnici je oranžový terč vidět výrazně líp než obyčejně nabarvená plocha
+const CLAYC={oranz:{n:'Fluo oranžový',c:0xff5a12,e:0xff3c00,ei:0.55,rim:0xe24a0c,p:[0xff7a3a,0xf0662a]},cernoor:{n:'Černý s oranžovou kupolí',c:0xff5a12,e:0xff3c00,ei:0.55,rim:0x161616,p:[0x3a3a3a,0xff7a3a]},cerny:{n:'Černý',c:0x1d1d1d,p:[0x3a3a3a,0x555555]},zluty:{n:'Fluo žlutý',c:0xd6ef1f,e:0xb8e000,ei:0.4,rim:0xc8e01a,p:[0xd9e85a,0xc8d84a]},
   bily:{n:'Bílý',c:0xf1efe8,p:[0xe8e6e0,0xd0cec8]},flash:{n:'Černý s růžovým prachem',c:0x1d1d1d,p:[0xff3fa0,0xff7ac0]}};
-function clayColApply(){ const C=CLAYC[st.clayCol]||CLAYC.oranz; clayMat.color.setHex(C.c); }
+function clayColApply(){ const C=CLAYC[st.clayCol]||CLAYC.oranz; clayMat.color.setHex(C.c); clayMat.emissive.setHex(C.e||0x000000); clayMat.emissiveIntensity=C.ei||0; clayRim.color.setHex(C.rim||0x1b1b1b); clayRim.emissive.setHex(C.rim&&C.e?C.e:0); clayRim.emissiveIntensity=C.rim&&C.e&&C.rim!==0x161616?C.ei*0.8:0; }
 const puffCol=i=>(CLAYC[st.clayCol]||CLAYC.oranz).p[i];
 function pocasiApply(){ const sn=st.pocasi==='snih'; RAIN.visible=['dest','bourka','snih'].includes(st.pocasi)&&!(typeof KRAJ!=='undefined'&&KRAJ.v==='mesic');
   RAIN.material.color.setHex(sn?0xffffff:0xaabbcc); RAIN.material.opacity=sn?0.95:st.pocasi==='bourka'?0.6:0.45;
@@ -1322,11 +1323,12 @@ function sShot(){ const a=audio(); if(!a)return; const o=out(), t=a.currentTime;
 const _sShotOld=()=>noise(0.45,2400,0.9,0.07), sBreak=()=>noise(0.18,6000,0.35,0.025), sThrow=()=>{ if(throwSnd) noise(0.25,300,0.6,0.05); }, sClick=()=>noise(0.03,8000,0.2,0.004);
 
 /* ---------- Terče ---------- */
-const clayGeo=new THREE.CylinderGeometry(0.054,0.054,0.026,20), clayMat=mat(0xe8662a), clayRim=mat(0x1b1b1b);
+// skutečný tvar terče 110 × 25 mm: rovný spodek, šikmý bok, rameno a kupole
+const clayGeo=new THREE.LatheGeometry([[0,-0.0125],[0.050,-0.0125],[0.0548,-0.0095],[0.0545,-0.002],[0.049,0.003],[0.044,0.0085],[0.034,0.0118],[0.018,0.0132],[0,0.0135]].map(([x,y])=>new THREE.Vector2(x,y)),28), clayMat=new THREE.MeshLambertMaterial({color:0xff5a12,emissive:0xff3c00,emissiveIntensity:0.55}), clayRim=new THREE.MeshLambertMaterial({color:0xe24a0c});
 const haloTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,4,32,32,30);g.addColorStop(0,'rgba(255,120,40,1)');g.addColorStop(0.5,'rgba(255,120,40,0.55)');g.addColorStop(1,'rgba(255,120,40,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
 function makeClay(){const g=new THREE.Group();
   const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:haloTex,sizeAttenuation:false,depthTest:false,fog:false,transparent:true}));
-  halo.scale.set(0.035,0.035,1); halo.renderOrder=7; halo.visible=st.big; g.userData.halo=halo; g.add(halo); g.add(new THREE.Mesh(clayGeo,clayMat)); const r=new THREE.Mesh(new THREE.TorusGeometry(0.054,0.004,4,20),clayRim); r.rotation.x=Math.PI/2; g.add(r); return g;}
+  halo.scale.set(0.035,0.035,1); halo.renderOrder=7; halo.visible=st.big; g.userData.halo=halo; g.add(halo); g.add(new THREE.Mesh(clayGeo,clayMat)); const r=new THREE.Mesh(new THREE.TorusGeometry(0.0535,0.0035,6,28),clayRim); r.rotation.x=Math.PI/2; r.position.y=-0.006; g.add(r); return g;}
 function applyBig(m){const k=st.big?2.5:1; m.children.forEach(c=>{if(c!==m.userData.halo)c.scale.setScalar(k);}); m.userData.halo.visible=st.big;}
 function launch(which){ if(st.terc==='zajic') return launchRabbit(); if(which==='T'||which==='W1'||which==='W2') return launchTrap(which);
   const house=which==='H'?HOUSE_H:HOUSE_L, p=house.mouth.clone();
@@ -1396,7 +1398,9 @@ function fire(src,lagMs){
   // jednotlivé broky: směr v obrazci (σ = 1/1,665 → 75 % uvnitř poloměru hraničky), část zdeformovaných
   const od=odpadOf(), N=Math.round(a.count*0.95), pel=new Float32Array(N*3);
   for(let i=0;i<N;i++){ pel[i*3]=gauss()/1.665; pel[i*3+1]=gauss()/1.665; pel[i*3+2]=Math.random()<od?1:0; }
-  st.shots.push({o,d,t:0,prev:0,judged:new Set(),best:null,a,rate,barrel,pel,tShot:performance.now()/1000});
+  // na který terč střelec mířil (nejmenší úhel od osy výstřelu) – okrajový „odštěp“ smí dostat jen ten
+  let aim=null, ba=1e9; for(const t of st.targets){ if(!t.alive) continue; const ang=t.p.clone().sub(o).angleTo(d); if(ang<ba){ ba=ang; aim=t; } }
+  st.shots.push({o,d,t:0,prev:0,judged:new Set(),best:null,a,rate,barrel,pel,aim,tShot:performance.now()/1000});
 }
 
 /* ---------- Nástřel – tabule na 16 m ---------- */
@@ -1913,6 +1917,7 @@ function step(dt){
       if(along<=0){sh.judged.add(t);continue;}
       if(along>sh.prev&&along<=D){ sh.judged.add(t);
         const perp=rel.addScaledVector(sh.d,-along), r=patternR(sh.rate,sh.a.steel,along), res=judge(sh,t,along,perp,r);
+        if(res.hit&&(res.kind==='odstip'||sh.hitInfo)&&sh.aim&&sh.aim!==t){ res.hit=false; }   // druhý terč dvojice: jen okrajové broky → nezasažen (dřív se rozprskl a letěl dál)
         if(res.hit){t.alive=false; sh.hitInfo={res,t,center:sh.o.clone().addScaledVector(sh.d,along),tp:t.p.clone()}; shatter(t,res.kind); report(t,res);}
         else if(!sh.best||perp.length()<sh.best.dist){sh.best={dist:perp.length(),res,t,center:sh.o.clone().addScaledVector(sh.d,along),tp:t.p.clone()};}
       }}

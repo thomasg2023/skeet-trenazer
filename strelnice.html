@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.12-13</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.13-1</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -669,6 +669,7 @@ function autoKonec(){ const S=ST.stage; if(!S) return false;
   if(S.mode==='presna') return ST.shots.length>=S.ran;
   if(S.mode==='drill'&&S.id==='bill') return ST.shots.length>=6;
   if(S.id==='mozambik') return ST.shots.length>=3; if(S.id==='fast') return ST.shots.length>=6; if(S.id==='dot') return ST.shots.length>=20; if(S.id==='biatlon') return ST.shots.length>=5; if(S.id==='prs') return TG.filter(t=>t.stav).every(t=>t.hits.length>=2)||ST.shots.length>=12; if(S.id==='steel5') return false;
+  if(S.id==='dvojice3') return ST.shots.length>=6;
   if(S.mode==='idpa') return TG.filter(t=>t.typ==='karta').every(t=>t.hits.length>=(S.zasahu||2));
   if(S.rukojmi) return ST.shots.length>=1&&TG.some(t=>t.name==='H'&&t.hits.length)||TG.some(t=>t.typ==='noshoot'&&t.hits.length);
   const papir=TG.filter(t=>t.typ==='ipsc'), ocel=TG.filter(t=>t.typ==='steel'||t.typ==='popper');
@@ -1075,6 +1076,47 @@ async function rekvizity(S){ const tag=S.id+':'+Date.now(); rekvizity.tag=tag; c
     for(const o of nahr){ o.visible=false; const k=b.clone(true); k.position.set(o.position.x,0,o.position.z); k.rotation.y=Math.random()*6.28; ENV.poust.add(k); } } })();
 const _vyberR=vyberCviceni; vyberCviceni=function(id){ _vyberR(id); try{ zdiMaterial(); }catch(e){} if(ST.stage&&FOTO.on) rekvizity(ST.stage); };
 
+/* ================= AKČNÍ TERČE A DALŠÍ STAGE ================= */
+// popper spouští: drop-turner (otočí se, chvíli je vidět, pak zmizí), swinger (kyvadlo), clamshell (odkryje se)
+function spoustPopperem(t,pop,o){ o=o||{}; t.skryty=true; t.aktPop=pop; t.okno=o.okno||0; t.cil0=t.m.rotation.y; t.m.rotation.y=t.cil0+Math.PI/2; return t; }
+function kyvadlo(t,amp,perioda,pop){ t.sw={x0:t.m.position.x,A:amp,w:2*Math.PI/perioda,t0:null,pop:pop||null}; return t; }
+function akceTick(dt,tRun){ if(ST.phase!=='run') return;
+  for(const t of TG){
+    if(t.skryty&&t.aktPop&&t.aktPop.down&&!t.odkryto){ t.odkryto=tRun; t.skryty=false; t.otoc=0; noise(0.25,700,0.25,0.06); if(t.sw&&t.sw.pop===t.aktPop) t.sw.t0=tRun; }
+    if(t.okno&&t.odkryto!=null&&!t.zmizel&&tRun-t.odkryto>t.okno){ t.zmizel=true; t.skryty=true; t.otoc=null; t.zpet=0; }
+    if(t.zpet!=null&&t.zpet<1){ t.zpet=Math.min(1,t.zpet+dt*4); t.m.rotation.y=t.cil0+t.zpet*Math.PI/2; }
+    if(t.sw){ if(t.sw.t0==null&&(!t.sw.pop||t.sw.pop.down)) t.sw.t0=t.sw.pop?tRun:0; if(t.sw.t0!=null){ const k=tRun-t.sw.t0, a=t.sw.A*Math.exp(-k*0.05), f=Math.sin(k*t.sw.w);
+      t.m.position.x=t.sw.x0+a*f; t.m.rotation.z=-0.25*a*f; } } } }
+const _vyberA=vyberCviceni; vyberCviceni=function(id){ _vyberA(id); for(const t of TG){ t.odkryto=null; t.zmizel=false; t.zpet=null; } };
+STAGES.push(
+ {id:'dropturn',cat:'dyn',n:'IPSC: popper spustí drop-turner',zbran:'pistole',env:'stadion',mode:'ipsc',ran:14,mag:17,cas:30,
+  popis:'Uprostřed popper. Když padne, vpravo se na 3 sekundy otočí terč (drop-turner) a pak zase zmizí. Vedle dva statické terče a nevinný.',
+  lekce:['Aktivační popper střílej až ve chvíli, kdy jsi připraven na pohyblivý cíl – pořadí si naplánuj předem.','Po pádu poppru máš na drop-turner jen 3 s: oči na místo, kde se objeví, zbraň už tam.','Statické terče nech na konec, neutečou.'],
+  setup(){ boxPal(0,0,1.2); const p=steelTarget(0,1.0,-8,{popper:true,name:'POP'}); const d=ipscTarget(4.2,1.4,-11,{name:'DROP'}); spoustPopperem(d,p,{okno:3});
+    ipscTarget(-3.5,1.4,-7,{name:'T1'}); ipscTarget(-1.8,1.4,-12,{name:'T2'}); ipscTarget(3.2,1.4,-10.6,{noshoot:true,name:'NS'}); startPos(0,0,0); }},
+ {id:'swinger',cat:'dyn',n:'IPSC: kyvadlo za nevinným (swinger)',zbran:'pistole',env:'les',mode:'ipsc',ran:12,mag:17,cas:30,
+  popis:'Popper rozhoupe kyvadlo. Terč se houpe za nevinným – v krajních polohách je celý vidět, uprostřed ho nevinný zakrývá.',
+  lekce:['Na kyvadlo nestřílej do pohybu – počkej v krajní poloze, kde se na chvilku zastaví (ambush).','Nevinný je uprostřed dráhy: rána ve špatnou chvíli = −10 bodů.','Kyvadlo pomalu tlumí – po pár kmitech je lehčí, ale čas běží.'],
+  setup(){ boxPal(0,0,1.2); const p=steelTarget(-3,1.0,-8,{popper:true,name:'POP'}); const s=ipscTarget(0.6,1.4,-10.4,{name:'SWING',bezStojanu:true}); kyvadlo(s,0.75,2.6,p);
+    const ram=box(2.4,0.06,0.06,mat(0x555555),0.6,2.1,-10.45,TGROUP); ipscTarget(0.6,1.4,-10,{noshoot:true,name:'NS'}); ipscTarget(3.6,1.4,-8,{name:'T1'}); startPos(0,0,0); }},
+ {id:'smoke',cat:'drill',n:'Steel Challenge: Smoke & Hope (podle)',zbran:'pistole',env:'les',mode:'drill',ran:15,mag:17,cas:15,
+  popis:'Rychlá stage: čtyři velké obdélníkové plechy blízko (7–8 m) a kulatý STOP plech ve středu. Čas do zásahu STOP plechu, za chybějící plech +3 s. Rozložení podle Steel Challenge „Smoke & Hope“.',
+  lekce:['Tady rozhoduje rychlost přechodů, ne přesnost – plechy jsou velké.','Pořadí: z kraje dovnitř a STOP na konec. Neopravuj, dokud neslyšíš, že jsi minul.','Po pípnutí: oči na první plech, zbraň tam hned za nimi.'],
+  setup(){ for(const [x,z] of [[-3.6,-7],[-1.5,-8],[1.5,-8],[3.6,-7]]) steelTarget(x,1.4,z,{obd:[0.46,0.61],stav:true,name:'P'}); steelTarget(0,1.45,-10,{r:0.15,stop:true,stav:true,barva:0xd23a2a,name:'STOP'}); boxPal(0,0,1); startPos(0,0,0); },
+  vyhodnot(S,R,sh,T){ const pl=TG.filter(t=>t.stav&&!t.stop), chyb=pl.filter(t=>!t.down).length, c=T+3*chyb; R.sum.push(['Čas',t2(T)+' s'],['Nezasažené plechy',chyb+' (+'+3*chyb+' s)'],['Výsledek',t2(c)+' s'],['Ran',sh.length]); R.skore=+c.toFixed(2); R.nizsiLepsi=true;
+    R.tr.push(c<3?'Výborné – pod 3 s je na Smoke & Hope velmi dobrý výkon.':c<4.5?'Dobré. Čas zkrátíš plynulými přechody – zbraň se zastaví až na plechu, ne před ním.':'Zkus nejdřív čistou sérii bez minutí, pak teprve zrychluj.'); return R; }},
+ {id:'accel',cat:'drill',n:'Steel Challenge: Accelerator (podle)',zbran:'pistole',env:'stadion',mode:'drill',ran:15,mag:17,cas:20,
+  popis:'Plechy od 9 do 22 m – blízko se střílí rychle, daleko přesně. Učí měnit tempo podle vzdálenosti.',
+  lekce:['Na blízký plech „nalož“ rychlý stisk, na daleký zpomal a dodrž mířidla.','Tempo mění vzdálenost, ne nervozita – vzdálený plech je stejně velký jako blízký.','STOP plech vždy poslední.'],
+  setup(){ steelTarget(-4,1.3,-9,{r:0.15,stav:true,name:'1'}); steelTarget(-2,1.6,-15,{r:0.15,stav:true,name:'2'}); steelTarget(2,1.6,-22,{r:0.15,stav:true,name:'3'}); steelTarget(4,1.3,-12,{r:0.15,stav:true,name:'4'}); steelTarget(0,1.4,-18,{obd:[0.45,0.6],stop:true,stav:true,barva:0xd23a2a,name:'STOP'}); boxPal(0,0,1); startPos(0,0,0); },
+  vyhodnot(S,R,sh,T){ const pl=TG.filter(t=>t.stav&&!t.stop), chyb=pl.filter(t=>!t.down).length, c=T+3*chyb; R.sum.push(['Čas',t2(T)+' s'],['Nezasažené plechy',chyb+' (+'+3*chyb+' s)'],['Výsledek',t2(c)+' s'],['Ran',sh.length]); R.skore=+c.toFixed(2); R.nizsiLepsi=true;
+    R.tr.push('Porovnej časy přechodů: na daleký plech by měl být jen o pár desetin delší. Když je to víc, mířidla hledáš až na místě – zvedni oči k plechu dřív než zbraň.'); return R; }},
+ {id:'dvojice3',cat:'drill',n:'Dvojice na 3, 7 a 15 m',zbran:'pistole',env:'hala',mode:'drill',ran:6,mag:17,cas:12,par:4,
+  popis:'Tři terče IPSC za sebou na 3, 7 a 15 m, do každého dvojici. Učí přizpůsobit rychlost dvojice vzdálenosti (na 3 m „double tap“, na 15 m dvě mířené rány).',
+  lekce:['3 m: jeden obraz mířidel, dvě rány – vnímej jen hrubou mušku.','7 m: po první ráně počkej, až se muška vrátí do zářezu.','15 m: každá rána mířená zvlášť. Rozdíl splitů mezi 3 a 15 m je správně dvoj- až trojnásobný.'],
+  setup(){ ipscTarget(-1.6,1.4,-3,{name:'3m'}); ipscTarget(0,1.4,-7,{name:'7m'}); ipscTarget(1.6,1.4,-15,{name:'15m'}); boxPal(0,0,1); startPos(0,0,0); }}
+);
+
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.
 // Zpoždění BLE (~40 ms) vyrovnáme: zbraň bereme tak, jak mířila v okamžiku, kdy rána skutečně padla.
@@ -1383,6 +1425,7 @@ function loop(){ const now=performance.now(), dt=Math.min(0.05,(now-last)/1000);
     if(t.mov){ const p=t.m.position; p.x+=t.mov.v*t.mov.dir*dt; if(p.x>t.mov.x1){ p.x=t.mov.x1; t.mov.dir=-1; } if(p.x<t.mov.x0){ p.x=t.mov.x0; t.mov.dir=1; } }
     if(t.otoc!=null&&t.otoc<1){ t.otoc=Math.min(1,t.otoc+dt*4); t.m.rotation.y=t.cil0+(1-t.otoc)*Math.PI/2; }
     if((t.typ==='steel'||t.typ==='popper')&&t.down&&!t.stav&&t.fall<1){ t.fall=Math.min(1,t.fall+dt*3); t.g.rotation.x=-t.fall*1.45; t.g.position.y-=dt*(t.typ==='popper'?0.6:1.2)*(1-t.fall); } }
+  if(typeof akceTick==='function') akceTick(dt,tRun);
   // ukazovátko druhé ruky do panelu
   let pt=null, hov=-1; if(ST.inXR&&panel.visible) for(const c of ctrls){ if(isGun(c)) continue; const hh=panelHit(c); if(hh){ pt=hh.point; hov=hh.i; } }
   pointer.visible=!!pt; if(pt) pointer.position.copy(pt); if(hov!==pHover){ pHover=hov; drawPanel(); }
