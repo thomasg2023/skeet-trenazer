@@ -147,9 +147,9 @@ fieldset:disabled{opacity:.5}
 <body>
 
 <div class="wrap">
-  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-1</small></h1>
+  <div class="bar"><h1>Skeet záznam <small id="verze" style="font-size:12px;font-weight:500;opacity:.6">v2026.11.12-2</small></h1>
     <div style="display:flex;gap:8px;align-items:center"><select id="langSel" aria-label="Jazyk / Language"><option value="cs">CZ</option><option value="en">GB</option><option value="es">ES</option><option value="it">IT</option><option value="de">DE</option></select>
-    <div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
+    <a href="index.html" class="btn" id="simLink" style="text-decoration:none;padding:6px 10px">🎯 Simulátor</a><div class="tabs" role="group" aria-label="Záložky"><button id="tZ" aria-pressed="true">Záznamy</button><button id="tN" aria-pressed="false">Nastavení</button></div></div></div>
   <div class="conn"><span class="dot" id="dot"></span><div class="txt" id="connTxt"><b>Spoušť nepřipojena</b></div>
     <button class="btn" id="blinkBtn" hidden>Bliknout</button><button class="btn" id="kabBtn" hidden title="Chrome / Edge na Macu nebo PC">Kabel USB</button><button class="btn pri" id="connBtn">Připojit spoušť</button></div>
 
@@ -256,7 +256,7 @@ fieldset:disabled{opacity:.5}
         <button class="btn danger" id="clearApp">Smazat všechny záznamy v aplikaci</button>
       </div>
       <div class="card fs">
-        <p class="explain">Verze aplikace: <b>2026.11.12-1</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
+        <p class="explain">Verze aplikace: <b>2026.11.12-2</b> · verze firmwaru ve spoušti se ukáže po připojení („fw …“). Při hlášení chyby pošlete obě.</p>
         <h2>Komunikace</h2>
         <div class="log" id="log"></div>
       </div>
@@ -657,6 +657,7 @@ const LANGS = [['cs', 'CZ'], ['en', 'GB'], ['es', 'ES'], ['it', 'IT'], ['de', 'D
 const LI = { en: 0, de: 1, es: 2, it: 3 };
 // EX = jen celý text, PH = i část delší věty (nahrazuje se od nejdelších)
 const EX = {
+  '🎯 Simulátor': ['🎯 Simulator', '🎯 Simulator', '🎯 Simulador', '🎯 Simulatore'],
   'Skeet': ['Skeet', 'Skeet', 'Skeet', 'Skeet'], 'Trap': ['Trap', 'Trap', 'Foso', 'Fossa'],
   'Program': ['Programme', 'Programm', 'Programa', 'Programma'],
   'Americký': ['American', 'Amerikanisch', 'Americano', 'Americano'], 'Olympijský': ['Olympic', 'Olympisch', 'Olímpico', 'Olimpico'],
@@ -967,7 +968,7 @@ function collect(cmd, endP, idleMs = 5000) {   // pošle příkaz a sbírá řá
 }
 const ask = (cmd, startsWith, ms) => collect(cmd, l => startsWith.some(s => l.startsWith(s)), ms).then(a => a[a.length - 1]);
 
-const VERZE = '2026.11.12-1';
+const VERZE = '2026.11.12-2';
 window.addEventListener('error', e => { try { log('! chyba programu (verze ' + VERZE + '): ' + (e.message || '?')); } catch (_) {} });
 // nejčastější příčina: telefon si pamatuje staré spárování, které spoušť už nezná („Peer removed pairing information“)
 const ZAPOMENOUT = 'Nejčastěji je to staré spárování: v iPhonu Nastavení → Bluetooth → Skeet Trigger → ⓘ → <u>Zapomenout toto zařízení</u> (na Macu Nastavení systému → Bluetooth → ⓘ → Zapomenout). Pak vypněte a zapněte Bluetooth, úplně zavřete Bluefy a dejte znovu Připojit; párování potvrďte. Ve Questu spoušť případně spárujte znovu.';
