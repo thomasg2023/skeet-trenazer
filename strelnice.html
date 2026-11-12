@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.12-10</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.12-11</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -200,6 +200,7 @@ const grassTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#6d9a49';x.fillRect(0,0,
 const asphaltTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#55585a';x.fillRect(0,0,w,h);for(let i=0;i<7000;i++){const l=25+Math.random()*25;x.fillStyle=`hsl(200,3%,${l}%)`;x.globalAlpha=0.4;x.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}},[300,300]);
 const sandTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#d9b77e';x.fillRect(0,0,w,h);for(let i=0;i<5000;i++){x.fillStyle=`hsl(${34+Math.random()*8},50%,${58+Math.random()*18}%)`;x.globalAlpha=0.4;x.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}},[300,300]);
 const gravelTex=canvasTex(128,128,(x,w,h)=>{x.fillStyle='#bdb5a3';x.fillRect(0,0,w,h);for(let i=0;i<1600;i++){x.fillStyle=`hsl(40,${8+Math.random()*10}%,${50+Math.random()*30}%)`;x.fillRect(Math.random()*w,Math.random()*h,2,2);}},[8,8]);
+new THREE.TextureLoader().load('tex/trava.jpg',t=>{ grassTex.image=t.image; grassTex.needsUpdate=true; ['les','stadion'].forEach(k=>{ if(ENVSET[k]) ENVSET[k].gc=0xe6eedf; }); if(ENVSET[ST.env]&&ENVSET[ST.env].gc) ground.material.color.setHex(ENVSET[ST.env].gc); });
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),new THREE.MeshLambertMaterial({map:grassTex})); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 const snowTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#eef2f5';x.fillRect(0,0,w,h);for(let i=0;i<4000;i++){x.fillStyle=`rgba(${170+Math.random()*60},${190+Math.random()*50},${215+Math.random()*40},0.35)`;x.fillRect(Math.random()*w,Math.random()*h,2,2);}},[300,300]);
 const concreteTex=canvasTex(256,256,(x,w,h)=>{x.fillStyle='#8d8f8c';x.fillRect(0,0,w,h);for(let i=0;i<6000;i++){x.fillStyle=`hsl(90,2%,${45+Math.random()*20}%)`;x.globalAlpha=0.3;x.fillRect(Math.random()*w,Math.random()*h,2,2);} x.globalAlpha=0.5; x.strokeStyle='#6f716e'; for(let i=0;i<=4;i++){ x.beginPath(); x.moveTo(i*64,0); x.lineTo(i*64,h); x.stroke(); }},[60,60]);
@@ -221,7 +222,7 @@ function say(t){ $('fb').textContent=t; if(typeof drawHud==='function') drawHud(
 /* ================= PROSTŘEDÍ ================= */
 const ENV={les:new THREE.Group(),mesto:new THREE.Group(),stadion:new THREE.Group(),poust:new THREE.Group(),hala:new THREE.Group(),hory:new THREE.Group()};
 Object.values(ENV).forEach(g=>{g.visible=false; scene.add(g);});
-const WALLS=[];   // kolize a kryt (CQB dům, barikády)
+const WALLS=[], ENVCOL=[];   // ENVCOL: pevné překážky prostředí (auta ve městě)   // kolize a kryt (CQB dům, barikády)
 // --- LESNÍ STŘELNICE: krytá palebná čára, valy mezi střelišti, zastřelovací val, rámy terčů, les okolo ---
 { const G=ENV.les, wood=mat(0x7a5a3a), roofM=mat(0x4b5a50), berm=mat(0x5f8a45), sandM=mat(0xb59a6a);
   // krytá palebná čára (12 stavů)
@@ -264,7 +265,7 @@ const towerTex=canvasTex(64,256,(x,w,h)=>{ x.fillStyle='#7f93a3'; x.fillRect(0,0
   // kontejnery, auta, lampy
   const kont=(x,z,ry,c)=>{ const k=box(6,2.6,2.44,mat(c),x,1.3,z,G); k.rotation.y=ry; };
   kont(-22,-60,0.1,0x2f6b9a); kont(22,-75,-0.2,0xb0452b); kont(-20,-95,1.5,0x4f7a3a);
-  const auto=(x,z,ry,c)=>{ const g=new THREE.Group(); box(4.2,0.8,1.8,mat(c),0,0.6,0,g); box(2.2,0.6,1.6,mat(0x2a3540),-0.2,1.25,0,g); for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.25,12),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.35,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; G.add(g); };
+  const auto=(x,z,ry,c)=>{ const g=new THREE.Group(); box(4.2,0.8,1.8,mat(c),0,0.6,0,g); box(2.2,0.6,1.6,mat(0x2a3540),-0.2,1.25,0,g); for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.25,12),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.35,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; G.add(g); ENVCOL.push({env:'mesto',x,z,ry,w:4.3,d:1.9}); };
   auto(-23,-30,0.2,0x9a2020); auto(23,-42,1.4,0xdedede); auto(-24,-120,-0.1,0x203a6a);
   for(let i=0;i<10;i++){ for(const s of [-1,1]){ box(0.15,6,0.15,mat(0x3a3f44),s*25,3,-10-i*18,G); box(1.4,0.15,0.3,mat(0x3a3f44),s*24.4,6,-10-i*18,G); } }
   // chodník
@@ -348,18 +349,20 @@ function makePistol(){ const g=new THREE.Group(), steel=mat(0x2b2f33), poly=mat(
   box(0.03,0.032,0.19,steel,0,0.0,-0.085,g);                 // závěr
   const gr=box(0.028,0.11,0.05,poly,0,-0.065,0.0,g); gr.rotation.x=0.28;   // rukojeť
   box(0.026,0.012,0.07,poly,0,-0.024,-0.07,g);                 // lučík
-  box(0.006,0.008,0.005,steel,0,0.02,-0.175,g);                // muška
-  box(0.022,0.008,0.006,steel,0,0.02,0.0,g);                   // hledí (zářez)
-  const dot=(x,z)=>{ const d=new THREE.Mesh(new THREE.SphereGeometry(0.0016,8,6),bila); d.position.set(x,0.021,z); g.add(d); }; dot(0,-0.178); dot(-0.006,0.003); dot(0.006,0.003);
-  g.userData={hlaven:0.19, mirH:0.02, typ:'pistole'}; return g; }
+  // mířidla: muška 3,5 mm, hledí se zářezem 4,5 mm (světelná mezera po stranách mušky), vrch mušky = vrch hledí = záměrná
+  box(0.0035,0.0095,0.005,steel,0,0.02075,-0.175,g);           // muška
+  box(0.022,0.003,0.009,steel,0,0.0175,0.0,g);                 // patka hledí
+  box(0.0085,0.0065,0.009,steel,-0.0065,0.02225,0.0,g); box(0.0085,0.0065,0.009,steel,0.0065,0.02225,0.0,g);   // hledí – dvě čelisti se zářezem
+  const dot=(x,y,z,r)=>{ const d=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),bila); d.position.set(x,y,z); g.add(d); }; dot(0,0.0222,-0.1724,0.0013); dot(-0.0065,0.0222,0.0046,0.0012); dot(0.0065,0.0222,0.0046,0.0012);
+  g.userData={hlaven:0.19, mirH:0.0255, typ:'pistole'}; return g; }
 function makeRifle(){ const g=new THREE.Group(), steel=mat(0x2b2f33), poly=mat(0x3b3f35);
   box(0.05,0.07,0.32,poly,0,0,-0.05,g);                         // pouzdro
   const b=new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.011,0.42,10),steel); b.rotation.x=Math.PI/2; b.position.set(0,0.01,-0.42); g.add(b);
   box(0.045,0.05,0.26,poly,0,-0.005,-0.33,g);                   // předpažbí
   box(0.04,0.09,0.24,poly,0,-0.04,0.22,g);                      // pažba
   const gr=box(0.03,0.09,0.04,poly,0,-0.07,0.02,g); gr.rotation.x=0.3;
-  box(0.03,0.02,0.02,steel,0,0.05,-0.6,g); box(0.004,0.03,0.004,steel,0,0.07,-0.6,g);   // muška
-  const h=box(0.032,0.025,0.02,steel,0,0.05,0.06,g); box(0.012,0.012,0.012,mat(0x111111),0,0.064,0.06,g);   // dioptr
+  box(0.03,0.02,0.02,steel,0,0.05,-0.6,g); box(0.003,0.015,0.004,steel,0,0.0625,-0.6,g); box(0.003,0.024,0.006,steel,-0.009,0.068,-0.6,g); box(0.003,0.024,0.006,steel,0.009,0.068,-0.6,g);   // muška s ochrannými uchy, vrch = záměrná
+  const h=box(0.032,0.02,0.02,steel,0,0.048,0.06,g); const kr=new THREE.Mesh(new THREE.TorusGeometry(0.0065,0.003,8,20),steel); kr.position.set(0,0.07,0.06); g.add(kr); box(0.004,0.012,0.006,steel,0,0.0605,0.06,g);   // dioptr – kroužek kolem záměrné
   g.userData={hlaven:0.63, mirH:0.07, typ:'puska'}; return g; }
 const GUNS={pistole:makePistol(), puska:makeRifle()};
 let gunRoot=new THREE.Group(); scene.add(gunRoot);
@@ -589,7 +592,7 @@ function buildDum(){ const c=0xd8d2c4;
   // podlaha uvnitř
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(12,14),mat(0x9a8f7c)); fl.rotation.x=-Math.PI/2; fl.position.set(0,0.03,-11); TGROUP.add(fl); }
 function buildUlice(){ const auto=(x,z,ry,c)=>{ const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.BoxGeometry(4.2,0.9,1.8),mat(c)); b.position.y=0.65; g.add(b); const k=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.65,1.6),mat(0x2a3540)); k.position.set(-0.2,1.4,0); g.add(k);
-    for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.36,0.25,14),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.36,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g); g.updateMatrixWorld(true); };
+    for(const [ax,az] of [[1.3,0.9],[1.3,-0.9],[-1.3,0.9],[-1.3,-0.9]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.36,0.25,14),mat(0x111111)); w.rotation.x=Math.PI/2; w.position.set(ax,0.36,az); g.add(w); } g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g); g.updateMatrixWorld(true); const col=new THREE.Mesh(new THREE.BoxGeometry(4.3,1.7,1.9),new THREE.MeshBasicMaterial()); col.visible=false; col.position.set(x,0.85,z); col.rotation.y=ry; col.userData.auto=true; TGROUP.add(col); WALLS.push(col); };
   auto(0,-0.6,0,0x9a2020); auto(-6,-14,0.5,0x203a6a); auto(5.5,-18,-0.3,0xdedede); auto(-2,-26,0.1,0x3a6b2f);
   const T=(x,y,z,o,t)=>{ const tg=ipscTarget(x,y,z,Object.assign({ry:face(x,z,0,2)},nahodnaRole(o))); if(ST.nahodne) t=Math.max(0.8,t+(Math.random()-0.5)*2); tg.skryty=true; tg.aktT=t; tg.cil0=tg.m.rotation.y; tg.m.rotation.y=tg.cil0+Math.PI/2; return tg; };
   T(-6.5,1.45,-15.5,{name:'U1',zbranKresba:true},1.5); T(5.8,1.45,-19.8,{noshoot:true,name:'U-civ'},3.0); T(6.2,1.45,-20.2,{name:'U2',zbranKresba:true},4.2); T(-2.3,1.45,-28,{name:'U3',zbranKresba:true},6.0);
@@ -754,7 +757,7 @@ function drawHud(){ const S=ST.stage; $('hudL').innerHTML=`<b>${S?S.n:'—'}</b>
 
 /* ================= VR: panel (menu / výuka / výsledek) a displej na zápěstí ================= */
 const PW=1024, PHh=1240, pCan=document.createElement('canvas'); pCan.width=PW; pCan.height=PHh; const pTex=new THREE.CanvasTexture(pCan);
-const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1*PHh/PW),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false})); panel.visible=false; dolly.add(panel);
+const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1*PHh/PW),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false,depthTest:false})); panel.renderOrder=20; panel.visible=false; dolly.add(panel);
 let pBtns=[], pHover=-1, pMode='menu';
 const rr=(x,X,Y,w,h,r)=>{ x.beginPath(); if(x.roundRect) x.roundRect(X,Y,w,h,r); else x.rect(X,Y,w,h); };
 function fit(x,t,w,s){ let f=s; x.font=`700 ${f}px Barlow Condensed, Arial`; while(x.measureText(t).width>w&&f>16){ f-=2; x.font=`700 ${f}px Barlow Condensed, Arial`; } }
@@ -795,14 +798,16 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
   pBtns.forEach((b,i)=>{ x.fillStyle=i===pHover?'#3c5a4a':(b.c||(b.on?'#c4452b':'#24362c')); rr(x,b.X,b.Y,b.w,b.h,14); x.fill(); x.fillStyle='#fff'; fit(x,b.t,b.w-30,40); x.textAlign='center'; x.textBaseline='middle'; x.fillText(b.t,b.X+b.w/2,b.Y+b.h/2+2); x.textAlign='left'; x.textBaseline='alphabetic'; });
   pTex.needsUpdate=true; }
 function placePanel(){ const d=new V(0,0,-1).applyQuaternion(camera.quaternion); d.y=0; if(d.lengthSq()<1e-4) d.set(0,0,-1); d.normalize();
-  panel.position.set(camera.position.x+d.x*1.3,Math.max(1.4,camera.position.y-0.05),camera.position.z+d.z*1.3); const e=new V(); camera.getWorldPosition(e); panel.lookAt(e); }
+  // v domě: když je zeď blíž než 1,3 m, dej panel před zeď a zmenši ho (a kresli ho vždy navrch)
+  let L=1.3; const e0=new V(); camera.getWorldPosition(e0); const dw=d.clone().applyQuaternion(dolly.quaternion); const rc=new THREE.Raycaster(e0,dw,0.05,1.4); const hw=rc.intersectObjects(WALLS,false)[0]; if(hw) L=Math.max(0.45,hw.distance-0.12);
+  panel.scale.setScalar(L/1.3); panel.position.set(camera.position.x+d.x*L,Math.max(1.4,camera.position.y-0.05),camera.position.z+d.z*L); const e=new V(); camera.getWorldPosition(e); panel.lookAt(e); }
 function showMenu(){ pMode='menu'; if(ST.inXR){ panel.visible=true; placePanel(); drawPanel(); } }
 function showLekce(){ pMode='lekce'; renderLekce(); mluv(ST.stage.popis+' '+ST.stage.lekce[0],{prerusit:true}); say('Výuka: '+ST.stage.lekce[0]); if(ST.inXR){ panel.visible=true; placePanel(); drawPanel(); } else $('lekce').scrollIntoView({block:'nearest',behavior:'smooth'}); }
 function showVysledek(){ pMode='vysledek'; if(ST.inXR){ panel.visible=true; placePanel(); drawPanel(); } }
 function hidePanel(){ panel.visible=false; pHover=-1; }
 function panelHit(c){ if(!panel.visible) return null; const o=new V(), q=new THREE.Quaternion(); c.getWorldPosition(o); c.getWorldQuaternion(q); ray.set(o,new V(0,0,-1).applyQuaternion(q)); ray.far=10;
   const h=ray.intersectObject(panel)[0]; if(!h||!h.uv) return null; const px=h.uv.x*PW, py=(1-h.uv.y)*PHh; return {i:pBtns.findIndex(b=>px>=b.X&&px<=b.X+b.w&&py>=b.Y&&py<=b.Y+b.h),point:h.point}; }
-const pointer=new THREE.Mesh(new THREE.SphereGeometry(0.01,10,8),new THREE.MeshBasicMaterial({color:0xffffff})); pointer.visible=false; scene.add(pointer);
+const pointer=new THREE.Mesh(new THREE.SphereGeometry(0.01,10,8),new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false})); pointer.renderOrder=21; pointer.visible=false; scene.add(pointer);
 // displej na zápěstí (druhá ruka): čas a náboje
 const wCan=document.createElement('canvas'); wCan.width=512; wCan.height=200; const wTex=new THREE.CanvasTexture(wCan);
 const wrist=new THREE.Mesh(new THREE.PlaneGeometry(0.16,0.0625),new THREE.MeshBasicMaterial({map:wTex,transparent:true})); wrist.position.set(0,0.05,0.06); wrist.rotation.x=-1.0; wrist.visible=false;
@@ -1063,7 +1068,7 @@ const RAZE={
           '223':{n:'.223 Rem / 5,56×45',v0:930,L:750,r:0.0028,raz:0.018,kop:0.05,zotav:0.10,hlas:1.1},
           '762':{n:'7,62×39',v0:715,L:650,r:0.0039,raz:0.03,kop:0.07,zotav:0.13,hlas:1.15},
           '308':{n:'.308 Win / 7,62×51',v0:820,L:1250,r:0.0039,raz:0.04,kop:0.09,zotav:0.16,hlas:1.25} } };
-const MIRIDLA={ pistole:{mech:{n:'Mechanická mířidla',h:0.02}, kol:{n:'Kolimátor (červený bod, bez zvětšení)',h:0.045}},
+const MIRIDLA={ pistole:{mech:{n:'Mechanická mířidla',h:0.0255}, kol:{n:'Kolimátor (červený bod, bez zvětšení)',h:0.045}},
                 puska:{mech:{n:'Dioptr / mechanická',h:0.07}, kol:{n:'Kolimátor (červený bod, bez zvětšení)',h:0.075}} };
 const NUL={ pistole:[10,15,25,50], puska:[25,50,100,200,300] };
 const ZBR=Object.assign({ pistole:{raze:'9mm',mir:'mech',nul:25}, puska:{raze:'223',mir:'mech',nul:100}, povely:'cz' }, LS.get('st-zbr',{}));
@@ -1255,7 +1260,8 @@ renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('mousemove',e=>{ if(document.pointerLockElement!==renderer.domElement) return; const k=ST.zoom?0.0006:0.0022; ST.yaw-=e.movementX*k; ST.pitch=Math.max(-1.4,Math.min(1.4,ST.pitch-e.movementY*k)); });
 // kolize: střelec (hlava) nesmí projít zdí
 function koliduje(x,z){ for(const w of WALLS){ const p=w.position, a=-w.rotation.y, dx=x-p.x, dz=z-p.z, lx=dx*Math.cos(a)+dz*Math.sin(a), lz=-dx*Math.sin(a)+dz*Math.cos(a);
-  if(Math.abs(lx)<w.geometry.parameters.width/2+0.25&&Math.abs(lz)<w.geometry.parameters.depth/2+0.25) return true; } return false; }
+  if(Math.abs(lx)<w.geometry.parameters.width/2+0.25&&Math.abs(lz)<w.geometry.parameters.depth/2+0.25) return true; }
+  for(const c of ENVCOL){ if(ST.env!==c.env) continue; const a=-c.ry, dx=x-c.x, dz=z-c.z, lx=dx*Math.cos(a)+dz*Math.sin(a), lz=-dx*Math.sin(a)+dz*Math.cos(a); if(Math.abs(lx)<c.w/2+0.25&&Math.abs(lz)<c.d/2+0.25) return true; } return false; }
 function posun(dx,dz){ const h=new V(); camera.getWorldPosition(h); if(!koliduje(h.x+dx,h.z)) dolly.position.x+=dx; if(!koliduje(h.x,h.z+dz)) dolly.position.z+=dz; }
 let prevBtn=new Map(), snapCd=0;
 function pollPads(dt){ const s=renderer.xr.getSession(); if(!s) return;
