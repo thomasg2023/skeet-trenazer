@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.13-3</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.13-4</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -156,7 +156,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.13-3';
+const VERZE='2026.11.13-4';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1193,6 +1193,9 @@ const _vyberQ=vyberCviceni; vyberCviceni=function(id){ const S=STAGES.find(s=>s.
     if(!CQB_POZ[id]){ cqbI=0; cqbZaz=[]; cqbMap=null; _vyberQ(id); CQB_POZ[id]=cqbZaz; cqbZaz=null; }   // poprvé jen zjistit, kde terče stojí
     const P=CQB_POZ[id].slice(); for(let i=P.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [P[i],P[j]]=[P[j],P[i]]; }
     cqbI=0; cqbMap=P; _vyberQ(id); } finally { cqbMap=null; cqbZaz=null; cqbBezi=false; } };
+
+// ---- skutečná pistole (Poly Haven „service pistol“, CC0) místo kreslené: srovnaná tak, že vrch mušky a hledí leží v záměrné (mirH) ----
+model('pistole_sluzebni').then(m=>{ if(!m) return; const g=GUNS.pistole; for(const c of g.children) if(typeof KOL==='undefined'||c!==KOL.pistole) c.visible=false; const k=m.clone(true); k.traverse(o=>{ if(o.isMesh){ o.castShadow=false; if(o.material) o.material.envMapIntensity=0.9; } }); g.add(k); g.userData.glb=true; });
 
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.

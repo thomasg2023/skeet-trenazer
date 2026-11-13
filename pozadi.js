@@ -18,6 +18,12 @@
   P.init = function(scene, onApply, radius, srgb){ P.scene = scene; P.onApply = onApply; P.R = radius || 1000; P.srgb = srgb !== false; };
   function horizont(img){ try { const c = document.createElement('canvas'); c.width = 64; c.height = 32; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 64, 32);
       const d = x.getImageData(0, 14, 64, 3).data; let r = 0, g = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } return [r / n / 255, g / n / 255, b / n / 255]; } catch (e) { return null; } }
+  // kde je na fotce slunce (nejjasnější místo nad obzorem) – podle něj se natočí světlo a stíny
+  function slunce(img){ try { const W = 128, H = 64, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(img, 0, 0, W, H);
+      const d = x.getImageData(0, 0, W, H / 2).data; let best = 0, bi = -1, sum = 0;
+      for (let i = 0; i < W * H / 2; i++) { const l = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]; sum += l; if (l > best) { best = l; bi = i; } }
+      const avg = sum / (W * H / 2); if (bi < 0 || best < 250 || best < avg * 1.6) return null;
+      return [((bi % W) + 0.5) / W, (Math.floor(bi / W) + 0.5) / H]; } catch (e) { return null; } }
   P.vypni = function(){ if (P.mesh) P.mesh.visible = false; P.cur = null; P.onApply && P.onApply(false, null); };
   P.nastav = async function(id){
     const it = P.list.find(x => x.id === id); if (!it || !P.scene) { P.vypni(); return false; }
@@ -29,7 +35,7 @@
       if (!P.mesh) { P.mesh = new THREE.Mesh(new THREE.SphereGeometry(P.R, 64, 32), new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, depthTest: false }));
         P.mesh.scale.x = -1; P.mesh.renderOrder = -10; P.mesh.frustumCulled = false; P.scene.add(P.mesh); }
       if (P.tex) P.tex.dispose(); P.tex = t; P.mesh.material.map = t; P.mesh.material.needsUpdate = true; P.mesh.visible = true;
-      P.mesh.rotation.y = (P.yaw + (it.yaw || 0)) * Math.PI / 180; P.cur = it; it.horizont = horizont(t.image);
+      P.mesh.rotation.y = (P.yaw + (it.yaw || 0)) * Math.PI / 180; P.cur = it; it.horizont = horizont(t.image); if (it.slunce === undefined) it.slunce = slunce(t.image);
       P.onApply && P.onApply(true, it); res(true); }, undefined, () => { if (my === P._load) P.vypni(); res(false); }));
   };
   P.natoc = function(deg){ P.yaw = deg; if (P.mesh && P.cur) P.mesh.rotation.y = (P.yaw + (P.cur.yaw || 0)) * Math.PI / 180; };

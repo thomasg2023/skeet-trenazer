@@ -3,258 +3,301 @@
   "id": "kloofendal_48d_partly_cloudy_puresky",
   "n": "Polojasno, kupovité mraky",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "kloofendal_43d_clear_puresky",
   "n": "Jasno, slunce vysoko",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "poledne"
  },
  {
   "id": "overcast_soil_puresky",
   "n": "Zataženo, těžké mraky",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "kloppenheim_06_puresky",
   "n": "Západ slunce, roztrhané mraky",
   "typ": "nebe",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "industrial_sunset_puresky",
   "n": "Západ slunce, oblačno",
   "typ": "nebe",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "qwantani_dusk_2_puresky",
   "n": "Soumrak, fialové nebe",
   "typ": "nebe",
-  "doba": "soumrak"
+  "doba": "soumrak",
+  "svetlo": "soumrak"
  },
  {
   "id": "kloppenheim_02_puresky",
   "n": "Noc, měsíc a hvězdy",
   "typ": "nebe",
-  "doba": "noc"
+  "doba": "noc",
+  "svetlo": "noc"
  },
  {
   "id": "lilienstein",
   "n": "Pole u lesa (Saské Švýcarsko)",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "evening_meadow",
   "n": "Louka se stromy",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "vecer"
  },
  {
   "id": "meadow_2",
   "n": "Louka s křovím",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "sunflowers",
   "n": "Polní cesta, slunečnice",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "golden_gate_hills",
   "n": "Kopce a písek u moře",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "limpopo_golf_course",
   "n": "Golfové hřiště s jezírkem",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "grasslands_sunset",
   "n": "Pláň při západu slunce",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "kloofendal_overcast_puresky",
   "n": "Zataženo, světlé mraky",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "alps_field",
   "n": "Alpy – louka v údolí",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "je_gray_02",
   "n": "Řídký les, slunce v korunách",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "goegap",
   "n": "Poušť se skalami",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "poledne"
  },
  {
   "id": "kiara_1_dawn",
   "n": "Skalnatá pláň za úsvitu",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "rano"
  },
  {
   "id": "snowy_field",
   "n": "Zasněžené pole",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "snowy_park_01",
   "n": "Zasněžený park",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "spiaggia_di_mondello",
   "n": "Pláž u moře (Sicílie)",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "poledne"
  },
  {
   "id": "umhlanga_sunrise",
   "n": "Východ slunce nad mořem",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "rano"
  },
  {
   "id": "venice_sunset",
   "n": "Benátky, západ slunce",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "wide_street_01",
   "n": "Široká ulice ve městě",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "canary_wharf",
   "n": "Mrakodrapy (Londýn)",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "rogland_clear_night",
   "n": "Noc, Mléčná dráha nad horami",
   "typ": "krajina",
-  "doba": "noc"
+  "doba": "noc",
+  "svetlo": "noc"
  },
  {
   "id": "dikhololo_night",
   "n": "Noc v buši",
   "typ": "krajina",
-  "doba": "noc"
+  "doba": "noc",
+  "svetlo": "noc"
  },
  {
   "id": "autumn_field_puresky",
   "n": "Podzimní obloha, jasno",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "belfast_sunset_puresky",
   "n": "Západ slunce, temné mraky",
   "typ": "nebe",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "evening_road_01_puresky",
   "n": "Večer, beránky na nebi",
   "typ": "nebe",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "mud_road_puresky",
   "n": "Zataženo, šedivo",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "sunflowers_puresky",
   "n": "Letní kupovité mraky",
   "typ": "nebe",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "autumn_field",
   "n": "Podzimní pole",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "autumn_park",
   "n": "Podzimní park, louka",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "immenstadter_horn",
   "n": "Horská pastvina se smrky",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "resting_place",
   "n": "Louka u rybníka",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "rural_asphalt_road",
   "n": "Venkovská silnice mezi poli",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "den"
  },
  {
   "id": "spruit_sunrise",
   "n": "Ranní mlha nad loukou",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "rano"
  },
  {
   "id": "drackenstein_quarry",
   "n": "Lom při západu slunce",
   "typ": "krajina",
-  "doba": "zlata"
+  "doba": "zlata",
+  "svetlo": "vecer"
  },
  {
   "id": "sunset_in_the_chalk_quarry",
   "n": "Křídový lom, soumrak",
   "typ": "krajina",
-  "doba": "soumrak"
+  "doba": "soumrak",
+  "svetlo": "soumrak"
  },
  {
   "id": "cannon",
   "n": "Skalnaté pobřeží, zataženo",
   "typ": "krajina",
-  "doba": "den"
+  "doba": "den",
+  "svetlo": "zatazeno"
  },
  {
   "id": "moonless_golf",
   "n": "Noc, světla v dálce",
   "typ": "krajina",
-  "doba": "noc"
+  "doba": "noc",
+  "svetlo": "noc"
  }
 ]

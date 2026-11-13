@@ -32,3 +32,8 @@ bouda_stara.glb – „Old Wooden Shed“, autor donnichols (https://sketchfab.c
 chata_drevo.glb – „Wooden Cabin“, autor donnichols (https://sketchfab.com/3d-models/wooden-cabin-c90674a377864ac1b8fd141ad1917ee3), licence CC Attribution (CC BY 4.0). Upraveno: měřítko, natočení, zmenšené textury.
 krabicka_naboju.glb – „Shotgun Ammo Box“, autor jsandwich96 (https://sketchfab.com/3d-models/shotgun-ammo-box-964f780f87d34d54890f9de94792fd01), licence CC Attribution (CC BY 4.0). Upraveno: měřítko, natočení, zmenšené textury.
 naboje_1270.glb – „12x70 Shotgun shell“, autor TwilightFox (https://sketchfab.com/3d-models/12x70-shotgun-shell-3e526a3a363644b889fbb0fd139dccf1), licence CC Attribution (CC BY 4.0). Upraveno: měřítko, natočení, zmenšené textury.
+
+Babylon.js Assets (https://github.com/BabylonJS/Assets), licence CC BY 4.0:
+strom_listnac_lod2.glb – „Tree1“ (meshes/Trees/rawtrees.babylon, SpeedTree listnáč, LOD2) s texturami Broadleaf_Desktop_Atlas a BroadleafBark. Převedeno z formátu .babylon do glTF, zmenšené textury.
+
+Poly Haven (CC0): pistole_sluzebni.glb – upravený „service_pistol“ (jen jedna varianta bez zásobníků, srovnaná na mířidla).
