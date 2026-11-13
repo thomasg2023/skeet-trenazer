@@ -82,7 +82,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-2</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-3</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -163,7 +163,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
     <section class="panel">
       <h2>Zbraň a náboj</h2>
       <div class="seg" id="gunSeg" aria-label="Zbraň" style="margin-bottom:10px"><button type="button" data-g="skeet">Skeet</button><button type="button" data-g="trap">Trap</button></div>
-      <div class="field"><label for="gunModel">Model zbraně (vzhled, délka hlavní)</label><select id="gunModel"></select><p class="small" style="margin:4px 0 0;color:var(--muted)">3D modely zbraní ze Sketchfabu (CC BY): CZ Drake a Browning Auto‑5 – TastyTony, Citori 725 – Aldensin, kozlice – Sizzor, TOZ‑34 – Ryan Pellegrini.</p></div>
+      <div class="field"><label for="gunModel">Model zbraně (vzhled, délka hlavní)</label><select id="gunModel"></select><p class="small" style="margin:4px 0 0;color:var(--muted)">3D modely zbraní ze Sketchfabu (CC BY): CZ Drake a Browning Auto‑5 – TastyTony, Citori 725 – Aldensin, kozlice – Sizzor, TOZ‑34 – Ryan Pellegrini, Ljutic – Vasily. Chata a boudy – donnichols, náboje – TwilightFox a jsandwich96.</p></div>
       <div class="field"><label for="gunName">Název zbraně</label><input type="text" id="gunName" maxlength="40" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
       <div class="field"><label for="gunPopis">Popis</label><input type="text" id="gunPopis" maxlength="120" style="font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%"></div>
       <div class="field"><label for="ch1">Čok 1. rána (spodní hlaveň)</label><select id="ch1"></select></div>
@@ -554,7 +554,7 @@ const st={auto:false,autoPause:4,autoT:0,hand:'right',wind:1,big:false,speed:1,s
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.13-2';
+const VERZE='2026.11.13-3';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -624,14 +624,22 @@ const path=new THREE.Mesh(new THREE.RingGeometry(R-0.8,R+0.8,64,1,Math.atan2(5.5
  const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.12,10),mat(0xe8662a)); cap.position.set(STAKE.x,0.62,STAKE.z); scene.add(cap);}
 
 REC=null;
+const GLB_BK={}, GLTF_BK=(typeof THREE.GLTFLoader==='function')?new THREE.GLTFLoader():null;
+function nactiBk(id){ if(!GLTF_BK) return Promise.resolve(null); return GLB_BK[id]||(GLB_BK[id]=new Promise(res=>GLTF_BK.load('modely/'+id+'.glb',g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=true; if(o.material) o.material.envMapIntensity=0.7; } }); res(g.scene); },undefined,()=>res(null)))); }
 // klubovna a lavičky za stanovišti
 {const club=new THREE.Group(), w=new THREE.Mesh(new THREE.BoxGeometry(16,3.4,7),mat(0xd9cdb6)); w.position.y=1.7; club.add(w);
  const roof=new THREE.Mesh(new THREE.CylinderGeometry(0.01,6.2,2.2,4,1),mat(0x7a3b2a)); roof.rotation.y=Math.PI/4; roof.scale.set(1.85,1,0.85); roof.position.y=4.5; club.add(roof);
  for(let i=-3;i<=3;i+=2){const win=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.2,0.1),mat(0x34505e)); win.position.set(i*2,1.9,-3.52); club.add(win);}
  const deck=new THREE.Mesh(new THREE.BoxGeometry(18,0.2,3),mat(0x8a6a4a)); deck.position.set(0,0.1,-5); club.add(deck);
  club.position.set(0,0,38); scene.add(club);
+ // skutečné dřevěné stavby (Sketchfab CC BY): klubovna = dřevěná chata, vedle modrá bouda; až se načtou, kreslená klubovna zmizí
+ if(GLTF_BK){ nactiBk('chata_drevo').then(m=>{ if(!m) return; const k=m.clone(true); k.position.set(-3,0,39); k.rotation.y=Math.PI; k.scale.setScalar(1.25); scene.add(k); club.visible=false;
+     nactiBk('bouda_modra').then(b=>{ if(!b) return; const k2=b.clone(true); k2.position.set(6,0,38.5); k2.rotation.y=-Math.PI/2; scene.add(k2); }); });
+   nactiBk('bouda_stara').then(m=>{ if(!m) return; const k=m.clone(true); k.position.set(-30,0,6); k.rotation.y=Math.PI/2; scene.add(k); }); }
  for(const sx of [-9,9]){const b=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.08,0.5),mat(0x8a6a4a)); b.position.set(sx,0.5,30); scene.add(b);
-   for(const lx of [-0.9,0.9]){const l=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.5,0.4),mat(0x3a3a3a)); l.position.set(sx+lx,0.25,30); scene.add(l);}}}
+   for(const lx of [-0.9,0.9]){const l=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.5,0.4),mat(0x3a3a3a)); l.position.set(sx+lx,0.25,30); scene.add(l);}}
+ // na lavičkách krabičky nábojů (Sketchfab CC BY)
+ if(GLTF_BK){ for(const [id,x,ry] of [['krabicka_naboju',-9.4,0.3],['naboje_1270',-8.7,-0.4],['krabicka_naboju',9.2,-0.5],['krabicka_naboju',9.36,0.1]]) nactiBk(id).then(m=>{ if(!m) return; const k=m.clone(true); k.position.set(x,0.54,30); k.rotation.y=ry; scene.add(k); }); }}
 
 // věže
 REC=SKEET_OBJS;
@@ -1261,9 +1269,8 @@ const GUN_MODELY={
   citori725:{n:'Browning Citori 725, 81 cm (3D model)',L:0.81,glb:'bk_citori725',zaklad:'kozlice81'},
   kozlice3d:{n:'Kozlice klasická, 76 cm (3D model)',L:0.76,glb:'bk_kozlice',zaklad:'kozlice76'},
   toz34:{n:'TOZ-34, 71 cm (3D model)',L:0.71,glb:'bk_toz34',zaklad:'kozlice71'},
-  auto5:{n:'Browning Auto-5 poloautomat, 71 cm (3D model)',L:0.71,glb:'bk_auto5',zaklad:'poloautomat'} };
-const GLB_BK={}, GLTF_BK=(typeof THREE.GLTFLoader==='function')?new THREE.GLTFLoader():null;
-function nactiBk(id){ if(!GLTF_BK) return Promise.resolve(null); return GLB_BK[id]||(GLB_BK[id]=new Promise(res=>GLTF_BK.load('modely/'+id+'.glb',g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=true; if(o.material) o.material.envMapIntensity=0.7; } }); res(g.scene); },undefined,()=>res(null)))); }
+  auto5:{n:'Browning Auto-5 poloautomat, 71 cm (3D model)',L:0.71,glb:'bk_auto5',zaklad:'poloautomat'},
+  ljutic:{n:'Ljutic Space Gun – trapová jednohlavňovka, 86 cm (3D model)',L:0.86,glb:'bk_ljutic',zaklad:'trap76'} };
 function makeGun(id){ const M0=GUN_MODELY[id]||GUN_MODELY.kozlice76;
   if(M0.glb){ const g=makeGun(M0.zaklad||'kozlice76'), puv=g.children.filter(c=>!c.userData.drzet); nactiBk(M0.glb).then(m=>{ if(!m) return; puv.forEach(c=>g.remove(c)); g.add(m.clone(true)); }); return g; }
   const M=M0, g=new THREE.Group(), L=M.L, zc=-0.04-L/2;
