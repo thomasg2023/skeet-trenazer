@@ -166,5 +166,95 @@
   "n": "Noc v buši",
   "typ": "krajina",
   "doba": "noc"
+ },
+ {
+  "id": "autumn_field_puresky",
+  "n": "Podzimní obloha, jasno",
+  "typ": "nebe",
+  "doba": "den"
+ },
+ {
+  "id": "belfast_sunset_puresky",
+  "n": "Západ slunce, temné mraky",
+  "typ": "nebe",
+  "doba": "zlata"
+ },
+ {
+  "id": "evening_road_01_puresky",
+  "n": "Večer, beránky na nebi",
+  "typ": "nebe",
+  "doba": "zlata"
+ },
+ {
+  "id": "mud_road_puresky",
+  "n": "Zataženo, šedivo",
+  "typ": "nebe",
+  "doba": "den"
+ },
+ {
+  "id": "sunflowers_puresky",
+  "n": "Letní kupovité mraky",
+  "typ": "nebe",
+  "doba": "den"
+ },
+ {
+  "id": "autumn_field",
+  "n": "Podzimní pole",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "autumn_park",
+  "n": "Podzimní park, louka",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "immenstadter_horn",
+  "n": "Horská pastvina se smrky",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "resting_place",
+  "n": "Louka u rybníka",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "rural_asphalt_road",
+  "n": "Venkovská silnice mezi poli",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "spruit_sunrise",
+  "n": "Ranní mlha nad loukou",
+  "typ": "krajina",
+  "doba": "zlata"
+ },
+ {
+  "id": "drackenstein_quarry",
+  "n": "Lom při západu slunce",
+  "typ": "krajina",
+  "doba": "zlata"
+ },
+ {
+  "id": "sunset_in_the_chalk_quarry",
+  "n": "Křídový lom, soumrak",
+  "typ": "krajina",
+  "doba": "soumrak"
+ },
+ {
+  "id": "cannon",
+  "n": "Skalnaté pobřeží, zataženo",
+  "typ": "krajina",
+  "doba": "den"
+ },
+ {
+  "id": "moonless_golf",
+  "n": "Noc, světla v dálce",
+  "typ": "krajina",
+  "doba": "noc"
  }
 ]
