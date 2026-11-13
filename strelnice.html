@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.13-4</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.13-5</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -156,7 +156,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.13-4';
+const VERZE='2026.11.13-5';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1208,10 +1208,10 @@ function gunHistTick(){ if(!ST.inXR) { GUNH.length=0; return; } const c=gunCtrl(
   const t=performance.now(); GUNH.push({t,o,d}); while(GUNH.length&&t-GUNH[0].t>500) GUNH.shift(); }
 function gunPast(ms){ if(!GUNH.length) return null; const T=performance.now()-ms; let b=GUNH[0]; for(const h of GUNH){ if(h.t<=T) b=h; else break; } return b; }
 function spoustOK(){ return performance.now()-spoustTep<15*60*1000&&spoustTep>0; }
-function spoustInfo(){ const el=$('bleInfo'); if(!el) return; el.textContent=spoustOK()?`Spoušť připojena${spoustBat!=null?' · baterka '+spoustBat+' %':''} · vyrovnání ${ST.lag} ms`:'Spoušť nepřipojena – stiskněte ji jednou (pošle F)'; }
+function spoustInfo(){ const el=$('bleInfo'); if(!el) return; el.textContent=spoustOK()?`Spoušť připojena${spoustBat==='usb'?' · napájení z USB':spoustBat!=null?' · baterka '+spoustBat+' %':''} · vyrovnání ${ST.lag} ms`:'Spoušť nepřipojena – stiskněte ji jednou (pošle F)'; }
 document.addEventListener('keydown',e=>{ if(e.target.closest&&e.target.closest('input,select,textarea')) return;
   const fk=/^F(1[3-9]|2[0-4])$/.exec(e.key||'')||/^F(1[3-9]|2[0-4])$/.exec(e.code||'');
-  if(fk){ e.preventDefault(); const n=+fk[1]; spoustBat=n<24?(n-13)*10:100; const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo) say('Spoušť připojena'); spoustInfo(); return; }
+  if(fk){ e.preventDefault(); const n=+fk[1]; spoustBat=n<24?(n-13)*10:'usb'; const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo) say('Spoušť připojena'); spoustInfo(); return; }
   if(e.code==='KeyF'||e.key==='f'||e.key==='F'){ e.preventDefault(); if(e.repeat) return; const bylo=spoustOK(); spoustTep=performance.now(); ST.zdroj='spoust';
     ST.blePast=true; try{ fire(); } finally{ ST.blePast=false; } if(!bylo) spoustInfo(); } },true);
 

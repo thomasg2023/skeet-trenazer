@@ -82,12 +82,13 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-6</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-7</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
       <select id="langSel" aria-label="Jazyk / Language" style="font:600 14px var(--body);padding:6px 8px;border-radius:6px;margin-bottom:8px"><option value="cs">CZ · Čeština</option><option value="en">GB · English</option><option value="es">ES · Español</option><option value="it">IT · Italiano</option><option value="de">DE · Deutsch</option></select>
       <button class="vrbtn" id="vrBtn" type="button">Vstoupit do VR</button>
+      <button class="vrbtn" id="arKalBtn" type="button" title="Quest 3: uvidíte svou skutečnou brokovnici a druhým ovladačem změříte, kde je hlaveň vůči ovladači v držáku">Kalibrace zbraně průhledem</button>
       <a class="navlink" href="zaznam.html">📱 Záznam ze střelnice a nastavení spouště →</a>
       <a class="navlink" href="strelnice.html">🔫 Střelnice: pistole, puška, IPSC, CQB →</a>
       <div class="vrnote" id="vrNote">Otevřete tuto stránku v prohlížeči v Questu.</div>
@@ -557,7 +558,7 @@ const st={vid:true,ukVrh:true,auto:false,autoPause:4,autoT:0,hand:'right',wind:1
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.13-6';
+const VERZE='2026.11.13-7';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -565,7 +566,7 @@ try{ const tr=JSON.parse(localStorage.getItem('skeet-trap')||'null'); if(tr){ if
 
 /* ---------- Renderer & scéna ---------- */
 const stage=$('stage');
-const renderer=new THREE.WebGLRenderer({antialias:true});
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); renderer.setClearAlpha(1);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.xr.enabled=true;
 renderer.xr.setReferenceSpaceType('local-floor');
@@ -1221,7 +1222,7 @@ const GUNH=[];
 try{ const r=localStorage.getItem('skeet-rozbor'); if(['vyp','chyba','vzdy'].includes(r)) st.rozbor=r; }catch(e){}
 const _ao=new V(), _ad=new V(), _aq=new THREE.Quaternion();
 function aimNow(){ const g=st.inXR?controllers.find(c=>isGun(c)):null;
-  if(g){ g.getWorldPosition(_ao); g.getWorldQuaternion(_aq); _ad.set(0,0,-1).applyEuler(corrEuler()).applyQuaternion(_aq); }
+  if(g){ g.userData.gun.getWorldPosition(_ao); g.userData.gun.getWorldQuaternion(_aq); _ad.set(0,0,-1).applyQuaternion(_aq); }
   else { camera.getWorldPosition(_ao); camera.getWorldDirection(_ad); } return {o:_ao.clone(),d:_ad.clone().normalize()}; }
 function recTick(){ const now=performance.now()/1000, a=aimNow(); const tg=[];
   for(const t of st.targets){ if(!t.id){ t.id=++TID; if(SEQ) SEQ.launch[t.id]=now; } if(t.alive) tg.push([t.id,t.p.x,t.p.y,t.p.z]); }
@@ -1324,7 +1325,7 @@ try{ const o=JSON.parse(localStorage.getItem('skeet-vrrec')||'null'); if(o){ VRR
 function vrrSave(){ try{ localStorage.setItem('skeet-vrrec',JSON.stringify({recs:VRR.recs.slice(-200),pol:VRR.pol})); }catch(e){} vrrUi(); }
 const _vq=new THREE.Quaternion(), _vp=new V(), _cq=new THREE.Quaternion();
 function vrrTick(){ const now=performance.now()/1000, g=st.inXR?controllers.find(c=>isGun(c)):null;
-  if(g){ g.getWorldQuaternion(_vq); _cq.setFromEuler(corrEuler()); _vq.multiply(_cq); g.getWorldPosition(_vp); } else { camera.getWorldQuaternion(_vq); camera.getWorldPosition(_vp); }
+  if(g){ g.userData.gun.getWorldQuaternion(_vq); g.userData.gun.getWorldPosition(_vp); } else { camera.getWorldQuaternion(_vq); camera.getWorldPosition(_vp); }
   VRR.ring.push({t:now,q:_vq.clone(),p:_vp.clone(),mic:HLAS.on?Math.min(255,HLAS.lvl*700):0}); while(VRR.ring.length&&now-VRR.ring[0].t>9) VRR.ring.shift();
   if(VRR.cur&&now>VRR.cur.konec) vrrBuild(); }
 function vrrPull(){ VRR.cur={hop:performance.now()/1000,shots:[],konec:1e12,hits:[]}; }
@@ -1407,8 +1408,8 @@ const controllers=[0,1].map(i=>{const c=renderer.xr.getController(i);
   const gunM=makeGun(gun.model); c.add(gunM); c.userData.gun=gunM; const las=makeLaser(); gunM.add(las); c.userData.laser=las;
   c.addEventListener('connected',e=>{c.userData.src=e.data; syncHands();});
   c.addEventListener('disconnected',()=>{c.userData.src=null; syncHands();});
-  c.addEventListener('selectstart',()=>{ if(isGun(c)){fire(c);return;} const h=panelHit(c); if(h){ if(h.i>=0){ pBtns[h.i].act(); drawPanel(); } return; } const g=hudHit(c); if(g){ if(g.i>=0){ hBtns[g.i].act(); drawHud(); } return; } if(st.auto) setAuto(false); pull(); });
-  c.addEventListener('squeezestart',()=>pull());
+  c.addEventListener('selectstart',()=>{ if(KALS.on){ kalSelect(c); return; } if(isGun(c)){fire(c);return;} const h=panelHit(c); if(h){ if(h.i>=0){ pBtns[h.i].act(); drawPanel(); } return; } const g=hudHit(c); if(g){ if(g.i>=0){ hBtns[g.i].act(); drawHud(); } return; } if(st.auto) setAuto(false); pull(); });
+  c.addEventListener('squeezestart',()=>{ if(!KALS.on) pull(); });
   dolly.add(c); return c;});
 
 function isGun(c){const h=c.userData.src&&c.userData.src.handedness; return h?h===st.hand:false;}
@@ -1508,13 +1509,17 @@ function pull(){
 const tmpQ=new THREE.Quaternion();
 const corr={yaw:0,pitch:0};
 try{const c=JSON.parse(localStorage.getItem('skeet-corr')||'null'); if(c&&isFinite(c.yaw)&&isFinite(c.pitch)){corr.yaw=c.yaw;corr.pitch=c.pitch;}}catch(e){}
-function applyCorr(){ controllers.forEach(c=>c.userData.gun.rotation.set(corr.pitch,corr.yaw,0,'YXZ')); applyOsa(); }
+function applyCorr(){ const cq=new THREE.Quaternion().setFromEuler(corrEuler()); controllers.forEach(c=>c.userData.gun.quaternion.copy(KALQ()).multiply(cq)); applyOsa(); }
 // ---------- Kalibrace zbraně v držáku: osa hlavně prochází okem střelce ----------
 // Ovladač sedí v držáku mimo osu lišty. Po zalícování se změří, kde je oko vůči ovladači; virtuální hlaveň se pak
 // vykreslí tak, aby lišta vedla přímo pod okem (stejný obraz při míření jako se skutečnou zbraní).
+// kalibrace dotykem: kde je na ovladači v držáku osa hlavně (KAL.q = natočení, KAL.p = posun skupiny zbraně v souřadnicích ovladače)
+const KAL={q:null,p:null,delka:null}; try{ const o=JSON.parse(localStorage.getItem('skeet-kal')||'null'); if(o&&Array.isArray(o.q)&&Array.isArray(o.p)){ KAL.q=o.q; KAL.p=o.p; KAL.delka=o.delka||null; } }catch(e){}
+function kalSave(){ try{ localStorage.setItem('skeet-kal',JSON.stringify(KAL)); }catch(e){} }
+const KALQ=()=>KAL.q?new THREE.Quaternion().fromArray(KAL.q):new THREE.Quaternion();
 const OSA={p:null,oko:'prave'}; try{ const o=JSON.parse(localStorage.getItem('skeet-osa')||'null'); if(o){ if(Array.isArray(o.p)) OSA.p=o.p; if(o.oko==='leve') OSA.oko='leve'; } }catch(e){}
 const OSA_POD=0.028, OSA_ZA=0.24;   // oko je 2,8 cm nad osou hlavní a 24 cm za pouzdrem závěru
-function applyOsa(){ controllers.forEach(c=>{ const g=c.userData.gun; if(!OSA.p){ g.position.set(0,0,0); return; }
+function applyOsa(){ controllers.forEach(c=>{ const g=c.userData.gun; if(KAL.p){ g.position.fromArray(KAL.p); return; } if(!OSA.p){ g.position.set(0,0,0); return; }
   const off=new V(0,-OSA_POD,-OSA_ZA).applyEuler(corrEuler()); g.position.set(OSA.p[0]+off.x,OSA.p[1]+off.y,OSA.p[2]+off.z); }); }
 function osaSave(){ try{localStorage.setItem('skeet-osa',JSON.stringify(OSA));}catch(e){} }
 function okoSvet(){ const e=new V(), q=new THREE.Quaternion(); camera.getWorldPosition(e); camera.getWorldQuaternion(q); return e.add(new V(OSA.oko==='leve'?-0.032:0.032,0,0).applyQuaternion(q)); }
@@ -1538,8 +1543,8 @@ function fire(src,lagMs){
   const a=ammoInfo(AMMO[gun.ammo]), rate=chokeRate(gun,barrel);
   const o=new V(), d=new V(0,0,-1);
   const hist=src&&lagMs>0?gunPast(lagMs):null;   // Bluetooth spoušť: směr hlavně v okamžiku stisku, ne až když zpráva dorazí
-  if(src){ if(hist){ o.copy(hist.o); tmpQ.copy(hist.q); } else { src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); } d.applyEuler(corrEuler()).applyQuaternion(tmpQ);
-    if(OSA.p){ const gp=src.userData.gun.position; o.add(gp.clone().applyQuaternion(tmpQ)); } o.addScaledVector(d,0.76);
+  if(src){ if(hist){ o.copy(hist.o); tmpQ.copy(hist.q); } else { src.getWorldPosition(o); src.getWorldQuaternion(tmpQ); } d.applyQuaternion(src.userData.gun.quaternion).applyQuaternion(tmpQ);
+    o.add(src.userData.gun.position.clone().applyQuaternion(tmpQ)); o.addScaledVector(d,0.76);
     const s=src.userData.src; const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0]; if(h&&h.pulse)h.pulse(1,70);}
   else{camera.getWorldPosition(o); camera.getWorldDirection(d);}
   if(st.mode==='N'){ zeroShot(o,d.normalize(),a,rate,barrel); return; }
@@ -1616,7 +1621,7 @@ function zSave(){
 function zAlignNow(src){
   st.zAlign=false; sClick();
   const o=new V(); src.getWorldPosition(o); src.getWorldQuaternion(tmpQ);
-  const l=zBasis.c.clone().sub(o).normalize().applyQuaternion(tmpQ.clone().invert());
+  const l=zBasis.c.clone().sub(o).normalize().applyQuaternion(tmpQ.clone().invert()).applyQuaternion(KALQ().invert());
   corr.pitch=Math.asin(Math.max(-1,Math.min(1,l.y))); corr.yaw=Math.atan2(-l.x,-l.z);
   try{localStorage.setItem('skeet-corr',JSON.stringify(corr));}catch(e){}
   applyCorr(); zClear(); drawHud();
@@ -1775,9 +1780,9 @@ function setUnlim(v){ st.unlim=v; try{localStorage.setItem('skeet-unlim',v?'1':'
 const shellsTxt=()=>st.unlim&&st.mode!=='N'?'∞':`${'●'.repeat(Math.max(0,st.shells))}${'○'.repeat(Math.max(0,2-st.shells))}`;
 
 /* ---------- Ovládací panel ve VR – za zády střelce ---------- */
-const PW=1024, PH=1230, pCan=document.createElement('canvas'); pCan.width=PW; pCan.height=PH;
+const PW=1024, PH=1340, pCan=document.createElement('canvas'); pCan.width=PW; pCan.height=PH;
 const pTex=new THREE.CanvasTexture(pCan);
-const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.28,1.5375),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false}));
+const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.28,1.675),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false}));
 panel.position.set(0,1.3,1.25); panel.rotation.y=Math.PI; panel.visible=false; dolly.add(panel);
 // tabule nastavení: otevře se ozubeným kolem na malém panelu, vždy před střelcem ve směru pohledu; zavře se terčem nebo grafem
 function panelOtevri(){ const q=camera.quaternion, d=new THREE.Vector3(0,0,-1).applyQuaternion(q); d.y=0; if(d.lengthSq()<1e-4) d.set(0,0,-1); d.normalize();
@@ -1822,7 +1827,9 @@ function buildPanel(){
   pBtn(24,row(9),300,84,{vyp:'ROZBOR VYP',chyba:'ROZBOR PO CHYBĚ',vzdy:'ROZBOR VŽDY'}[st.rozbor],st.rozbor!=='vyp',()=>setRozbor({vyp:'chyba',chyba:'vzdy',vzdy:'vyp'}[st.rozbor]));
   pBtn(336,row(9),300,84,'PŘEHRÁT RÁNU',false,()=>rozborStart());
   pBtn(648,row(9),352,84,'NÍZKÉ DRŽENÍ = TEĎ',DRZ.low!=null,()=>drzKalibruj());
-  pBtn(336,row(10),380,70,OSA.p?'KALIBRACE ZBRANĚ ✓ (znovu)':'KALIBRACE ZBRANĚ',!!OSA.p,()=>osaKalibruj());
+  pBtn(336,row(10),380,70,OSA.p?'OKO NAD LIŠTOU ✓ (znovu)':'OKO NAD LIŠTOU',!!OSA.p,()=>osaKalibruj());
+  pBtn(24,row(11),560,80,KAL.p?'KALIBRACE DRUHÝM OVLADAČEM ✓ (znovu)':'KALIBRACE ZBRANĚ DRUHÝM OVLADAČEM',!!KAL.p,()=>kalStart(false));
+  pBtn(596,row(11),404,80,KAL.p?'ZRUŠIT KALIBRACI DOTYKEM':'(kalibrace průhledem: tlačítko na stránce)',false,()=>{ if(KAL.p) kalZrus(); });
   pBtn(728,row(10),272,70,OSA.oko==='leve'?'OKO: LEVÉ':'OKO: PRAVÉ',false,()=>setOko(OSA.oko==='leve'?'prave':'leve'));
   pBtn(24,row(10),300,70,tr('Zpoždění spouště')+' '+st.lag+' ms',st.lag>0,()=>setLag([0,20,40,60,80][([0,20,40,60,80].indexOf(st.lag)+1)%5]));
   pBtn(728,row(8),272,84,st.squad.length>1?st.squad[st.sq].name:'1 STŘELEC',st.squad.length>1,()=>{ if(st.squad.length>1){ st.sq=(st.sq+1)%st.squad.length; renderSquad(); say(tr('Na řadě')+': '+st.squad[st.sq].name); } });
@@ -1891,7 +1898,7 @@ function drawGear(x,X,Y,w,h,open,hover){
   x.closePath(); x.fill(); x.fillStyle=hover?'#3c5a4a':(open?'#e8662a':'#24362c'); x.beginPath(); x.arc(cx,cy,h*0.13,0,7); x.fill();
 }
 let spoustTep=-1e9, spoustBat=null;
-const batTxt=()=>spoustBat==null?'':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
+const batTxt=()=>spoustBat==null?'':spoustBat==='usb'?' · USB':` ${spoustBat} %`; const spoustOK=()=>performance.now()-spoustTep<12000;
 function drawHud(){
   $('hudL').innerHTML=`<b>${tr('Stanoviště')} ${st.station+1}</b><br>${tr(MODE[st.mode])}${st.squad.length>1?'<br>'+tr('Na řadě')+': '+esc(st.squad[st.sq].name):''}`;
   $('hudR').innerHTML=`${gun.name?esc(gun.name)+' · '+tr(AMMO[gun.ammo].n).split(' · ')[0]+'<br>':''}${tr('Náboje')} ${shellsTxt()}<br>${tr('Spoušť')} ${spoustOK()?tr('● připojena')+batTxt():tr('○ nepřipojena')}`;
@@ -1901,7 +1908,7 @@ function drawHud(){
   const P=PROG[st.prog], tt=(st.squad.length>1?st.squad[st.sq].name+' · ':'')+(P?`${P.k} ${st.progI+1}/${P.seq.length} · `:'')+`${st.station+1} · ${SH[st.mode]}`;
   x.fillStyle='#fff'; fitFont(x,tt,600,72); x.fillText(tt,36,80);
   x.textAlign='right'; x.font='600 44px IBM Plex Mono, monospace'; x.fillStyle='#cfe3d6'; x.fillText(`${shellsTxt()} ${totals()}`,W-30,74);
-  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(tr(spoustOK()?'● SPOUŠŤ':'○ SPOUŠŤ')+(spoustOK()?batTxt():''),W-30,122); x.textAlign='left';
+  x.font='600 30px IBM Plex Mono, monospace'; x.fillStyle=spoustOK()?((spoustBat!=null&&spoustBat!=='usb'&&spoustBat<20)?'#ffb08a':'#7fe0a0'):'#ffb08a'; x.fillText(tr(spoustOK()?'● SPOUŠŤ':'○ SPOUŠŤ')+(spoustOK()?batTxt():''),W-30,122); x.textAlign='left';
   // hláška – zkrácená a zmenšená, aby se vždy vešla
   let m=LANG==='cs'?st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,'').replace(' před terčem',' před').replace(' za terčem',' za')
     :tr(st.lastMsg.replace('Vedle','VEDLE').replace('Zásah','ZÁSAH').replace(/ · \d+\. rána/,''));
@@ -1989,7 +1996,7 @@ document.addEventListener('keydown',e=>{
   try{ $('lastKey').textContent=(e.key||'?')+' / '+(e.code||'?')+' · '+new Date().toLocaleTimeString('cs-CZ'); }catch(_){}
   if(e.target.closest&&e.target.closest('button')&&e.key===' ')return;
   const fk=/^F(1[3-9]|2[0-4])$/.exec(e.key||'')||/^F(1[3-9]|2[0-4])$/.exec(e.code||'');
-  if(fk){e.preventDefault(); const n=+fk[1]; spoustBat=n<24?(n-13)*10:null; const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} else drawHud(); return;}
+  if(fk){e.preventDefault(); const n=+fk[1]; spoustBat=n<24?(n-13)*10:'usb'; const bylo=spoustOK(); spoustTep=performance.now(); if(!bylo){say('Spoušť připojena');} else drawHud(); return;}
   if(e.key==='f'||e.key==='F'){e.preventDefault(); spoustTep=performance.now(); spoust();}
   else if(e.key===' '){e.preventDefault();audio();pull();}
   else if(e.key==='ArrowLeft'){e.preventDefault();setStation(st.station-1);}
@@ -2011,6 +2018,72 @@ function spoust(){
   $('spCnt').textContent=spoustPocet;
   if(st.mode!=='N' && !st.targets.some(t=>t.alive) && st.lastMsg.indexOf('Prázdná')<0) say('Výstřel z desky č. '+spoustPocet+' – bez terče');
 }
+
+/* ---------- KALIBRACE ZBRANĚ DRUHÝM OVLADAČEM (dotyk 2–3 bodů) + KONTROLA PRŮHLEDEM ----------
+   Ovladač je v držáku na zbrani. Druhým ovladačem se dotkneme mušky, lišty u pouzdra závěru a lučíku.
+   Z bodů v souřadnicích ovladače v držáku se spočítá osa hlavně → virtuální brokovnice leží přesně na skutečné. */
+const KALS={on:false,krok:0,body:[],ar:false,volny:null,znacka:null,tecky:[],prevB:new Map(),pruhl:[]};
+const KAL_TEXT=[
+  'KROK 1/3 – MUŠKA: Zbraň s ovladačem v držáku držte v jedné ruce. Druhým ovladačem se dotkněte {kde} MUŠKY na konci hlavně a zmáčkněte spoušť toho ovladače.',
+  'KROK 2/3 – LIŠTA U ZÁVĚRU: Teď se stejně dotkněte LIŠTY těsně před pouzdrem závěru (tam, kde lišta začíná) a zmáčkněte spoušť.',
+  'KROK 3/3 – LUČÍK: Dotkněte se SPODKU LUČÍKU (krytu spouště) a zmáčkněte spoušť. Když nejde dosáhnout, přeskočte tlačítkem B nebo Y.',
+  'KONTROLA: {kont} Doladění páčkou: na ovladači ZBRANĚ posun nahoru/dolů a do stran, na DRUHÉM natočení. ULOŽIT = spoušť druhého ovladače, ZRUŠIT = B nebo Y.'];
+function kalHlas(t){ const kde=KALS.ar?'oranžovou kuličkou na ovladači':'přední hranou ovladače (kroužkem)';
+  const kont=KALS.ar?'Podívejte se, jestli šedá virtuální hlaveň leží přesně na vaší skutečné.':'Zalícujte a podívejte se po liště – muška má být přesně v ose.';
+  const m=t.replace('{kde}',kde).replace('{kont}',kont); say(m); mluv(m.replace(/^[^:]*: /,''),VOICE[LANG]||'cs-CZ',{prerusit:true}); }
+function kalZnacka(c){ if(!KALS.znacka){ KALS.znacka=new THREE.Mesh(new THREE.SphereGeometry(0.006,16,12),new THREE.MeshBasicMaterial({color:0xff6a00,depthTest:false})); KALS.znacka.renderOrder=20; }
+  if(KALS.znacka.parent) KALS.znacka.parent.remove(KALS.znacka); if(c) c.add(KALS.znacka); }
+function kalGunViditelna(v,pruh){ controllers.forEach(c=>{ const g=c.userData.gun; g.visible=v&&isGun(c);
+  g.traverse(o=>{ if(o.isMesh&&o.material){ const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{ if(pruh){ if(m.userData.kalO==null){ m.userData.kalO=[m.transparent,m.opacity]; } m.transparent=true; m.opacity=0.55; m.needsUpdate=true; }
+      else if(m.userData.kalO){ m.transparent=m.userData.kalO[0]; m.opacity=m.userData.kalO[1]; delete m.userData.kalO; m.needsUpdate=true; } }); } }); }); }
+function kalStart(ar){ if(!st.inXR){ say('Kalibrace jde jen v brýlích (VR nebo průhled)'); return; } panelZavri(); if(osaOdpocet) return;
+  KALS.on=true; KALS.krok=0; KALS.body=[]; KALS.ar=!!ar; KALS.volny=null; KALS.tecky.forEach(t=>t.parent&&t.parent.remove(t)); KALS.tecky=[];
+  kalGunViditelna(false,false); controllers.forEach(c=>{ if(c.userData.laser) c.userData.laser.visible=false; });
+  const v=controllers.find(c=>c.userData.src&&!isGun(c)); kalZnacka(v); kalHlas(KAL_TEXT[0]); }
+function kalSelect(c){ if(KALS.krok>=3){ if(c===KALS.volny||!isGun(c)) kalKonec(true); return; }
+  // ovladač, kterým se dotýkáme, je ten volný; druhý je na zbrani (podle toho se nastaví ruka)
+  if(!KALS.volny){ KALS.volny=c; const h=c.userData.src&&c.userData.src.handedness; if(h){ const g=h==='left'?'right':'left'; if(st.hand!==g){ st.hand=g; syncHands(); kalGunViditelna(false,false); } } kalZnacka(c); }
+  if(c!==KALS.volny) return; const gunC=controllers.find(x=>x!==c); if(!gunC) return;
+  const p=new V(); c.getWorldPosition(p); gunC.updateMatrixWorld(true); const loc=gunC.worldToLocal(p.clone()); KALS.body.push(loc);
+  const t=new THREE.Mesh(new THREE.SphereGeometry(0.005,12,8),new THREE.MeshBasicMaterial({color:0x2fd16b,depthTest:false})); t.renderOrder=21; t.position.copy(loc); gunC.add(t); KALS.tecky.push(t);
+  sClick(); try{ const h=c.userData.src.gamepad.hapticActuators[0]; h&&h.pulse(0.6,40); }catch(e){}
+  if(KALS.body.length===2&&KALS.body[0].distanceTo(KALS.body[1])<0.15){ say('Body jsou moc blízko u sebe – zkuste znovu od mušky'); KALS.body=[]; KALS.tecky.forEach(t=>t.parent&&t.parent.remove(t)); KALS.tecky=[]; KALS.krok=0; kalHlas(KAL_TEXT[0]); return; }
+  KALS.krok=KALS.body.length; if(KALS.krok<3) kalHlas(KAL_TEXT[KALS.krok]); else kalSpocti(); }
+function kalSpocti(){ const [M,Z,T]=KALS.body; const a=M.clone().sub(Z), len=a.length(); a.normalize();
+  const gunC=controllers.find(x=>x!==KALS.volny);
+  let u=T?Z.clone().sub(T):new V(0,1,0); u.addScaledVector(a,-u.dot(a)); if(u.lengthSq()<1e-6) u.set(0,1,0).addScaledVector(a,-a.y); u.normalize();
+  const zA=a.clone().negate(), xA=new V().crossVectors(u,zA).normalize(); const m=new THREE.Matrix4().makeBasis(xA,u,zA); const q=new THREE.Quaternion().setFromRotationMatrix(m);
+  const p=Z.clone().sub(new V(0,0.026,-0.04).applyQuaternion(q));
+  KAL.q=q.toArray(); KAL.p=p.toArray(); KAL.delka=len; corr.yaw=0; corr.pitch=0; try{localStorage.removeItem('skeet-corr');}catch(e){} applyCorr();
+  KALS.krok=3; kalGunViditelna(true,true);
+  say(`Změřeno: od mušky k závěru ${Math.round(len*100)} cm${T?'':' (bez lučíku – náklon podle ovladače)'}.`); kalHlas(KAL_TEXT[3]); }
+function kalPads(s){ for(const src of s.inputSources){ const gp=src.gamepad; if(!gp) continue; const key=src.handedness, b=gp.buttons, pb=KALS.prevB.get(key)||[];
+    const pressed=i=>b[i]&&b[i].pressed&&!pb[i]; KALS.prevB.set(key,b.map(x=>x.pressed));
+    if(pressed(5)||pressed(4)&&false){ if(KALS.krok===2){ kalSpocti(); continue; } if(KALS.krok>=3){ kalKonec(false); return; } }
+    if(KALS.krok<3||!KAL.q) continue; const x=gp.axes[2]||0, y=gp.axes[3]||0; if(Math.abs(x)<0.25&&Math.abs(y)<0.25) continue;
+    const gunH=st.hand, q=KALQ(), p=new V().fromArray(KAL.p);
+    if(key===gunH){ p.add(new V(x*0.0006,-y*0.0006,0).applyQuaternion(q)); KAL.p=p.toArray(); }                 // posun 0,6 mm za snímek
+    else { const r=new THREE.Quaternion().setFromEuler(new THREE.Euler(-y*0.0015,-x*0.0015,0,'YXZ')); const piv=new V(0,0.026,-0.04), w0=piv.clone().applyQuaternion(q).add(p);
+      q.multiply(r); KAL.q=q.toArray(); KAL.p=w0.sub(piv.clone().applyQuaternion(q)).toArray(); }                    // natočení kolem začátku lišty
+    applyCorr(); } }
+function kalKonec(ulozit){ KALS.on=false; kalZnacka(null); KALS.tecky.forEach(t=>t.parent&&t.parent.remove(t)); KALS.tecky=[]; kalGunViditelna(true,false); syncHands();
+  if(ulozit&&KAL.q){ kalSave(); say(`Kalibrace uložena – brokovnice leží na skutečné (${KAL.delka?Math.round(KAL.delka*100)+' cm':''}). Doporučeno: pak ještě NASTŘELENÍ na tabuli.`); mluv('Kalibrace uložena',VOICE[LANG]||'cs-CZ',{prerusit:true}); }
+  else { try{ const o=JSON.parse(localStorage.getItem('skeet-kal')||'null'); KAL.q=o&&o.q||null; KAL.p=o&&o.p||null; KAL.delka=o&&o.delka||null; }catch(e){ KAL.q=KAL.p=null; } applyCorr(); say('Kalibrace zrušena – zůstává předchozí nastavení'); }
+  if(KALS.ar){ const ss=renderer.xr.getSession(); if(ss) setTimeout(()=>ss.end(),1500); } }
+function kalZrus(){ KAL.q=KAL.p=KAL.delka=null; try{localStorage.removeItem('skeet-kal');}catch(e){} applyCorr(); say('Kalibrace dotykem zrušena – brokovnice zase podle ovladače'); if(panel.visible) drawPanel(); }
+// průhled (Quest 3): skryje se střelnice, vidíte skutečný svět a přes něj virtuální brokovnici
+function arRezim(on){ if(on){ KALS.pruhl=[]; scene.children.forEach(o=>{ if(o!==dolly){ KALS.pruhl.push([o,o.visible]); o.visible=false; } }); dolly.children.forEach(o=>{ if(!controllers.includes(o)&&o!==camera){ KALS.pruhl.push([o,o.visible]); o.visible=false; } });
+    KALS.bg=scene.background; KALS.fog=scene.fog; scene.background=null; scene.fog=null; renderer.setClearAlpha(0); }
+  else { KALS.pruhl.forEach(([o,v])=>o.visible=v); KALS.pruhl=[]; if(KALS.bg!==undefined) scene.background=KALS.bg; if(KALS.fog!==undefined) scene.fog=KALS.fog; renderer.setClearAlpha(1); } }
+$('arKalBtn').onclick=async()=>{ audio(); try{ const cur=renderer.xr.getSession(); if(cur) await cur.end();
+    let ok=false; try{ ok=navigator.xr&&await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){}
+    if(!ok){ say('Průhled tu není k dispozici – vstupte do VR a v menu dejte KALIBRACE ZBRANĚ DRUHÝM OVLADAČEM'); return; }
+    const s=await navigator.xr.requestSession('immersive-ar',{optionalFeatures:['local-floor']}); arRezim(true);
+    await renderer.xr.setSession(s); st.inXR=true; syncHands(); placeDolly();
+    s.addEventListener('end',()=>{ st.inXR=false; if(KALS.on){ KALS.on=false; kalZnacka(null); kalGunViditelna(true,false); } arRezim(false); resize(); placeDolly(); });
+    setTimeout(()=>kalStart(true),900); }catch(e){ arRezim(false); say('Průhled se nespustil ('+(e&&e.message?e.message:'?')+')'); } };
+
+applyCorr();   // uložená kalibrace a korekce hned po startu
 
 /* ---------- VR ---------- */
 const vrBtn=$('vrBtn'), vrNote=$('vrNote');
@@ -2035,6 +2108,7 @@ vrBtn.onclick=async()=>{
 const prevAxes=new Map(), prevBtn=new Map();
 function pollPads(){
   const s=renderer.xr.getSession(); if(!s)return;
+  if(KALS.on){ kalPads(s); return; }
   for(const src of s.inputSources){const gp=src.gamepad; if(!gp)continue; const key=src.handedness;
     const ax=gp.axes, x=ax[2]||0, y=ax[3]||0, pa=prevAxes.get(key)||{x:0,y:0};
     if(x>0.7&&pa.x<=0.7)setStation(st.station+1); if(x<-0.7&&pa.x>=-0.7)setStation(st.station-1);
