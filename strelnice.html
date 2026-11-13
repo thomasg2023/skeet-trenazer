@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.13-2</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.13-3</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -156,7 +156,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.13-2';
+const VERZE='2026.11.13-3';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -422,7 +422,7 @@ function ringTarget(x,y,z,kind){ const dist=Math.abs(z), T=kind!=='puska'?{R10:0
   const t={typ:'ring',kind,m,c,ctx,tex,px,N,size,hits:[],R10,step,blk:T.blk,bin:T.bin,
     score(l){ const r=Math.hypot(l.x,l.y), rb=typeof zbr==='function'?zbr().r:0.0045; if(r<=R10+rb) return {pts:10,zona:r<=R10*0.5?'10x':'10'}; const s=10-Math.ceil((r-R10-rb)/step); return s>=1?{pts:s,zona:String(s)}:{pts:0,zona:'0'}; }};
   m.userData.t=t; TG.push(t); return t; }
-function stojan(x,y,z,w,h){ const wood=mat(0x8a6a44); box(0.05,y-h/2+0.05,0.05,wood,x-w/2-0.03,(y-h/2)/2,z-0.02,TGROUP); box(0.05,y-h/2+0.05,0.05,wood,x+w/2+0.03,(y-h/2)/2,z-0.02,TGROUP); }
+function stojan(x,y,z,w,h){ const wood=mat(0x8a6a44); return [box(0.05,y-h/2+0.05,0.05,wood,x-w/2-0.03,(y-h/2)/2,z-0.02,TGROUP),box(0.05,y-h/2+0.05,0.05,wood,x+w/2+0.03,(y-h/2)/2,z-0.02,TGROUP)]; }
 // IPSC terč (kartonový): A 15×28, C 30×48 (zkosené rohy), D zbytek; hlava 15×15 s A 10×5 cm
 function ipscTarget(x,y,z,o){ o=o||{}; const ns=!!o.noshoot, W=0.46, H=0.58, N=512, px=N/W, c=document.createElement('canvas'); c.width=N; c.height=Math.round(H*px); const ctx=c.getContext('2d');
   const X=v=>N/2+v*px, Y=v=>c.height/2-v*px;
@@ -434,13 +434,13 @@ function ipscTarget(x,y,z,o){ o=o||{}; const ns=!!o.noshoot, W=0.46, H=0.58, N=5
   if(o.zbranKresba){ ctx.fillStyle='#1b1b1b'; ctx.save(); ctx.translate(X(0.12),Y(-0.02)); ctx.rotate(-0.4); ctx.fillRect(-30,-8,60,14); ctx.fillRect(-30,-8,14,36); ctx.restore(); }
   if(ns){ ctx.strokeStyle='#222'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(X(-0.12),Y(0.05)); ctx.lineTo(X(-0.2),Y(0.25)); ctx.moveTo(X(0.12),Y(0.05)); ctx.lineTo(X(0.2),Y(0.25)); ctx.stroke(); ctx.fillStyle='#222'; ctx.font='700 40px Arial'; ctx.textAlign='center'; ctx.fillText('NS',X(0),Y(-0.12)); }
   const tex=new THREE.CanvasTexture(c); const m=new THREE.Mesh(new THREE.PlaneGeometry(W,H),new THREE.MeshLambertMaterial({map:tex,transparent:true,alphaTest:0.5,side:THREE.DoubleSide}));
-  m.position.set(x,y,z); if(o.ry) m.rotation.y=o.ry; TGROUP.add(m); if(!o.bezStojanu) stojan(x,y,z,W*0.8,H);
+  m.position.set(x,y,z); if(o.ry) m.rotation.y=o.ry; TGROUP.add(m); const stj=o.bezStojanu?null:stojan(x,y,z,W*0.8,H);
   const inA=l=>(Math.abs(l.x)<=0.075&&l.y>=-0.12&&l.y<=0.16)||(Math.abs(l.x)<=0.05&&l.y>=0.2&&l.y<=0.255);
   const inC=l=>(Math.abs(l.x)<=0.15&&l.y>=-0.30&&l.y<=0.17)||(Math.abs(l.x)<=0.075&&l.y>0.17&&l.y<=0.29);
   const inT=l=>{ if(l.y>0.17) return Math.abs(l.x)<=0.075&&l.y<=0.29; if(Math.abs(l.x)>0.23||l.y<-0.29) return false; if(l.y>0.10&&Math.abs(l.x)>0.16+(0.17-l.y)*1.0) return false; if(l.y<-0.22&&Math.abs(l.x)>0.16+(l.y+0.29)*1.0) return false; return true; };
   const t={typ:ns?'noshoot':'ipsc',m,c,ctx,tex,px,N:c.width,NH:c.height,size:W,H,hits:[],name:o.name||'',
     score(l){ if(!inT(l)) return null; const hl=l.y>0.17; if(ns) return {pts:-10,zona:'NS'}; if(inA(l)) return {pts:5,zona:'A'}; if(inC(l)) return {pts:ST.stage&&ST.stage.zbran==='puska'?4:3,zona:hl?'B':'C'}; return {pts:ST.stage&&ST.stage.zbran==='puska'?2:1,zona:'D'}; }};
-  m.userData.t=t; TG.push(t); return t; }
+  t.stojan=stj; m.userData.t=t; TG.push(t); return t; }
 // ocelový terč: kulatý plech (padá dozadu) nebo popper (padá při zásahu horní části)
 function steelTarget(x,y,z,o){ o=o||{}; const pop=!!o.popper, g=new THREE.Group(); const sm=new THREE.MeshLambertMaterial({color:o.barva||0xe9e9e4});
   let m; if(pop){ m=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.12,0.01,24),sm); const body=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.55,0.012),sm); body.position.y=-0.32; g.add(body); m.rotation.x=Math.PI/2; m.position.y=0.0; body.userData.parentT=true; }
@@ -785,7 +785,8 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
   const S=ST.stage;
   if(pMode==='menu'){
     [['mirena','MÍŘENÁ'],['dyn','IPSC'],['drill','DRILY'],['cqb','CQB']].forEach(([k,t],i)=>btn(30+i*243,90,230,80,t,ST.cat===k,()=>{ ST.cat=k; renderList(); }));
-    STAGES.filter(s=>s.cat===ST.cat).forEach((s,i)=>btn(30,190+i*92,964,80,s.n,S&&S.id===s.id,()=>vyberCviceni(s.id)));
+    { const L=STAGES.filter(s=>s.cat===ST.cat), dva=L.length>6, R=dva?Math.ceil(L.length/2):6, rh=Math.min(92,Math.floor(552/Math.max(1,R)));   // víc cvičení = dva sloupce, všechna se vejdou
+      L.forEach((s,i)=>{ const c=dva?Math.floor(i/R):0, r=dva?i%R:i; btn(30+c*494,190+r*rh,dva?470:964,rh-12,s.n,S&&S.id===s.id,()=>vyberCviceni(s.id)); }); }
     const y0=190+6*92+4; x.fillStyle='#9fb5a8'; x.font='500 24px IBM Plex Mono, monospace'; x.fillText('PROSTŘEDÍ A DENNÍ DOBA',30,y0+10);
     [['les','LES'],['mesto','MĚSTO'],['stadion','STADION'],['poust','POUŠŤ'],['hala','HALA'],['hory','HORY']].forEach(([k,t],i)=>btn(30+i*162,y0+24,152,70,t,ST.env===k,()=>{ ST.envRucne=true; setEnv(k); nocNastav(!!(S&&S.noc)); }));
     btn(30,y0+104,310,60,DOBA[ST.doba].n.toUpperCase(),ST.doba!=='den',()=>{ const k=Object.keys(DOBA); setDoba(k[(k.indexOf(ST.doba)+1)%k.length]); nocNastav(!!(S&&S.noc)); pocasiApply(); });
@@ -877,7 +878,7 @@ function rekord(S,R){ const k='st-rek-'+S.id, val=R.skore; if(val==null) return;
 
 // ---- náhodné prezentace: posun terčů, prohození hrozba/civilista v CQB ----
 function nahodnaRole(o){ if(!ST.nahodne) return o; const r=Object.assign({},o); if(Math.random()<0.3){ if(r.noshoot){ r.noshoot=false; r.zbranKresba=true; r.name=(r.name||'')+'*'; } else if(r.zbranKresba){ r.noshoot=true; r.zbranKresba=false; r.name=(r.name||'')+'*'; } } return r; }
-function nahodnyPosun(){ if(!ST.nahodne||!ST.stage||ST.stage.cat==='cqb'||ST.stage.mode==='presna') return; for(const t of TG){ if(t.typ==='ipsc'||t.typ==='noshoot'){ const dx=(Math.random()-0.5)*0.8, dz=(Math.random()-0.5)*1.0, dy=(Math.random()-0.5)*0.25; t.m.position.x+=dx; t.m.position.z+=dz; t.m.position.y+=dy; } } }
+function nahodnyPosun(){ if(!ST.nahodne||!ST.stage||ST.stage.cat==='cqb'||ST.stage.mode==='presna') return; for(const t of TG){ if((t.typ==='ipsc'||t.typ==='noshoot')&&!t.sw&&!t.pevny){ const dx=(Math.random()-0.5)*0.8, dz=(Math.random()-0.5)*1.0, dy=t.stojan?0:(Math.random()-0.5)*0.25; t.m.position.x+=dx; t.m.position.z+=dz; t.m.position.y+=dy; if(t.stojan) for(const s of t.stojan){ s.position.x+=dx; s.position.z+=dz; } } } }
 
 function syncReal(){ document.querySelectorAll('#pocasiSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===ST.pocasi)); document.querySelectorAll('#tlakSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===ST.tlak));
   const n=$('nahodneBtn'); if(n) n.setAttribute('aria-pressed',ST.nahodne); const vz=$('vzdSel'); if(vz){ const S=ST.stage; vz.hidden=!(S&&S.vzdal); if(S&&S.vzdal){ vz.innerHTML=S.vzdal.map(d=>`<option value="${d}"${d===(ST.vzd||S.vzdal0)?' selected':''}>${d} m</option>`).join(''); } } }
@@ -1079,14 +1080,20 @@ const _vyberR=vyberCviceni; vyberCviceni=function(id){ _vyberR(id); try{ zdiMate
 /* ================= AKČNÍ TERČE A DALŠÍ STAGE ================= */
 // popper spouští: drop-turner (otočí se, chvíli je vidět, pak zmizí), swinger (kyvadlo), clamshell (odkryje se)
 function spoustPopperem(t,pop,o){ o=o||{}; t.skryty=true; t.aktPop=pop; t.okno=o.okno||0; t.cil0=t.m.rotation.y; t.m.rotation.y=t.cil0+Math.PI/2; return t; }
-function kyvadlo(t,amp,perioda,pop){ t.sw={x0:t.m.position.x,A:amp,w:2*Math.PI/perioda,t0:null,pop:pop||null}; return t; }
+// kyvadlo jako na závodech: ocelový rám se dvěma sloupky, terč visí na tyči z čepu a houpe se do stran
+function kyvadlo(t,amp,perioda,pop){ const m=t.m, L=1.0, py=m.position.y+L, steel=mat(0x4a4d50), piv=new THREE.Group(); t.pevny=true;
+  piv.position.set(m.position.x,py,m.position.z); TGROUP.add(piv); TGROUP.remove(m); m.position.set(0,-L,0); piv.add(m);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(0.025,L-0.29,0.025),steel); arm.position.set(0,-(L-0.29)/2,-0.015); piv.add(arm);
+  const cep=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.12,10),steel); cep.rotation.x=Math.PI/2; piv.add(cep);
+  const x=m.position.x, z=piv.position.z-0.03, rw=2*amp+0.9;
+  box(rw,0.06,0.06,steel,piv.position.x,py+0.04,z,TGROUP); for(const sx of [-1,1]) box(0.06,py+0.07,0.06,steel,piv.position.x+sx*rw/2,(py+0.07)/2,z,TGROUP);
+  t.sw={piv,A:Math.asin(Math.min(0.9,amp/L)),w:2*Math.PI/perioda,t0:null,pop:pop||null}; return t; }
 function akceTick(dt,tRun){ if(ST.phase!=='run') return;
   for(const t of TG){
     if(t.skryty&&t.aktPop&&t.aktPop.down&&!t.odkryto){ t.odkryto=tRun; t.skryty=false; t.otoc=0; noise(0.25,700,0.25,0.06); if(t.sw&&t.sw.pop===t.aktPop) t.sw.t0=tRun; }
     if(t.okno&&t.odkryto!=null&&!t.zmizel&&tRun-t.odkryto>t.okno){ t.zmizel=true; t.skryty=true; t.otoc=null; t.zpet=0; }
     if(t.zpet!=null&&t.zpet<1){ t.zpet=Math.min(1,t.zpet+dt*4); t.m.rotation.y=t.cil0+t.zpet*Math.PI/2; }
-    if(t.sw){ if(t.sw.t0==null&&(!t.sw.pop||t.sw.pop.down)) t.sw.t0=t.sw.pop?tRun:0; if(t.sw.t0!=null){ const k=tRun-t.sw.t0, a=t.sw.A*Math.exp(-k*0.05), f=Math.sin(k*t.sw.w);
-      t.m.position.x=t.sw.x0+a*f; t.m.rotation.z=-0.25*a*f; } } } }
+    if(t.sw){ if(t.sw.t0==null&&(!t.sw.pop||t.sw.pop.down)) t.sw.t0=t.sw.pop?tRun:0; if(t.sw.t0!=null){ const k=tRun-t.sw.t0; t.sw.piv.rotation.z=t.sw.A*Math.exp(-k*0.05)*Math.sin(k*t.sw.w); } } } }
 const _vyberA=vyberCviceni; vyberCviceni=function(id){ _vyberA(id); for(const t of TG){ t.odkryto=null; t.zmizel=false; t.zpet=null; } };
 STAGES.push(
  {id:'dropturn',cat:'dyn',n:'IPSC: popper spustí drop-turner',zbran:'pistole',env:'stadion',mode:'ipsc',ran:14,mag:17,cas:30,
@@ -1098,7 +1105,7 @@ STAGES.push(
   popis:'Popper rozhoupe kyvadlo. Terč se houpe za nevinným – v krajních polohách je celý vidět, uprostřed ho nevinný zakrývá.',
   lekce:['Na kyvadlo nestřílej do pohybu – počkej v krajní poloze, kde se na chvilku zastaví (ambush).','Nevinný je uprostřed dráhy: rána ve špatnou chvíli = −10 bodů.','Kyvadlo pomalu tlumí – po pár kmitech je lehčí, ale čas běží.'],
   setup(){ boxPal(0,0,1.2); const p=steelTarget(-3,1.0,-8,{popper:true,name:'POP'}); const s=ipscTarget(0.6,1.4,-10.4,{name:'SWING',bezStojanu:true}); kyvadlo(s,0.75,2.6,p);
-    const ram=box(2.4,0.06,0.06,mat(0x555555),0.6,2.1,-10.45,TGROUP); ipscTarget(0.6,1.4,-10,{noshoot:true,name:'NS'}); ipscTarget(3.6,1.4,-8,{name:'T1'}); startPos(0,0,0); }},
+    ipscTarget(0.6,1.4,-10,{noshoot:true,name:'NS'}); ipscTarget(3.6,1.4,-8,{name:'T1'}); startPos(0,0,0); }},
  {id:'smoke',cat:'drill',n:'Steel Challenge: Smoke & Hope (podle)',zbran:'pistole',env:'les',mode:'drill',ran:15,mag:17,cas:15,
   popis:'Rychlá stage: čtyři velké obdélníkové plechy blízko (7–8 m) a kulatý STOP plech ve středu. Čas do zásahu STOP plechu, za chybějící plech +3 s. Rozložení podle Steel Challenge „Smoke & Hope“.',
   lekce:['Tady rozhoduje rychlost přechodů, ne přesnost – plechy jsou velké.','Pořadí: z kraje dovnitř a STOP na konec. Neopravuj, dokud neslyšíš, že jsi minul.','Po pípnutí: oči na první plech, zbraň tam hned za nimi.'],
@@ -1174,6 +1181,18 @@ STAGES.push({id:'trosky',cat:'cqb',n:'Postapo: vrakoviště v troskách',zbran:'
 const _vyberM=vyberCviceni; vyberCviceni=function(id){ _vyberM(id); try{ const S=ST.stage; postapoNastav(!!(S&&S.postapo)); }catch(e){} };
 const _setEnvM=setEnv; setEnv=function(e){ _setEnvM(e); try{ if(e==='mesto'){ domyStav(); autaFoto(); const S=ST.stage; postapoNastav(!!(S&&S.postapo)); } }catch(err){} };
 if(ST.env==='mesto') setEnv('mesto');
+
+// ---- CQB: při každém pokusu se terče přeházejí – hrozby i civilisté stojí pokaždé jinde a vynořují se v jiném pořadí ----
+// (místa jsou ta, která cvičení samo nabízí, takže nikdy nestojí ve zdi; rukojmí má pevnou dvojici, to se nemíchá)
+const CQB_POZ={}; let cqbMap=null, cqbI=0, cqbZaz=null, cqbBezi=false;
+const _ipscQ=ipscTarget; ipscTarget=function(x,y,z,o){ o=Object.assign({},o||{}); const i=cqbI++; if(cqbZaz) cqbZaz.push([x,y,z,o.ry||0]);
+  if(cqbMap&&cqbMap[i]){ const q=cqbMap[i]; x=q[0]; y=q[1]; z=q[2]; o.ry=q[3]; } return _ipscQ(x,y,z,o); };
+const _vyberQ=vyberCviceni; vyberCviceni=function(id){ const S=STAGES.find(s=>s.id===id); const mix=S&&S.cat==='cqb'&&id!=='rukojmi'&&!cqbBezi;
+  if(!mix) return _vyberQ(id);
+  cqbBezi=true; try{
+    if(!CQB_POZ[id]){ cqbI=0; cqbZaz=[]; cqbMap=null; _vyberQ(id); CQB_POZ[id]=cqbZaz; cqbZaz=null; }   // poprvé jen zjistit, kde terče stojí
+    const P=CQB_POZ[id].slice(); for(let i=P.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [P[i],P[j]]=[P[j],P[i]]; }
+    cqbI=0; cqbMap=P; _vyberQ(id); } finally { cqbMap=null; cqbZaz=null; cqbBezi=false; } };
 
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.
