@@ -82,7 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
-      <p class="small" id="verze" style="margin:0">verze 2026.11.13-1</p>
+      <p class="small" id="verze" style="margin:0">verze 2026.11.13-2</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
     <div>
@@ -145,7 +145,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
     </section>
   </div>
   <div class="tabp" id="tab-denik" hidden></div>
-  <p class="small" style="margin:0">Fotografické textury: Babylon.js Assets a Poly Haven (CC0). Oblohy a krajiny 360°: Poly Haven (CC0).</p>
+  <p class="small" style="margin:0">Fotografické textury: Babylon.js Assets a Poly Haven (CC0). Oblohy a krajiny 360°: Poly Haven (CC0). 3D modely aut, domů a trosek ze Sketchfabu (CC BY 4.0) – KidBi-Gaming, MaG80, asset_garden, Rashad Ibrahimli, Mehdi Shahsavan, Leandro Andrade, Léonard Doye, GAMGO, B0rn2D13, Orzechu, Frid.blend, bean(alwayshasbean), YadroGames, nermin, falk lochmann, sergeilihandristov; úplný seznam v modely/ZDROJE.txt.</p>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -156,7 +156,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.12-7';
+const VERZE='2026.11.13-2';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -237,7 +237,7 @@ function makeCar(c){ const g=new THREE.Group(), lak=carLak(c); const t=new THREE
   const zrc=new THREE.MeshStandardMaterial({color:0x111111,roughness:0.3,metalness:0.6}); for(const s of [1,-1]){ const z=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.08,0.1),zrc); z.position.set(0.95,0.98,s*0.93); g.add(z); }
   for(const [ax,az] of [[1.4,0.84],[1.4,-0.84],[-1.42,0.84],[-1.42,-0.84]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,0.24,20),carGuma()); w.rotation.x=Math.PI/2; w.position.set(ax,0.34,az); w.castShadow=true; g.add(w);
     const di=new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.21,0.25,16),new THREE.MeshStandardMaterial({color:0xb8bcc0,roughness:0.3,metalness:0.9})); di.rotation.x=Math.PI/2; di.position.copy(w.position); g.add(di); }
-  return g; }
+  g.userData.car=c; return g; }
    // ENVCOL: pevné překážky prostředí (auta ve městě)   // kolize a kryt (CQB dům, barikády)
 // --- LESNÍ STŘELNICE: krytá palebná čára, valy mezi střelišti, zastřelovací val, rámy terčů, les okolo ---
 { const G=ENV.les, wood=mat(0x7a5a3a), roofM=mat(0x4b5a50), berm=mat(0x5f8a45), sandM=mat(0xb59a6a); berm.userData.foto='trava'; sandM.userData.foto='hlina';
@@ -1116,6 +1116,64 @@ STAGES.push(
   lekce:['3 m: jeden obraz mířidel, dvě rány – vnímej jen hrubou mušku.','7 m: po první ráně počkej, až se muška vrátí do zářezu.','15 m: každá rána mířená zvlášť. Rozdíl splitů mezi 3 a 15 m je správně dvoj- až trojnásobný.'],
   setup(){ ipscTarget(-1.6,1.4,-3,{name:'3m'}); ipscTarget(0,1.4,-7,{name:'7m'}); ipscTarget(1.6,1.4,-15,{name:'15m'}); boxPal(0,0,1); startPos(0,0,0); }}
 );
+
+/* ================= SKUTEČNÉ 3D MODELY: AUTA, DOMY S VÝLOHAMI, POSTAPO TROSKY (Sketchfab CC BY, Poly Haven CC0) ================= */
+// všechny modely jsou předem srovnané: střed v (0,0), stojí na zemi, auta mají délku podél osy X, domy mají průčelí (výlohy) na +X
+const AUTA_GLB=['auto_megane','auto_bmw','auto_dodavka','auto_megane','auto_bmw'], VRAKY_GLB=['vrak_sedan','vrak_kombi','vrak_ohoreny','vrak_shoreny','auto_205_dvere'];
+function autoNahrad(g,ids,seed){ const id=ids[Math.abs(Math.round(seed))%ids.length]; model(id).then(m=>{ if(!m||!FOTO.on) return; g.children.slice().forEach(c=>{ c.visible=false; }); const k=m.clone(true); k.userData.glb=true; g.add(k); g.userData.glb=true; }); }
+function autaFoto(){ // přepnutí fotorealismu: kreslené ↔ skutečné modely
+  const sw=g=>{ for(const c of g.children) c.visible=c.userData.glb?FOTO.on:!FOTO.on; };
+  ENV.mesto.traverse(o=>{ if(o.userData.car!==undefined&&o.userData.glb) sw(o); }); TGROUP.traverse(o=>{ if(o.userData.car!==undefined&&o.userData.glb) sw(o); }); }
+// nová auta (buildUlice a další) dostanou skutečný model
+const _makeCar0=makeCar; makeCar=function(c){ const g=_makeCar0(c); g.userData.car=c; if(FOTO.on) autoNahrad(g,makeCar.vraky?VRAKY_GLB:['auto_bmw','auto_megane'],(c>>8)+(makeCar.n=(makeCar.n||0)+1)); return g; };
+// auta stojící ve městě (vytvořená dřív, než se načetly modely)
+ENV.mesto.children.forEach((o,i)=>{ if(o.userData.car!==undefined&&!o.userData.glb&&FOTO.on) autoNahrad(o,AUTA_GLB,i*3+1); });
+// model do cvičení: zástupná skupina se přidá hned, model se do ní vloží po načtení (při změně cvičení zmizí i s ní)
+function pridejTG(id,x,y,z,ry){ const g=new THREE.Group(); g.position.set(x,y,z); g.rotation.y=ry||0; TGROUP.add(g); model(id).then(m=>{ if(m) g.add(m.clone(true)); }); return g; }
+
+// ---- domy s výlohami podél ulice (průčelí na chodníku, x = ±27) ----
+const MESTO_GLB=new THREE.Group(); MESTO_GLB.userData.env='mesto'; ENV.mesto.add(MESTO_GLB);
+const DOMY=[ // [model, strana (-1 vlevo/+1 vpravo), z středu, hloubka (X), délka podél ulice (Z)]
+  ['dum_rada_obchody',-1,-45,20.4,66.2],['dum_cihla',-1,-95,26.7,8.0],['dum_obchod',-1,-108,8.2,9.7],['dum_rada_obchody',-1,52,20.4,66.2],
+  ['domy_evropa',1,-38,27,49.4],['dum_obchod',1,-70,8.2,9.7],['dum_cihla',1,-82,26.7,8.0],['dum_rada_obchody',1,-125,20.4,66.2],['domy_evropa',1,40,27,49.4]];
+function domyStav(){ if(!FOTO.on||domyStav.hotovo) { MESTO_GLB.visible=FOTO.on; skryjKrabice(); return; } domyStav.hotovo=true;
+  for(const [id,s,z,d] of DOMY){ (async()=>{ const m=await model(id); if(!m) return; const k=m.clone(true); k.position.set(s*(27+d/2),0,z); k.rotation.y=s<0?0:Math.PI; MESTO_GLB.add(k); })(); }
+  // pouliční vybavení na chodnících (Poly Haven CC0)
+  const P=[['fire_hydrant',-22.3,-20,0.4],['metal_trash_can',22.4,-33,-1.6],['modular_street_seating',-22.6,-60,1.57],['trashbag',22.7,-48,0.6],['trashbag',22.3,-48.5,2],['cardboard_box_01',-22.5,-86,0.3],['cardboard_box_01',-22.4,-86.5,1.2],
+    ['fire_hydrant',22.3,-104,2.0],['metal_trash_can',-22.5,-118,0.9],['modular_street_seating',22.6,-140,-1.57],['old_tyre',-22.2,-131,1.0],['hand_truck',22.2,-92,2.4],['rollershutter_door',-26.9,-104,1.57]];
+  for(const [id,x,z,ry] of P) postav(id,x,0,z,ry,MESTO_GLB);
+  skryjKrabice(); }
+// kreslené krabicové domy, které teď zakrývají skutečné domy, se schovají
+function skryjKrabice(){ for(const o of ENV.mesto.children){ const g=o.geometry; if(!o.isMesh||!g||g.type!=='BoxGeometry'||Math.abs(g.parameters.width-16)>0.1||Math.abs(g.parameters.depth-18)>0.1) continue;
+    const s=Math.sign(o.position.x); const kryto=DOMY.some(([,ds,z,,l])=>ds===s&&Math.abs(o.position.z-z)<l/2+4); o.visible=!(FOTO.on&&kryto); } }
+
+// ---- POSTAPO: trosky, vraky, rozbořený dům a hřiště (stage „trosky“) ----
+const POSTAPO=new THREE.Group(); POSTAPO.visible=false; ENV.mesto.add(POSTAPO); let postapoHotovo=false;
+async function postapoStav(){ if(postapoHotovo) return; postapoHotovo=true;
+  await postav('ruina_vez',-38,0,-32,0.2,POSTAPO); await postav('ruina_chatrc',31,0,-24,Math.PI,POSTAPO); await postav('ruina_vez',40,0,-70,1.2,POSTAPO);
+  await postav('sut',-12,0,-48,0.6,POSTAPO); await postav('sut',14,0,-90,2.1,POSTAPO); await postav('hriste',-19,0,-8,0.9,POSTAPO);
+  await postav('vrak_alfa2',-15,0,-30,0.3,POSTAPO); await postav('vrak_kombi',17,0,-50,1.9,POSTAPO); }
+function postapoNastav(on){ POSTAPO.visible=on&&FOTO.on; MESTO_GLB.visible=!on&&FOTO.on; if(on) postapoStav();
+  ENV.mesto.traverse(o=>{ if(o.userData.car!==undefined&&o.parent===ENV.mesto) o.visible=!on; }); }
+
+function buildTrosky(){ const vrak=(x,z,ry,id)=>{ pridejTG(id,x,0,z,ry); const col=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.4,1.9),new THREE.MeshBasicMaterial()); col.visible=false; col.position.set(x,0.7,z); col.rotation.y=ry; col.userData.auto=true; TGROUP.add(col); WALLS.push(col); };
+  if(FOTO.on){ vrak(0,-0.8,0.05,'vrak_ohoreny'); vrak(-6.5,-13,0.6,'vrak_sedan'); vrak(5.2,-17,-0.4,'vrak_shoreny'); vrak(-1.5,-25,0.15,'vrak_kombi'); }
+  else { makeCar.vraky=true; const a=(x,z,ry,c)=>{ const g=makeCar(c); g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g); const col=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.5,1.85),new THREE.MeshBasicMaterial()); col.visible=false; col.position.set(x,0.75,z); col.rotation.y=ry; col.userData.auto=true; TGROUP.add(col); WALLS.push(col); };
+    a(0,-0.8,0.05,0x5a4a3a); a(-6.5,-13,0.6,0x3a3a3a); a(5.2,-17,-0.4,0x6a3020); a(-1.5,-25,0.15,0x4a4a40); makeCar.vraky=false; }
+  // barikáda z pneumatik, sudů a pytlů
+  for(const [id,x,z,ry,y] of [['old_tyre',2.6,-7,0,0],['old_tyre',2.6,-7,0.3,0.16],['barrel_03',3.4,-7.4,0,0],['cement_bag',-3,-6,0.4,0],['cement_bag',-3,-6.1,1.9,0.18],['trashbag',4.2,-24,0.5,0],['wooden_military_crate',-4.4,-21,0.3,0]]) pridejTG(id,x,y,z,ry);
+  const T=(x,y,z,o,t)=>{ const tg=ipscTarget(x,y,z,Object.assign({ry:face(x,z,0,2)},nahodnaRole(o))); if(ST.nahodne) t=Math.max(0.8,t+(Math.random()-0.5)*2); tg.skryty=true; tg.aktT=t; tg.cil0=tg.m.rotation.y; tg.m.rotation.y=tg.cil0+Math.PI/2; return tg; };
+  T(-7,1.45,-14.5,{name:'P1',zbranKresba:true},1.2); T(5.8,1.45,-18.6,{noshoot:true,name:'P-civ'},2.6); T(6.4,1.45,-19.2,{name:'P2',zbranKresba:true},3.8); T(-2,1.45,-26.8,{name:'P3',zbranKresba:true},5.2);
+  T(-12.5,1.45,-30.5,{name:'P4',zbranKresba:true},6.6); T(10.5,1.45,-27,{noshoot:true,name:'P-civ2'},7.8); T(13,1.45,-24,{name:'P5',zbranKresba:true},9.0); T(-9.8,1.45,-6.5,{name:'P6',zbranKresba:true},10.5); }
+
+STAGES.push({id:'trosky',cat:'cqb',n:'Postapo: vrakoviště v troskách',zbran:'pistole',env:'mesto',mode:'cqb',ran:30,mag:17,cas:50,postapo:true,
+  popis:'Rozbořená ulice po katastrofě: shořelá auta, suť a ruiny domů. Stojíš za vrakem, hrozby se postupně vynořují za vraky, v ruinách i za tebou na boku. Mezi nimi civilisté.',
+  lekce:['Vrak auta kryje jen tam, kde je motor a kola – plech shořelé karoserie střelu nezastaví.','Ruiny mají spoustu otvorů: skenuj nejen ulici, ale i okna a díry ve zdech. Hrozba se může objevit i z boku.','V nepřehledném prostředí je rozlišení cíle důležitější než rychlost – nejdřív ruce, pak spoušť.'],
+  setup(){ buildTrosky(); startPos(0,1.6,0); }});
+
+const _vyberM=vyberCviceni; vyberCviceni=function(id){ _vyberM(id); try{ const S=ST.stage; postapoNastav(!!(S&&S.postapo)); }catch(e){} };
+const _setEnvM=setEnv; setEnv=function(e){ _setEnvM(e); try{ if(e==='mesto'){ domyStav(); autaFoto(); const S=ST.stage; postapoNastav(!!(S&&S.postapo)); } }catch(err){} };
+if(ST.env==='mesto') setEnv('mesto');
 
 /* ================= SPOUŠŤ BLE + TRÉNINKOVÝ DENÍK ================= */
 // Bluetooth spoušť (XIAO) posílá klávesu F při výstřelu a F13–F24 jako hlášení baterky.
