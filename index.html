@@ -82,7 +82,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-5</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-6</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -557,7 +557,7 @@ const st={vid:true,ukVrh:true,auto:false,autoPause:4,autoT:0,hand:'right',wind:1
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.13-5';
+const VERZE='2026.11.13-6';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -1134,9 +1134,9 @@ function rainTick(dt){ if(!RAIN.visible) return; RAIN.position.set(dolly.positio
   const sn=st.pocasi==='snih', v=sn?1.2:st.pocasi==='bourka'?15:11, t=performance.now()/1000;
   for(let i=0;i<a.length;i+=6){ const dx=sn?Math.sin(t+i)*0.4*dt:0; a[i]+=dx; a[i+3]+=dx; a[i+1]-=dt*v; a[i+4]-=dt*v; if(a[i+4]<0){ a[i+1]+=18; a[i+4]+=18; } } P.needsUpdate=true; }
 // fluorescenční barvy svítí i ve stínu (emisivní složka) – na skutečné střelnici je oranžový terč vidět výrazně líp než obyčejně nabarvená plocha
-const CLAYC={oranz:{n:'Fluo oranžový',c:0xff5a12,e:0xff3c00,ei:0.55,rim:0xe24a0c,p:[0xff7a3a,0xf0662a]},cernoor:{n:'Černý s oranžovou kupolí',c:0xff5a12,e:0xff3c00,ei:0.55,rim:0x161616,p:[0x3a3a3a,0xff7a3a]},cerny:{n:'Černý',c:0x1d1d1d,p:[0x3a3a3a,0x555555]},zluty:{n:'Fluo žlutý',c:0xd6ef1f,e:0xb8e000,ei:0.4,rim:0xc8e01a,p:[0xd9e85a,0xc8d84a]},
+const CLAYC={oranz:{n:'Fluo oranžový',c:0xff5a12,e:0xff5010,ei:0.95,rim:0xff5a12,p:[0xff7a3a,0xf0662a]},cernoor:{n:'Černý s oranžovou kupolí',c:0xff5a12,e:0xff5010,ei:0.95,rim:0x161616,p:[0x3a3a3a,0xff7a3a]},cerny:{n:'Černý',c:0x1d1d1d,p:[0x3a3a3a,0x555555]},zluty:{n:'Fluo žlutý',c:0xd6ef1f,e:0xc8f000,ei:0.85,rim:0xd6ef1f,p:[0xd9e85a,0xc8d84a]},
   bily:{n:'Bílý',c:0xf1efe8,p:[0xe8e6e0,0xd0cec8]},flash:{n:'Černý s růžovým prachem',c:0x1d1d1d,p:[0xff3fa0,0xff7ac0]}};
-function clayColApply(){ const C=CLAYC[st.clayCol]||CLAYC.oranz; clayMat.color.setHex(C.c); clayMat.emissive.setHex(C.e||0x000000); clayMat.emissiveIntensity=C.ei||0; clayRim.color.setHex(C.rim||0x1b1b1b); clayRim.emissive.setHex(C.rim&&C.e?C.e:0); clayRim.emissiveIntensity=C.rim&&C.e&&C.rim!==0x161616?C.ei*0.8:0; }
+function clayColApply(){ const C=CLAYC[st.clayCol]||CLAYC.oranz; clayMat.color.setHex(C.c); clayMat.emissive.setHex(C.e||0x000000); clayMat.emissiveIntensity=C.ei||0; clayRim.color.setHex(C.rim||0x1b1b1b); clayRim.emissive.setHex(C.rim&&C.e?C.e:0); clayRim.emissiveIntensity=C.rim&&C.e&&C.rim!==0x161616?C.ei:0; }
 const puffCol=i=>(CLAYC[st.clayCol]||CLAYC.oranz).p[i];
 function pocasiApply(){ const sn=st.pocasi==='snih'; RAIN.visible=['dest','bourka','snih'].includes(st.pocasi)&&!(typeof KRAJ!=='undefined'&&KRAJ.v==='mesic');
   RAIN.material.color.setHex(sn?0xffffff:0xaabbcc); RAIN.material.opacity=sn?0.95:st.pocasi==='bourka'?0.6:0.45;
@@ -1460,7 +1460,13 @@ function makeClay(){const g=new THREE.Group();
 // viditelnost v brýlích: Quest má ~25 px na stupeň, oko rozliší ~60. Vzdálený terč (0,1–0,2°) by měl jen 3–4 px a ztrácel by se.
 // Terč se proto vykreslí nejméně 0,3° velký (jako ho vidí oko na střelnici); zásahy se dál počítají ze skutečných 110 mm.
 const _vk=new V();
-function vidKomp(){ camera.getWorldPosition(_vk); for(const t of st.targets){ if(!t.alive){ continue; } let k=1; if(st.vid&&!st.big){ const d=_vk.distanceTo(t.m.position); k=Math.min(3,Math.max(1,d*0.00524/0.11)); } t.m.scale.setScalar(k); } }
+const _vn=new V(), _vd=new V();
+function vidKomp(){ camera.getWorldPosition(_vk); for(const t of st.targets){ if(!t.alive) continue;
+    if(!st.vid||st.big){ t.m.scale.setScalar(1); continue; }
+    const d=_vk.distanceTo(t.m.position), kx=Math.min(3.5,Math.max(1,d*0.0061/0.11));          // průměr aspoň 0,35°
+    _vn.set(0,1,0).applyQuaternion(t.m.quaternion); _vd.subVectors(t.m.position,_vk).normalize(); const s=Math.abs(_vn.dot(_vd));
+    const ky=kx+(Math.min(6,Math.max(kx,d*0.0035/0.027))-kx)*(1-s);                                 // z boku (hranou) aspoň 0,2° na výšku
+    t.m.scale.set(kx,ky,kx); } }
 // trap: krátké rozsvícení vrhačky, ze které terč vyletěl
 const VRH_FX=[]; const vrhTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,2,32,32,30);
   g.addColorStop(0,'rgba(255,240,200,1)');g.addColorStop(0.3,'rgba(255,170,60,0.85)');g.addColorStop(1,'rgba(255,120,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
