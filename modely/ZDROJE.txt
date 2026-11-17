@@ -37,3 +37,17 @@ Babylon.js Assets (https://github.com/BabylonJS/Assets), licence CC BY 4.0:
 strom_listnac_lod2.glb – „Tree1“ (meshes/Trees/rawtrees.babylon, SpeedTree listnáč, LOD2) s texturami Broadleaf_Desktop_Atlas a BroadleafBark. Převedeno z formátu .babylon do glTF, zmenšené textury.
 
 Poly Haven (CC0): pistole_sluzebni.glb – upravený „service_pistol“ (jen jedna varianta bez zásobníků, srovnaná na mířidla).
+
+--- Střelnice 2026-11-17 (Sketchfab, CC BY 4.0) ---
+postava_eric.glb – „Eric Rigged 001 - Rigged 3D Business Man“, renderpeople, https://sketchfab.com/3d-models/eric-rigged-001-rigged-3d-business-man-a46bc9f67aaa415bb4f3241eef900e7f
+postava_nathan.glb – „Nathan Animated 003 - Walking 3D Man“, renderpeople, https://sketchfab.com/3d-models/nathan-animated-003-walking-3d-man-143a2b1ea5eb4385ae90a73657aca3bc
+postava_sophia.glb – „Sophia Animated 003 - Animated 3D Woman“, renderpeople, https://sketchfab.com/3d-models/sophia-animated-003-animated-3d-woman-dc448c3be0e74f96a55fb475a13433cf
+lampa.glb – „Street Lamp“, bez_glaza, https://sketchfab.com/3d-models/street-lamp-6881aa1e84b047d79860fa9297e05e22
+kontejner_odpad.glb – „Dumpster“, txnomod, https://sketchfab.com/3d-models/dumpster-337b3a4424b745699cda776545070e04
+hesco.glb – „Hesco Barrier“, aidancallaghan, https://sketchfab.com/3d-models/hesco-barrier-33b47b984fb546e19b20211036d4b38d
+plot_stavebni.glb – „Construction Fence with Screen“, doty_aecom, https://sketchfab.com/3d-models/construction-fence-with-screen-41d7197d73d24ad589c48220ea2c5fb6
+kontejner.glb – „Classic Shipping Container (Free/Gameready)“, Sebastian.Hamish.Webster, https://sketchfab.com/3d-models/classic-shipping-container-freegameready-772f4be391a245f699c54e6cf157c58d
+pytle.glb – „Sandbag Wall 02“, PieterSnauwaert, https://sketchfab.com/3d-models/sandbag-wall-02-6ab8f2c7db3d46f49b5b58ae0b686e2e
+kuzel.glb – „Traffic Cone“, jamiemcfarlane, https://sketchfab.com/3d-models/traffic-cone-66b282e65d3b4da8a883ae8579bfb33c
+policie.glb – „Volvo Police Car-British Police“, David_Holiday, https://sketchfab.com/3d-models/volvo-police-car-british-police-a6e99776c35645c5b11e03a753f7c3e7
+zatarasa.glb – „Fence Barricade 03“, rocz3d, https://sketchfab.com/3d-models/fence-barricade-03-2a09091d4e7b4539abe03f6a50762409

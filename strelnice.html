@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.17-1';
+const VERZE='2026.11.17-2';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1552,15 +1552,15 @@ ENVCOL.push({env:'les',x:0,z:14,ry:0,w:14.6,d:7});
 // plot / zátaras – kreslený (vždy) + skutečný model, když je k dispozici
 const pletivoTex=canvasTex(128,128,(x,w,h)=>{ x.clearRect(0,0,w,h); x.strokeStyle='rgba(185,192,196,1)'; x.lineWidth=3; for(let i=-h;i<w;i+=16){ x.beginPath(); x.moveTo(i,0); x.lineTo(i+h,h); x.stroke(); x.beginPath(); x.moveTo(i+h,0); x.lineTo(i,h); x.stroke(); } },[1,1]);
 const PLOTY={ // model, délka jednoho dílu (m) podél X, výška
-  stavebni:{glb:'plot_stavebni',L:3.45,h:2.0,barva:0xb9c0c4}, pletivo:{glb:'plot_pletivo',L:3.0,h:2.0,barva:0xb9c0c4}, hesco:{glb:'hesco',L:1.05,h:1.35,barva:0xb8a27a},
-  pytle:{glb:'pytle',L:1.6,h:0.7,barva:0xa89470}, beton:{glb:'concrete_road_barrier',L:1.54,h:0.82,barva:0xa8a8a0}, zatarasa:{glb:'zatarasa',L:2.2,h:1.1,barva:0x9a6a3a} };
+  stavebni:{glb:'plot_stavebni',L:2.58,h:2.0,barva:0xb9c0c4}, pletivo:{glb:null,L:3.0,h:2.0,barva:0xb9c0c4}, hesco:{glb:'hesco',L:1.26,h:1.35,barva:0xb8a27a},
+  pytle:{glb:'pytle',L:2.0,h:0.49,barva:0xa89470}, beton:{glb:'concrete_road_barrier',L:1.54,h:0.82,barva:0xa8a8a0}, zatarasa:{glb:'zatarasa',L:2.12,h:0.9,barva:0x9a6a3a} };
 function plotUsek(x0,z0,x1,z1,typ,cil){ const P=PLOTY[typ]||PLOTY.stavebni, L=Math.hypot(x1-x0,z1-z0); if(L<0.3) return; const ry=-Math.atan2(z1-z0,x1-x0), n=Math.max(1,Math.round(L/P.L)), g=new THREE.Group(); g.position.set(x0,0,z0); g.rotation.y=ry; (cil||TGROUP).add(g);
   // kreslený plot (schová se, když se načte model)
   const kr=new THREE.Group(); g.add(kr); const sl=new THREE.MeshStandardMaterial({color:new THREE.Color(0x8d9296).convertSRGBToLinear(),metalness:0.6,roughness:0.5});
   if(typ==='stavebni'||typ==='pletivo'){ for(let i=0;i<=n;i++){ const s=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,P.h,6),sl); s.position.set(i*L/n,P.h/2,0); kr.add(s); }
     const t=pletivoTex.clone(); t.needsUpdate=true; t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(L/0.9,P.h/0.9); const pm=new THREE.Mesh(new THREE.PlaneGeometry(L,P.h*0.95),new THREE.MeshStandardMaterial({map:t,transparent:true,opacity:typ==='stavebni'?0.9:0.55,depthWrite:false,side:THREE.DoubleSide,metalness:0.4,roughness:0.6,color:typ==='stavebni'?0x6d7378:0xffffff})); pm.position.set(L/2,P.h/2,0); kr.add(pm); }
   else { const m=new THREE.Mesh(new THREE.BoxGeometry(L,P.h,typ==='hesco'?1.05:0.5),new THREE.MeshStandardMaterial({color:new THREE.Color(P.barva).convertSRGBToLinear(),roughness:0.95})); m.position.set(L/2,P.h/2,0); m.castShadow=m.receiveShadow=true; kr.add(m); }
-  if(FOTO.on&&typeof model==='function') model(P.glb).then(mm=>{ if(!mm||!g.parent) return; kr.visible=false; for(let i=0;i<n;i++){ const k=mm.clone(true); k.position.set((i+0.5)*L/n,0,0); k.scale.x=(L/n)/P.L; g.add(k); } });
+  if(P.glb&&FOTO.on&&typeof model==='function') model(P.glb).then(mm=>{ if(!mm||!g.parent) return; kr.visible=false; for(let i=0;i<n;i++){ const k=mm.clone(true); k.position.set((i+0.5)*L/n,0,0); k.scale.x=(L/n)/P.L; g.add(k); } });
   return g; }
 function ohrada(b,typ,vynech,cil){ const [x0,x1,z0,z1]=b, s=[['S',x0,z1,x1,z1],['J',x0,z0,x1,z0],['Z',x0,z0,x0,z1],['V',x1,z0,x1,z1]];
   for(const [k,a,c,d,e] of s){ if(vynech&&vynech.includes(k)) continue; plotUsek(a,c,d,e,typ,cil); } }
@@ -1597,6 +1597,17 @@ const _vyberH=vyberCviceni; vyberCviceni=function(id){ _vyberH(id); try{ ohradyC
 // Bill drill: hodnotí se všech 6 ran do jednoho terče (ne jen nejlepší 2)
 { const b=STAGES.find(s=>s.id==='bill'); if(b) b.zasahu=6; }
 
+// skutečné kontejnery místo krabic, policejní auto, kužely a lampy na koncích ulice
+function kontejnerGLB(k,ry){ if(!FOTO.on) return; model('kontejner').then(m=>{ if(!m||!k.parent) return; const c=m.clone(true); c.position.set(k.position.x,0,k.position.z); c.rotation.y=(ry!=null?ry:k.rotation.y); k.parent.add(c); k.material=k.material.clone(); k.material.visible=false; }); }
+const _vyberK=vyberCviceni; vyberCviceni=function(id){ _vyberK(id); try{ TGROUP.children.filter(o=>o.userData.kontejner).forEach(k=>kontejnerGLB(k)); }catch(e){} };
+(async()=>{ const G=ENV.mesto; if(!FOTO.on) return;
+  ENV.mesto.children.forEach(o=>{ const g=o.geometry; if(o.isMesh&&g&&g.type==='BoxGeometry'&&Math.abs(g.parameters.width-6)<0.01&&Math.abs(g.parameters.height-2.6)<0.01) kontejnerGLB(o); });
+  await postav('policie',-8,0,35.6,1.35,G,[4.8,1.6,2.1]); await postav('policie',9,0,-145,-1.2,G,[4.8,1.6,2.1]);
+  for(const [x,z] of [[-4,36.5],[-1,36.8],[2,36.5],[5,36.8],[-3,-146],[0,-146.3],[3,-146]]) await postav('kuzel',x,0,z,Math.random()*3,G);
+  for(const [x,z,r] of [[-21,20,1.57],[21,-60,-1.57],[-21,-100,1.57],[21,-130,-1.57]]) await postav('kontejner_odpad',x,0,z,r,G,[2.0,1.3,1.35]);
+  for(const z of [10,-30,-70,-110]) { await postav('lampa',-22.6,0,z,1.57,G); await postav('lampa',22.6,0,z-20,-1.57,G); }
+})();
+
 /* ================= REALISTICKÉ POSTAVY MÍSTO KARTONU (3D skeny Renderpeople, CC BY) =================
    Model s kostrou se při načtení „zapózuje“ (hrozba míří pistolí / drží ji u boku, civilista má ruce nahoře / telefon / prázdné ruce)
    a zapeče do pevné sítě – zásah se pak počítá přesně tam, kam střela dopadla. Zóny podle IPSC: A = střed hrudníku a hlava,
@@ -1605,29 +1616,27 @@ const POSTAVY_GLB=[['postava_eric',1.80],['postava_nathan',1.78],['postava_sophi
 const POZY_H=['miri','bok'], POZY_C=['ruce','telefon','klid'];
 const POST={cache:{}, nacteno:false, nacitam:null, pistole:null};
 function kost(root,re){ let b=null; root.traverse(o=>{ if(!b&&o.isBone&&re.test(o.name)) b=o; }); return b; }
-const KOSTI={ hlava:/head(?!.*(end|top|nub))/i, krk:/neck/i, hrud:/spine.?(2|3|02|03)|chest|upper.?chest/i, panev:/pelvis|hips/i,
-  ramL:/(l(eft)?[ _.:-]*(upper)?arm(?!.*(twist|fore|lower))|upper.?arm[ _.:-]*l\b)/i, ramR:/(r(ight)?[ _.:-]*(upper)?arm(?!.*(twist|fore|lower))|upper.?arm[ _.:-]*r\b)/i,
-  predL:/(l(eft)?[ _.:-]*(fore|lower)arm(?!.*twist)|(fore|lower).?arm[ _.:-]*l\b)/i, predR:/(r(ight)?[ _.:-]*(fore|lower)arm(?!.*twist)|(fore|lower).?arm[ _.:-]*r\b)/i,
-  rukaL:/(l(eft)?[ _.:-]*hand(?!.*(thumb|index|middle|ring|pinky|finger))|hand[ _.:-]*l\b)/i, rukaR:/(r(ight)?[ _.:-]*hand(?!.*(thumb|index|middle|ring|pinky|finger))|hand[ _.:-]*r\b)/i };
+const KOSTI={ hlava:/(^|_)head_\d/i, krk:/(^|_)neck_\d/i, hrud:/spine_03_\d/i, panev:/(^|_)hip_\d/i,
+  ramL:/upperarm_l_\d/i, ramR:/upperarm_r_\d/i, predL:/lowerarm_l_\d/i, predR:/lowerarm_r_\d/i, rukaL:/(^|_)hand_l_\d/i, rukaR:/(^|_)hand_r_\d/i };
 // natoč kost tak, aby směr k jejímu potomkovi ukazoval do směru d (ve světě)
 function nasmer(kost_,dite,d){ kost_.updateMatrixWorld(true); const a=kost_.getWorldPosition(new V()), b=dite.getWorldPosition(new V()); const cur=b.sub(a).normalize();
   const q=new THREE.Quaternion().setFromUnitVectors(cur,d.clone().normalize()); const qw=kost_.getWorldQuaternion(new THREE.Quaternion()), qp=kost_.parent.getWorldQuaternion(new THREE.Quaternion());
   kost_.quaternion.copy(qp.invert().multiply(q.multiply(qw))); kost_.updateMatrixWorld(true); }
-function pozuj(root,K,poza){ const W=p=>p.getWorldPosition(new V()); const sh=W(K.ramR), sl=W(K.ramL), hl=W(K.hlava), hr=W(K.hrud);
+function pozuj(root,K,poza){ const W=p=>p.getWorldPosition(new V()); const sh=W(K.ramR), sl=W(K.ramL), hl=W(K.hlava), hr=W(K.hrud); const u=sh.distanceTo(sl)/0.36;   // jednotky modelu na metr
   const ruka=(st,ram,pred,ruk,dRam,cil)=>{ if(!ram||!pred||!ruk) return; nasmer(ram,pred,dRam); if(cil){ const e=W(pred); nasmer(pred,ruk,cil.clone().sub(e)); } };
   const s=1; // postava stojí čelem k +z, její pravá ruka je na −x
-  if(poza==='miri'){ const P=new V((sh.x+sl.x)/2,sh.y-0.06,sh.z+0.52); ruka(1,K.ramR,K.predR,K.rukaR,P.clone().sub(sh).add(new V(-0.12,-0.05,0)),P); ruka(1,K.ramL,K.predL,K.rukaL,P.clone().sub(sl).add(new V(0.12,-0.05,0)),P); }
-  else if(poza==='bok'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.1,-1,0.12),new V(sh.x-0.02,sh.y-0.62,sh.z+0.38)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
+  if(poza==='miri'){ const P=new V((sh.x+sl.x)/2,sh.y-0.06*u,sh.z+0.5*u); ruka(1,K.ramR,K.predR,K.rukaR,P.clone().sub(sh).add(new V(-0.12*u,-0.05*u,0)),P); ruka(1,K.ramL,K.predL,K.rukaL,P.clone().sub(sl).add(new V(0.12*u,-0.05*u,0)),P); }
+  else if(poza==='bok'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.1,-1,0.12),new V(sh.x-0.02*u,sh.y-0.62*u,sh.z+0.38*u)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
   else if(poza==='ruce'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.75,0.55,0.15),null); nasmer(K.predR,K.rukaR,new V(-0.08,1,0.05)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.75,0.55,0.15),null); nasmer(K.predL,K.rukaL,new V(0.08,1,0.05)); }
-  else if(poza==='telefon'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.2,-0.7,0.35),new V(hl.x-0.09,hl.y-0.02,hl.z+0.02)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
+  else if(poza==='telefon'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.2,-0.7,0.35),new V(hl.x-0.09*u,hl.y-0.02*u,hl.z+0.02*u)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
   else { ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.12,-1,0.02),null); nasmer(K.predR,K.rukaR,new V(-0.05,-1,0.12)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); nasmer(K.predL,K.rukaL,new V(0.05,-1,0.12)); } }
 // zapečení kostry do pevné sítě (r128: SkinnedMesh.boneTransform)
 function zapec(root){ const out=new THREE.Group(); root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert();
   root.traverse(o=>{ if(!o.isMesh) return; const g=o.geometry, pos=g.attributes.position, np=new Float32Array(pos.count*3), v=new V(), M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
     if(o.isSkinnedMesh){ o.skeleton.update(); for(let i=0;i<pos.count;i++){ o.boneTransform(i,v); v.applyMatrix4(M); np[i*3]=v.x; np[i*3+1]=v.y; np[i*3+2]=v.z; } }
     else for(let i=0;i<pos.count;i++){ v.fromBufferAttribute(pos,i).applyMatrix4(M); np[i*3]=v.x; np[i*3+1]=v.y; np[i*3+2]=v.z; }
-    const ng=new THREE.BufferGeometry(); ng.setAttribute('position',new THREE.BufferAttribute(np,3)); if(g.attributes.uv) ng.setAttribute('uv',g.attributes.uv); if(g.index) ng.setIndex(g.index); ng.computeVertexNormals();
-    const m=new THREE.Mesh(ng,o.material); m.castShadow=m.receiveShadow=true; out.add(m); });
+    const ng=new THREE.BufferGeometry(); ng.setAttribute('position',new THREE.BufferAttribute(np,3)); for(const [k,a] of Object.entries(g.attributes)) if(!['position','normal','skinIndex','skinWeight','tangent'].includes(k)) ng.setAttribute(k,a); if(g.index){ if(M.determinant()<0){ const a=Array.from(g.index.array); for(let i=0;i<a.length;i+=3){ const t=a[i+1]; a[i+1]=a[i+2]; a[i+2]=t; } ng.setIndex(a); } else ng.setIndex(g.index); } ng.computeVertexNormals();
+    let mt=o.material; if(mt&&mt.vertexTangents){ mt=mt.clone(); mt.vertexTangents=false; mt.needsUpdate=true; } const m=new THREE.Mesh(ng,mt); m.castShadow=m.receiveShadow=true; out.add(m); });
   return out; }
 async function postavaPriprav(id,H,poza){ const k=id+':'+poza; if(POST.cache[k]) return POST.cache[k];
   const src=await model(id); if(!src) return null; const root=THREE.SkeletonUtils?THREE.SkeletonUtils.clone(src):src.clone(true); const sc=new THREE.Group(); sc.add(root); sc.updateMatrixWorld(true);
@@ -1635,13 +1644,13 @@ async function postavaPriprav(id,H,poza){ const k=id+':'+poza; if(POST.cache[k])
   // natočit čelem k +z (pravé rameno na −x)
   const r=K.ramR.getWorldPosition(new V()), l=K.ramL.getWorldPosition(new V()); const fw=new V(0,1,0).cross(r.clone().sub(l)).setY(0).normalize(); sc.rotation.y=Math.atan2(fw.x,fw.z)*-1+0; sc.updateMatrixWorld(true);
   { const r2=K.ramR.getWorldPosition(new V()), l2=K.ramL.getWorldPosition(new V()); if(r2.x>l2.x){ sc.rotation.y+=Math.PI; sc.updateMatrixWorld(true); } }
-  pozuj(sc,K,poza);
+  const hlavaY0=K.hlava.getWorldPosition(new V()).y; pozuj(sc,K,poza); const u=K.ramR.getWorldPosition(new V()).distanceTo(K.ramL.getWorldPosition(new V()))/0.36;
   // pistole / telefon do ruky
-  if((poza==='miri'||poza==='bok')&&POST.pistole){ const p=POST.pistole.clone(true); const h=K.rukaR.getWorldPosition(new V()); p.position.copy(h).add(new V(poza==='miri'?0.04:0,poza==='miri'?0.03:0.0,0.06)); p.rotation.y=Math.PI; if(poza==='bok') p.rotation.x=0.45; sc.add(p); }
-  if(poza==='telefon'){ const f=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.15,0.01),new THREE.MeshStandardMaterial({color:0x111318,roughness:0.3,metalness:0.4})); const h=K.rukaR.getWorldPosition(new V()); f.position.copy(h).add(new V(0.02,0.05,0.02)); f.rotation.set(0,0.4,0.2); sc.add(f); }
+  if((poza==='miri'||poza==='bok')&&POST.pistole){ const p=POST.pistole.clone(true); const h=K.rukaR.getWorldPosition(new V()); p.scale.setScalar(u); p.position.copy(h).add(new V(poza==='miri'?0.04*u:0,poza==='miri'?0.03*u:0.0,0.06*u)); p.rotation.y=Math.PI; if(poza==='bok') p.rotation.x=0.45; sc.add(p); }
+  if(poza==='telefon'){ const f=new THREE.Mesh(new THREE.BoxGeometry(0.075*u,0.15*u,0.01*u),new THREE.MeshStandardMaterial({color:0x111318,roughness:0.3,metalness:0.4})); const h=K.rukaR.getWorldPosition(new V()); f.position.copy(h).add(new V(0.02*u,0.05*u,0.02*u)); f.rotation.set(0,0.4,0.2); sc.add(f); }
   sc.updateMatrixWorld(true); const pevna=zapec(sc);
   // měřítko a usazení: chodidla na zemi, výška H, střed v ose
-  const bb=new THREE.Box3().setFromObject(pevna), s=H/(bb.max.y-bb.min.y); pevna.scale.setScalar(s); pevna.updateMatrixWorld(true); const bb2=new THREE.Box3().setFromObject(pevna);
+  const bb=new THREE.Box3().setFromObject(pevna), s=H*0.9/(hlavaY0-bb.min.y); pevna.scale.setScalar(s); pevna.updateMatrixWorld(true); const bb2=new THREE.Box3().setFromObject(pevna);
   const W=o=>{ const p=o.getWorldPosition(new V()); return p; }; sc.updateMatrixWorld(true);
   const toLoc=p=>p.clone().sub(new V(0,bb.min.y,0)).multiplyScalar(s);  // body kostry do souřadnic zapečené postavy (před posunem)
   const head=toLoc(W(K.hlava)), hrud=toLoc(K.hrud?W(K.hrud):W(K.hlava).lerp(W(K.panev||K.hlava),0.35)), panev=toLoc(W(K.panev||K.hrud||K.hlava)), krk=toLoc(W(K.krk||K.hlava));
@@ -1665,8 +1674,8 @@ function postavaTarget(x,y,z,o){ const ns=!!o.noshoot, pozy=ns?POZY_C:POZY_H, i=
 // díra v postavě: tmavý kroužek na povrchu (při zvýraznění se žlutým lemem)
 const DIRA_M=new THREE.MeshBasicMaterial({color:0x0a0a0a,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4}), DIRA_Z=new THREE.MeshBasicMaterial({color:0xffe14a,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3}), DIRA_N=new THREE.MeshBasicMaterial({color:0xff3b2a,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3});
 function postavaDira(t,l){ const g=t.m, p=new V(l.x,l.y,l.z); const e=new V(); camera.getWorldPosition(e); const el=g.worldToLocal(e.clone());
-  const d=new THREE.Mesh(new THREE.CircleGeometry(0.006,12),DIRA_M); d.position.copy(p).addScaledVector(el.clone().sub(p).normalize(),0.004); d.lookAt(g.localToWorld(el.clone())); g.add(d);
-  if(ST.zvyraz){ const z=new THREE.Mesh(new THREE.RingGeometry(0.012,0.019,20),t.typ==='noshoot'?DIRA_N:DIRA_Z); z.position.copy(d.position); z.quaternion.copy(d.quaternion); g.add(z); } }
+  const d=new THREE.Mesh(new THREE.CircleGeometry(0.006,12),DIRA_M); d.position.copy(p).addScaledVector(el.clone().sub(p).normalize(),0.004); d.lookAt(g.localToWorld(el.clone())); d.raycast=()=>{}; g.add(d);
+  if(ST.zvyraz){ const z=new THREE.Mesh(new THREE.RingGeometry(0.012,0.019,20),t.typ==='noshoot'?DIRA_N:DIRA_Z); z.position.copy(d.position); z.quaternion.copy(d.quaternion); z.raycast=()=>{}; g.add(z); } }
 // kartonový terč → postava (když je zapnuto a modely jsou načtené)
 const _ipscP=ipscTarget; ipscTarget=function(x,y,z,o){ o=o||{}; if(ST.postavy&&POST.nacteno){ const t=postavaTarget(x,y,z,o); if(t) return t; } return _ipscP(x,y,z,o); };
 const _vyberP=vyberCviceni; vyberCviceni=function(id){ postavaI=0; _vyberP(id);
