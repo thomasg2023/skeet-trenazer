@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.17-3';
+const VERZE='2026.11.17-4';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1627,19 +1627,29 @@ function kost(root,re){ let b=null; root.traverse(o=>{ if(!b&&o.isBone&&re.test(
 const KOSTI={ hlava:/(^|_)head_\d/i, krk:/(^|_)neck_\d/i, hrud:/spine_03_\d/i, panev:/(^|_)hip_\d/i,
   ramL:/upperarm_l_\d/i, ramR:/upperarm_r_\d/i, predL:/lowerarm_l_\d/i, predR:/lowerarm_r_\d/i, rukaL:/(^|_)hand_l_\d/i, rukaR:/(^|_)hand_r_\d/i };
 // natoč kost tak, aby směr k jejímu potomkovi ukazoval do směru d (ve světě)
-function nasmer(kost_,dite,d){ kost_.updateMatrixWorld(true); const a=kost_.getWorldPosition(new V()), b=dite.getWorldPosition(new V()); const cur=b.sub(a).normalize();
-  const q=new THREE.Quaternion().setFromUnitVectors(cur,d.clone().normalize()); const qw=kost_.getWorldQuaternion(new THREE.Quaternion()), qp=kost_.parent.getWorldQuaternion(new THREE.Quaternion());
-  kost_.quaternion.copy(qp.invert().multiply(q.multiply(qw))); kost_.updateMatrixWorld(true); }
-function pozuj(root,K,poza){ const W=p=>p.getWorldPosition(new V()); const sh=W(K.ramR), sl=W(K.ramL), hl=W(K.hlava), hr=W(K.hrud); const u=sh.distanceTo(sl)/0.36;   // jednotky modelu na metr
-  const ruka=(st,ram,pred,ruk,dRam,cil)=>{ if(!ram||!pred||!ruk) return; nasmer(ram,pred,dRam); if(cil){ const e=W(pred); nasmer(pred,ruk,cil.clone().sub(e)); } };
-  const s=1; // postava stojí čelem k +z, její pravá ruka je na −x
-  if(poza==='miri'){ const P=new V((sh.x+sl.x)/2,sh.y-0.06*u,sh.z+0.5*u); ruka(1,K.ramR,K.predR,K.rukaR,P.clone().sub(sh).add(new V(-0.12*u,-0.05*u,0)),P); ruka(1,K.ramL,K.predL,K.rukaL,P.clone().sub(sl).add(new V(0.12*u,-0.05*u,0)),P); }
-  else if(poza==='bok'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.1,-1,0.12),new V(sh.x-0.02*u,sh.y-0.62*u,sh.z+0.38*u)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
-  else if(poza==='ruce'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.75,0.55,0.15),null); nasmer(K.predR,K.rukaR,new V(-0.08,1,0.05)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.75,0.55,0.15),null); nasmer(K.predL,K.rukaL,new V(0.08,1,0.05)); }
-  else if(poza==='telefon'){ ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.2,-0.7,0.35),new V(hl.x-0.09*u,hl.y-0.02*u,hl.z+0.02*u)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); if(K.predL&&K.rukaL) nasmer(K.predL,K.rukaL,new V(0.05,-1,0.1)); }
-  else { ruka(1,K.ramR,K.predR,K.rukaR,new V(-0.12,-1,0.02),null); nasmer(K.predR,K.rukaR,new V(-0.05,-1,0.12)); ruka(1,K.ramL,K.predL,K.rukaL,new V(0.12,-1,0.02),null); nasmer(K.predL,K.rukaL,new V(0.05,-1,0.12)); } }
+function nasmer(kost_,dite,d){ kost_.updateMatrixWorld(true); const a=kost_.getWorldPosition(new V()), b=dite.getWorldPosition(new V());
+  // počítáno v souřadnicích rodiče – funguje i když má kostra zrcadlené/zmenšené měřítko
+  const inv=new THREE.Matrix4().copy(kost_.parent.matrixWorld).invert(); const cur=b.sub(a).transformDirection(inv), des=d.clone().transformDirection(inv);
+  const q=new THREE.Quaternion().setFromUnitVectors(cur.normalize(),des.normalize()); kost_.quaternion.premultiply(q); kost_.updateMatrixWorld(true); }
+// dvoukloubová IK: rameno → loket → zápěstí do bodu T, loket směrem k „pólu“; dlaň natočit do směru ruky
+function ikRuka(ram,pred,ruk,T,pole,smerDlane){ if(!ram||!pred||!ruk) return; const W=o=>o.getWorldPosition(new V()); const S=W(ram), a=W(pred).distanceTo(S), b=W(ruk).distanceTo(W(pred));
+  const d=T.clone().sub(S); let L=d.length(); const dir=d.normalize(); L=Math.min(Math.max(L,Math.abs(a-b)+1e-4),(a+b)*0.999); const ca=(a*a+L*L-b*b)/(2*a*L), sa=Math.sqrt(Math.max(0,1-ca*ca));
+  const pp=pole.clone().sub(dir.clone().multiplyScalar(pole.dot(dir))).normalize(); const E=S.clone().addScaledVector(dir,a*ca).addScaledVector(pp,a*sa);
+  nasmer(ram,pred,E.clone().sub(S)); nasmer(pred,ruk,T.clone().sub(W(pred)));
+  if(smerDlane){ let ch=ruk.children.find(c=>c.isBone&&/middle/i.test(c.name))||ruk.children.find(c=>c.isBone); if(ch) nasmer(ruk,ch,smerDlane); } }
+function pozuj(root,K,poza){ const W=p=>p.getWorldPosition(new V()); const sh=W(K.ramR), sl=W(K.ramL), hl=W(K.hlava); const u=sh.distanceTo(sl)/0.36, cx=(sh.x+sl.x)/2, sy=(sh.y+sl.y)/2, sz=(sh.z+sl.z)/2;   // postava čelem k +z, pravá ruka na −x
+  const P=(x,y,z)=>new V(x*u,y*u,z*u);
+  const klidL=()=>ikRuka(K.ramL,K.predL,K.rukaL,new V(sl.x+0.05*u,sy-0.58*u,sz+0.06*u),new V(0.25,0,-1),new V(0.05,-1,0.15));
+  const klidR=()=>ikRuka(K.ramR,K.predR,K.rukaR,new V(sh.x-0.05*u,sy-0.58*u,sz+0.06*u),new V(-0.25,0,-1),new V(-0.05,-1,0.15));
+  if(poza==='miri'){ // obouruční držení (isosceles): ruce skoro natažené, zápěstí u sebe ve výšce brady
+    ikRuka(K.ramR,K.predR,K.rukaR,new V(cx-0.01*u,sy-0.03*u,sz+0.52*u),new V(-1,-1.2,0),new V(0.02,0.0,1));
+    ikRuka(K.ramL,K.predL,K.rukaL,new V(cx+0.035*u,sy-0.07*u,sz+0.48*u),new V(1,-1.2,0),new V(-0.45,-0.1,1)); }
+  else if(poza==='bok'){ ikRuka(K.ramR,K.predR,K.rukaR,new V(sh.x+0.03*u,sy-0.5*u,sz+0.3*u),new V(-0.3,-0.2,-1),new V(0.0,-0.35,1)); klidL(); }
+  else if(poza==='ruce'){ ikRuka(K.ramR,K.predR,K.rukaR,new V(sh.x-0.28*u,sy+0.38*u,sz+0.06*u),new V(-1,-1,0),new V(-0.1,1,0.05)); ikRuka(K.ramL,K.predL,K.rukaL,new V(sl.x+0.28*u,sy+0.38*u,sz+0.06*u),new V(1,-1,0),new V(0.1,1,0.05)); }
+  else if(poza==='telefon'){ ikRuka(K.ramR,K.predR,K.rukaR,new V(hl.x-0.06*u,hl.y-0.13*u,hl.z+0.05*u),new V(-0.6,-1,0.1),new V(0.15,1,0.15)); klidL(); }
+  else { klidR(); klidL(); } }
 // zapečení kostry do pevné sítě (r128: SkinnedMesh.boneTransform)
-function zapec(root){ const out=new THREE.Group(); root.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(root.matrixWorld).invert();
+function zapec(root){ const out=new THREE.Group(); root.updateMatrixWorld(true); const inv=root.parent?new THREE.Matrix4().copy(root.parent.matrixWorld).invert():new THREE.Matrix4();   // zapéct ve světě (i s natočením čelem k +z)
   root.traverse(o=>{ if(!o.isMesh) return; const g=o.geometry, pos=g.attributes.position, np=new Float32Array(pos.count*3), v=new V(), M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
     if(o.isSkinnedMesh){ o.skeleton.update(); for(let i=0;i<pos.count;i++){ o.boneTransform(i,v); v.applyMatrix4(M); np[i*3]=v.x; np[i*3+1]=v.y; np[i*3+2]=v.z; } }
     else for(let i=0;i<pos.count;i++){ v.fromBufferAttribute(pos,i).applyMatrix4(M); np[i*3]=v.x; np[i*3+1]=v.y; np[i*3+2]=v.z; }
@@ -1654,7 +1664,8 @@ async function postavaPriprav(id,H,poza){ const k=id+':'+poza; if(POST.cache[k])
   { const r2=K.ramR.getWorldPosition(new V()), l2=K.ramL.getWorldPosition(new V()); if(r2.x>l2.x){ sc.rotation.y+=Math.PI; sc.updateMatrixWorld(true); } }
   const hlavaY0=K.hlava.getWorldPosition(new V()).y; pozuj(sc,K,poza); const u=K.ramR.getWorldPosition(new V()).distanceTo(K.ramL.getWorldPosition(new V()))/0.36;
   // pistole / telefon do ruky
-  if((poza==='miri'||poza==='bok')&&POST.pistole){ const p=POST.pistole.clone(true); const h=K.rukaR.getWorldPosition(new V()); p.scale.setScalar(u); p.position.copy(h).add(new V(poza==='miri'?0.04*u:0,poza==='miri'?0.03*u:0.0,0.06*u)); p.rotation.y=Math.PI; if(poza==='bok') p.rotation.x=0.45; sc.add(p); }
+  if((poza==='miri'||poza==='bok')&&POST.pistole){ const p=POST.pistole.clone(true); p.scale.setScalar(u); const h=K.rukaR.getWorldPosition(new V()), sm=poza==='miri'?new V(0.02,0,1).normalize():new V(0,-0.35,1).normalize();
+    p.position.copy(h).addScaledVector(sm,0.07*u).add(new V(0,0.02*u,0)); p.lookAt(p.position.clone().sub(sm)); sc.add(p); }
   if(poza==='telefon'){ const f=new THREE.Mesh(new THREE.BoxGeometry(0.075*u,0.15*u,0.01*u),new THREE.MeshStandardMaterial({color:0x111318,roughness:0.3,metalness:0.4})); const h=K.rukaR.getWorldPosition(new V()); f.position.copy(h).add(new V(0.02*u,0.05*u,0.02*u)); f.rotation.set(0,0.4,0.2); sc.add(f); }
   sc.updateMatrixWorld(true); const pevna=zapec(sc);
   // měřítko a usazení: chodidla na zemi, výška H, střed v ose
