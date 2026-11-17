@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.17-4';
+const VERZE='2026.11.17-5';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1728,7 +1728,8 @@ function pollPads(dt){ const s=renderer.xr.getSession(); if(!s) return;
     prevBtn.set(key,b); } }
 // otočný terč v domě se otočí, jakmile na něj střelec uvidí (žádná zeď mezi okem a terčem, do 9 m) – funguje i po přeházení terčů
 const _losR=new THREE.Raycaster();
-function vidiTerc(t,h){ const p=new V(); t.m.getWorldPosition(p); const d=p.clone().sub(h), L=d.length(); if(L>9) return false; _losR.set(h,d.normalize()); _losR.far=L-0.3; return _losR.intersectObjects(WALLS,false).length===0; }
+function vidiTerc(t,h){ const c=new V(); t.m.getWorldPosition(c); if(c.distanceTo(h)>10) return false; const bok=new V(1,0,0).applyQuaternion(t.m.getWorldQuaternion(new THREE.Quaternion()));
+  for(const k of [0,0.3,-0.3,0.6,-0.6]){ const p=c.clone().addScaledVector(bok,k), d=p.clone().sub(h), L=d.length(); _losR.set(h,d.normalize()); _losR.far=L-0.2; if(_losR.intersectObjects(WALLS,false).length===0) return true; } return false; }
 let last=performance.now();
 function loop(){ const now=performance.now(), dt=Math.min(0.05,(now-last)/1000); last=now;
   if(!ST.inXR){ camera.rotation.set(ST.pitch,ST.yaw,0,'YXZ'); const f=new V(-Math.sin(ST.yaw),0,-Math.cos(ST.yaw)).applyAxisAngle(new V(0,1,0),dolly.rotation.y), r=new V(-f.z,0,f.x), sp=3*dt;
