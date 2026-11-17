@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.17-2';
+const VERZE='2026.11.17-3';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -784,7 +784,7 @@ function drawHud(){ const S=ST.stage; $('hudL').innerHTML=`<b>${S?S.n:'—'}</b>
   $('ammo').textContent=S?(ST.reloading?'přebíjím…':`${ST.mag}/${ST.magCap}`)+` · ${S.zbran==='puska'?'puška':'pistole'}`:''; drawWrist(); }
 
 /* ================= VR: panel (menu / výuka / výsledek) a displej na zápěstí ================= */
-const PW=1024, PHh=1420, pCan=document.createElement('canvas'); pCan.width=PW; pCan.height=PHh; const pTex=new THREE.CanvasTexture(pCan);
+const PW=1024, PHh=1510, pCan=document.createElement('canvas'); pCan.width=PW; pCan.height=PHh; const pTex=new THREE.CanvasTexture(pCan);
 const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1*PHh/PW),new THREE.MeshBasicMaterial({map:pTex,transparent:true,fog:false,depthTest:false})); panel.renderOrder=20; panel.visible=false; dolly.add(panel);
 let pBtns=[], pHover=-1, pMode='menu';
 const rr=(x,X,Y,w,h,r)=>{ x.beginPath(); if(x.roundRect) x.roundRect(X,Y,w,h,r); else x.rect(X,Y,w,h); };
@@ -814,8 +814,10 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
     btn(30,y1+184,310,76,ST.postavy?'TERČE: POSTAVY':'TERČE: KARTON',!!ST.postavy,()=>{ setOpt('postavy',!ST.postavy); if(S) vyberCviceni(S.id); });
     btn(355,y1+184,310,76,ST.zvyraz?'ZÁSAHY: ZVÝRAZNIT':'ZÁSAHY: JEN DÍRA',!!ST.zvyraz,()=>setOpt('zvyraz',!ST.zvyraz));
     btn(680,y1+184,314,76,ST.nahodne?'NÁHODNĚ ZAP':'NÁHODNĚ VYP',!!ST.nahodne,()=>{ ST.nahodne=!ST.nahodne; LS.set('st-nahodne',ST.nahodne); if(S) vyberCviceni(S.id); syncReal(); });
-    if(S&&typeof cilText==='function'){ x.fillStyle='#ffd36a'; x.font='600 26px IBM Plex Sans, Arial'; let yy=y1+300; yy=wrap(x,'ÚKOL: '+cilText(S),30,yy,964,32); }
-    btn(30,y1+376,964,100,S?'START – '+S.n:'Vyberte cvičení',true,()=>start(),'#2f7d4a'); }
+    if(typeof nebeVR==='function'){ const nb=nebeVR(); btn(30,y1+276,90,76,'◀',false,()=>nebeVR(-1)); btn(130,y1+276,560,76,'OBLOHA: '+nb,false,()=>nebeVR(1)); btn(700,y1+276,90,76,'▶',false,()=>nebeVR(1));
+      btn(800,y1+276,194,76,FOTO.on?'FOTO ZAP':'FOTO VYP',FOTO.on,()=>{ FOTO.on=!FOTO.on; LS.set('st-foto',FOTO.on); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); }); }
+    if(S&&typeof cilText==='function'){ x.fillStyle='#ffd36a'; x.font='600 26px IBM Plex Sans, Arial'; let yy=y1+392; yy=wrap(x,'ÚKOL: '+cilText(S),30,yy,964,32); }
+    btn(30,y1+466,964,100,S?'START – '+S.n:'Vyberte cvičení',true,()=>start(),'#2f7d4a'); }
   else if(pMode==='lekce'&&S){ x.fillStyle='#fff'; fit(x,S.n,960,40); x.fillText(S.n,30,120); x.font='500 30px IBM Plex Sans, Arial'; x.fillStyle='#d8e4dc'; let y=170;
     y=wrap(x,S.popis,30,y,960,38)+8; if(typeof cilText==='function'){ x.fillStyle='#ffd36a'; x.font='600 28px IBM Plex Sans, Arial'; y=wrap(x,'ÚKOL: '+cilText(S),30,y,960,34)+12; } S.lekce.forEach((l,i)=>{ x.fillStyle='#ef6a4a'; x.font='700 32px Barlow Condensed, Arial'; x.fillText((i+1)+'.',30,y); x.fillStyle='#e6ede8'; x.font='400 28px IBM Plex Sans, Arial'; y=wrap(x,l,72,y,920,36)+12; });
     btn(30,PHh-140,964,110,'ROZUMÍM – START',true,()=>start(),'#2f7d4a'); }
@@ -1056,6 +1058,12 @@ fotoMat('trava','tex/trava.jpg',10,0xb8c8a8); fotoMat('hlina','tex/hlina.jpg',6,
 function nebeSelRender(){ const el=$('nebeSel'); if(!el) return; const l=POZADI.list, opt=(v,t)=>`<option value="${esc(v)}"${v===FOTO.volba?' selected':''}>${esc(t)}</option>`;
   el.innerHTML=opt('auto','Obloha: podle denní doby')+opt('proc','Obloha: počítaná (bez fotky)')+`<optgroup label="Obloha">${l.filter(x=>x.typ==='nebe').map(x=>opt(x.id,x.n)).join('')}</optgroup><optgroup label="Krajina 360°">${l.filter(x=>x.typ==='krajina'&&!x.vlastni).map(x=>opt(x.id,x.n)).join('')}</optgroup>`
    +(l.some(x=>x.vlastni)?`<optgroup label="Vlastní (jen v tomto zařízení)">${l.filter(x=>x.vlastni).map(x=>opt(x.id,x.n)).join('')}${l.filter(x=>x.vlastni).map(x=>opt('del:'+x.id,'✕ smazat '+x.n.slice(2))).join('')}</optgroup>`:''); }
+
+// výběr oblohy / krajiny 360° přímo v brýlích (menu: ◀ OBLOHA ▶)
+function nebeVR(krok){ const l=POZADI.list||[], ids=['auto','proc',...l.filter(x=>x.typ==='nebe').map(x=>x.id),...l.filter(x=>x.typ==='krajina').map(x=>x.id)];
+  if(krok){ let i=ids.indexOf(FOTO.volba); if(i<0) i=0; i=(i+krok+ids.length)%ids.length; FOTO.volba=ids[i]; LS.set('st-nebe',FOTO.volba); if(!FOTO.on){ FOTO.on=true; LS.set('st-foto',true); } nebeSelRender(); setEnv(ST.env); if(typeof pocasiApply==='function') pocasiApply(); return; }
+  const v=FOTO.volba, it=l.find(x=>x.id===v); let n=v==='auto'?'podle denní doby':v==='proc'?'počítaná':it?(it.typ==='krajina'?'360° ':'')+it.n:v;
+  if(!fotoNebeOK()&&FOTO.on&&v!=='proc') n+=' (zde ne)'; return n.length>34?n.slice(0,33)+'…':n; }
 
 /* ================= FOTOGRAFICKÉ MATERIÁLY ZDÍ A 3D REKVIZITY (Poly Haven, CC0) ================= */
 // zdi: omítka (dům), beton (venku), překližka (barikády) – textura + normálová mapa + drsnost, UV podle skutečných rozměrů
