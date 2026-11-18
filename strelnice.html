@@ -82,6 +82,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <header>
     <div>
       <h1>Střelnice <span>VR</span></h1>
+      <p class="small" style="margin:0"><a href="index.html">Rozcestník</a> · <a href="brokovnice.html#skeet">Brokovnice: skeet · trap · parkur →</a></p>
       <p class="small" id="verze" style="margin:0">verze 2026.11.13-5</p>
       <p class="lede">Pistole a puška: mířená střelba na kruhové terče, dynamická střelba IPSC, drily a boj ve městě (CQB) v cvičném domě. Trenér vysvětlí každé cvičení a po každém pokusu rozebere chyby.</p>
     </div>
@@ -120,6 +121,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
   <div class="tabp grid" id="tab-cviceni">
     <section class="card">
       <h2>Disciplína a cvičení</h2>
+      <div class="seg" id="zbranSeg" style="margin-bottom:8px"><button type="button" data-z="pistole">Pistole</button><button type="button" data-z="puska">Puška</button></div>
       <div class="seg" id="catSeg"><button type="button" data-c="mirena">Mířená střelba</button><button type="button" data-c="dyn">IPSC</button><button type="button" data-c="drill">Drily</button><button type="button" data-c="cqb">Boj ve městě (CQB)</button></div>
       <div class="stlist" id="stList"></div>
     </section>
@@ -157,7 +159,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.18-4';
+const VERZE='2026.11.18-5';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -180,7 +182,7 @@ function canvasTex(w,h,draw,rep){const c=document.createElement('canvas');c.widt
   const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; if(rep){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep[0],rep[1]);} t.anisotropy=8; return t;}
 const box=(w,h,d,m,x,y,z,g)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); b.position.set(x,y,z); (g||scene).add(b); return b; };
 
-const ST={ruka:LS.get('st-ruka','right'), postavy:LS.get('st-postavy',false), zvyraz:LS.get('st-zvyraz',true), vyuka:LS.get('st-vyuka',true), hlas:LS.get('st-hlas',true), env:LS.get('st-env','les'), cat:'mirena', stage:null,
+const ST={zbranF:LS.get('st-zbranF','pistole'), ruka:LS.get('st-ruka','right'), postavy:LS.get('st-postavy',false), zvyraz:LS.get('st-zvyraz',true), vyuka:LS.get('st-vyuka',true), hlas:LS.get('st-hlas',true), env:LS.get('st-env','les'), cat:'mirena', stage:null,
   inXR:false, phase:'idle', t0:0, shots:[], mag:0, magCap:17, reloading:0, recoil:0, yaw:0, pitch:0, zoom:false};
 
 /* ---------------- obloha, zem ---------------- */
@@ -773,8 +775,17 @@ function cqb(S,R,x){ const hroz=x.papir, neut=hroz.filter(t=>t.hits.filter(h=>h.
   R.skore=+celk.toFixed(2); R.nizsiLepsi=true; R.mluv=`${neut.length} z ${hroz.length} hrozeb, čas ${t2(celk)} sekund. ${R.tr[0]||''}`; return R; }
 
 /* ================= UI (stránka) ================= */
-function renderList(){ document.querySelectorAll('#catSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===ST.cat));
-  $('stList').innerHTML=STAGES.filter(s=>s.cat===ST.cat).map(s=>`<button type="button" data-s="${s.id}" aria-pressed="${ST.stage&&ST.stage.id===s.id}"><b>${s.n}</b><br><span class="small">${s.popis}</span></button>`).join(''); }
+// zbraň: pistole / puška (odkaz kulove.html#pistole, #puska) – každá má svůj seznam cvičení
+const KATS=[['mirena','MÍŘENÁ','Mířená střelba'],['dyn','IPSC','IPSC'],['drill','DRILY','Drily'],['cqb','CQB','Boj ve městě (CQB)']];
+const zbranOK=s=>(s.zbran||'pistole')===ST.zbranF;
+const katyZbrane=()=>KATS.filter(([k])=>STAGES.some(s=>s.cat===k&&zbranOK(s)));
+function setZbranF(z,vybrat=true){ ST.zbranF=z; LS.set('st-zbranF',z); if(!katyZbrane().some(([k])=>k===ST.cat)) ST.cat=(katyZbrane()[0]||KATS[0])[0];
+  if(vybrat&&(!ST.stage||!zbranOK(ST.stage))){ const s=STAGES.find(s=>s.cat===ST.cat&&zbranOK(s)); if(s) vyberCviceni(s.id); }
+  try{ const h='#'+z; if(location.hash!==h&&!STAGES.some(s=>'#'+s.id===location.hash&&zbranOK(s))) history.replaceState(null,'',h); }catch(e){}
+  renderList(); if(typeof drawPanel==='function') drawPanel(); }
+function renderList(){ const zs=$('zbranSeg'); if(zs) zs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.z===ST.zbranF));
+  { const K=katyZbrane().map(k=>k[0]); document.querySelectorAll('#catSeg button').forEach(b=>b.hidden=!K.includes(b.dataset.c)); } document.querySelectorAll('#catSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===ST.cat));
+  $('stList').innerHTML=STAGES.filter(s=>s.cat===ST.cat&&zbranOK(s)).map(s=>`<button type="button" data-s="${s.id}" aria-pressed="${ST.stage&&ST.stage.id===s.id}"><b>${s.n}</b><br><span class="small">${s.popis}</span></button>`).join(''); }
 function renderLekce(){ const S=ST.stage; $('lekce').innerHTML=S?`<p style="margin:8px 0 0"><b>Výuka – ${S.n}</b></p><ol>${S.lekce.map(l=>`<li>${l}</li>`).join('')}</ol>`:''; }
 function renderVysledek(R){ $('vysl').hidden=false; $('vyslH').textContent='Výsledek – '+R.nadpis;
   $('vyslSum').innerHTML=R.sum.map(([k,v])=>`<span style="display:inline-block;margin:0 16px 6px 0"><span class="small">${k}</span><br><b style="font:700 22px var(--display)">${v}</b></span>`).join('');
@@ -796,8 +807,9 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
   x.fillStyle='#ef6a4a'; x.font='700 48px Barlow Condensed, Arial'; x.fillText(pMode==='menu'?'STŘELNICE VR':pMode==='lekce'?'VÝUKA':'VÝSLEDEK',30,62);
   const S=ST.stage;
   if(pMode==='menu'){
-    [['mirena','MÍŘENÁ'],['dyn','IPSC'],['drill','DRILY'],['cqb','CQB']].forEach(([k,t],i)=>btn(30+i*243,90,230,80,t,ST.cat===k,()=>{ ST.cat=k; renderList(); }));
-    { const L=STAGES.filter(s=>s.cat===ST.cat), dva=L.length>6, R=dva?Math.ceil(L.length/2):6, rh=Math.min(92,Math.floor(552/Math.max(1,R)));   // víc cvičení = dva sloupce, všechna se vejdou
+    btn(30,90,230,80,ST.zbranF==='puska'?'PUŠKA ▸':'PISTOLE ▸',true,()=>setZbranF(ST.zbranF==='puska'?'pistole':'puska'),'#6b4a1e');
+    katyZbrane().forEach(([k,t],i)=>btn(275+i*182,90,170,80,t,ST.cat===k,()=>{ ST.cat=k; renderList(); }));
+    { const L=STAGES.filter(s=>s.cat===ST.cat&&zbranOK(s)), dva=L.length>6, R=dva?Math.ceil(L.length/2):6, rh=Math.min(92,Math.floor(552/Math.max(1,R)));   // víc cvičení = dva sloupce, všechna se vejdou
       L.forEach((s,i)=>{ const c=dva?Math.floor(i/R):0, r=dva?i%R:i; btn(30+c*494,190+r*rh,dva?470:964,rh-12,s.n,S&&S.id===s.id,()=>vyberCviceni(s.id)); }); }
     const y0=190+6*92+4; x.fillStyle='#9fb5a8'; x.font='500 24px IBM Plex Mono, monospace'; x.fillText('PROSTŘEDÍ A DENNÍ DOBA',30,y0+10);
     [['les','LES'],['mesto','MĚSTO'],['stadion','STADION'],['poust','POUŠŤ'],['hala','HALA'],['hory','HORY']].forEach(([k,t],i)=>btn(30+i*162,y0+24,152,70,t,ST.env===k,()=>{ ST.envRucne=true; setEnv(k); nocNastav(!!(S&&S.noc)); }));
@@ -2013,6 +2025,12 @@ $('resetBtn').onclick=()=>{ if(ST.stage) vyberCviceni(ST.stage.id); };
 // otočné terče – zapamatovat cílové natočení
 const _ipsc=ipscTarget;
 setEnv(ST.env); syncOpt(); tlakApply(); vyberCviceni(LS.get('st-cv','p25')); ST.envRucne=false;
+// odkazy: kulove.html#pistole | #puska | #<cvičení> (např. #r100, #bill)
+function odkaz(){ const h=decodeURIComponent(location.hash.slice(1)).toLowerCase(); if(ST.phase==='run') return;
+  const S=STAGES.find(s=>s.id.toLowerCase()===h); if(S){ ST.zbranF=S.zbran||'pistole'; LS.set('st-zbranF',ST.zbranF); vyberCviceni(S.id); setZbranF(ST.zbranF,false); return; }
+  if(h==='pistole'||h==='puska'||h==='puška') setZbranF(h==='pistole'?'pistole':'puska'); else setZbranF(ST.zbranF); }
+odkaz(); addEventListener('hashchange',odkaz);
+$('zbranSeg').onclick=e=>{ const b=e.target.closest('button'); if(b) setZbranF(b.dataset.z); };
 window._dbg={WALLS,TGROUP,ENVCOL,denik,denikRender,ST,TG,STAGES,vyberCviceni,start,fire,konec,camera,dolly,setEnv,showMenu,panel,drawPanel,pCan,ST_:()=>ST};
 
 </script>
