@@ -51,3 +51,4 @@ pytle.glb – „Sandbag Wall 02“, PieterSnauwaert, https://sketchfab.com/3d-m
 kuzel.glb – „Traffic Cone“, jamiemcfarlane, https://sketchfab.com/3d-models/traffic-cone-66b282e65d3b4da8a883ae8579bfb33c
 policie.glb – „Volvo Police Car-British Police“, David_Holiday, https://sketchfab.com/3d-models/volvo-police-car-british-police-a6e99776c35645c5b11e03a753f7c3e7
 zatarasa.glb – „Fence Barricade 03“, rocz3d, https://sketchfab.com/3d-models/fence-barricade-03-2a09091d4e7b4539abe03f6a50762409
+anim_postava_*.json – pohyby z Adobe Mixamo (mixamo.com, licence Mixamo pro použití v projektech), přenesené na kostry postav Renderpeople

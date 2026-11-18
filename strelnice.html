@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.18-1';
+const VERZE='2026.11.18-2';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1737,7 +1737,7 @@ postavaTarget=function(x,y,z,o){ const ns=!!o.noshoot, i=postavaI++, [id,H]=POST
   root.traverse(m=>{ if(m.isMesh){ m.raycast=()=>{}; m.frustumCulled=false; m.castShadow=true; if(m.material&&m.material.vertexTangents){ m.material=m.material.clone(); m.material.vertexTangents=false; } } });
   g.updateMatrixWorld(true);
   const K={}; for(const [n,re] of Object.entries(Object.assign({},KOSTI,KOSTI2))) K[n]=kost(root,re);
-  const t={typ:ns?'noshoot':'ipsc',m:g,hits:[],name:o.name||'',postava:true,ziva:true,size:0.5,K,telo,root,poza,ns,
+  const t={typ:ns?'noshoot':'ipsc',m:g,hits:[],name:o.name||'',postava:true,ziva:true,size:0.5,K,telo,root,poza,ns,id,idx:i,
     st:{kl:0,klC:0,fl:0,flS:1,pad:0,padC:0,pad0:0,sklon:0,zbranDolu:0,znesk:false,tVid:null,tPal:0,dych:Math.random()*6}};
   // klidová póza kostí (k ní se každý snímek vracíme)
   // civilistka má skutečnou nahranou animaci (přešlapování) – použije se místo počítané pózy
@@ -1847,6 +1847,59 @@ const _konecZ=konec; konec=function(p){ const z=ST.zasazen||0; _konecZ(p); if(ST
 const _startZ=start; start=function(){ ST.zasazen=0; return _startZ.apply(this,arguments); };
 // karton → postavy → postavy s palbou
 function postavyDalsi(){ const v=!ST.postavy?true:ST.postavy===true?'palba':false; setOpt('postavy',v); if(ST.stage) vyberCviceni(ST.stage.id); syncReal(); }
+
+/* ================= NAHRANÉ POHYBY (Mixamo, přenesené na naskenované postavy) =================
+   Hrozba: „ready“ (zbraň dole) → po spatření střelce zvedne a míří; zásah do trupu/paže = reakce na zásah a míří dál;
+   zásah do nohy = sjede do kleku a míří z kleku; zneškodnění = pád dozadu, zbraň vypadne.
+   Civilista: stojí / telefonuje / ruce nahoře / je vyděšený; po zásahu padá. */
+const MX={data:{}, klipy:{}, nacitam:null};
+const mxCanon=n=>n.replace(/^rp_[a-z]+_[a-z]+_\d+_[a-z]+_/i,'').replace(/_\d+$/,'');
+function mxNacti(){ if(MX.nacitam) return MX.nacitam; MX.nacitam=Promise.all(POSTAVY_GLB.map(([id])=>fetch('modely/anim_'+id+'.json').then(r=>r.ok?r.json():null).then(j=>{ MX.data[id]=j; }).catch(()=>{}))); return MX.nacitam; }
+function mxKlipy(id,root){ if(MX.klipy[id]) return MX.klipy[id]; const d=MX.data[id]; if(!d) return null; const jm={}; root.traverse(o=>{ if(o.isBone) jm[mxCanon(o.name)]=o.name; });
+  const out={}; for(const [a,c] of Object.entries(d.clips)){ const times=new Float32Array(c.n); for(let i=0;i<c.n;i++) times[i]=Math.min(c.dur,i/d.fps); const tr=[];
+    for(const k of d.bones){ if(!jm[k]||!c.q[k]) continue; tr.push(new THREE.QuaternionKeyframeTrack(jm[k]+'.quaternion',times,new Float32Array(c.q[k]))); }
+    const cl=new THREE.AnimationClip(a,c.dur,tr); cl.hip=new Float32Array(c.hip); cl.fps=d.fps; out[a]=cl; }
+  return MX.klipy[id]=out; }
+function mxHrej(t,a,{jednou=false,prechod=0.25,konec=null}={}){ const k=t.mx.klipy[a]; if(!k) return; const nova=t.mx.mixer.clipAction(k); if(t.mx.akce===nova&&!jednou) return;
+  nova.reset(); nova.setLoop(jednou?THREE.LoopOnce:THREE.LoopRepeat); nova.clampWhenFinished=jednou; nova.enabled=true; nova.setEffectiveWeight(1); nova.play(); if(!jednou) nova.time=Math.random()*k.duration;
+  if(t.mx.akce&&t.mx.akce!==nova) t.mx.akce.crossFadeTo(nova,prechod,false); t.mx.akce=nova; t.mx.nazev=a; t.mx.konec=konec; t.mx.konecT=jednou?k.duration-0.05:null; }
+const _postavaMX=postavaTarget; postavaTarget=function(x,y,z,o){ const t=_postavaMX(x,y,z,o); if(!t) return t; const id=t.id;
+  const kl=mxKlipy(id,t.root); if(!kl) return t;
+  if(t.mixer) t.mixer.stopAllAction(); t.mx={mixer:new THREE.AnimationMixer(t.root),klipy:kl,akce:null,id,hipRest:null,yaw:0}; t.mixer=null;   // nahraná animace přebírá vládu nad kostrou
+  const K=t.K, rp=t.rest.get(K.panev); if(rp) K.panev.position.copy(rp[1]); t.root.updateMatrixWorld(true); t.mx.hipRest=t.telo.worldToLocal(K.panev.getWorldPosition(new V())); t.mx.hipBone=K.panev;
+  if(t.ns){ const r=(t.idx>>1)%3; t.mx.klid=['stoji',/sophia/.test(id)?'telefon_z':'telefon_m','strach'][r]; if(t.mx.klid.startsWith('telefon')&&!t.telefon){ const f=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.15,0.01),new THREE.MeshStandardMaterial({color:0x111318,roughness:0.3,metalness:0.4})); f.raycast=()=>{}; t.telefon=f; } }
+  else t.mx.klid=t.poza==='bok'?'ready':'miri';
+  mxHrej(t,t.mx.klid); return t; };
+// reakce na zásah nahranými pohyby
+const _onHitMX=function(t,s,z){ const st=t.st, zo=t._posledni&&t._posledni.o&&t._posledni.o.userData.zona;
+  if(st.znesk){ if(!t.mx.padl){ t.mx.padl=true; mxHrej(t,'pad2',{jednou:true,prechod:0.12}); } return; }
+  if(zo==='noha'&&!t.mx.klec){ t.mx.klec=true; mxHrej(t,'do_kleku',{jednou:true,prechod:0.1,konec:'klek'}); return; }
+  mxHrej(t,'zasah',{jednou:true,prechod:0.08,konec:t.mx.klec?'klek':'miri'}); };
+const _ziv=zivPozuj; zivPozuj=function(t,dt,prvni){ if(!t.mx) return _ziv(t,dt,prvni); const st=t.st, mx=t.mx, K=t.K;
+  // stav → pohyb
+  if(st.znesk&&!mx.padl) _onHitMX(t);
+  if(!t.ns&&!st.znesk&&mx.nazev==='ready'&&!t.skryty&&ST.phase==='run'){ mx.tReady=(mx.tReady||0)+dt; if(mx.tReady>0.8) mxHrej(t,'miri',{prechod:0.35}); }
+  if(mx.konecT!=null&&mx.akce&&mx.akce.time>=mx.konecT&&mx.konec){ const k=mx.konec; mx.konec=null; mx.konecT=null; mxHrej(t,k,{prechod:0.2}); }
+  if(st.zbranDolu>0) st.zbranDolu=Math.max(0,st.zbranDolu-dt);
+  mx.mixer.update(dt||0);
+  // posun pánve z nahrávky (klek, pád)
+  const a=mx.akce; if(a&&mx.hipBone){ const c=a.getClip(), i=Math.min(c.hip.length/3-1,Math.round(a.time*c.fps)); const off=new V(c.hip[i*3],c.hip[i*3+1],c.hip[i*3+2]);   // posun je v jednotkách modelu (= místní souřadnice těla)
+    const w=t.telo.localToWorld(mx.hipRest.clone().add(off)); mx.hipBone.position.copy(mx.hipBone.parent.worldToLocal(w)); }
+  // natočení celé postavy za střelcem (hrozba, která není zneškodněná a není skrytá)
+  const cam=new V(); camera.getWorldPosition(cam); if(!t.ns&&!st.znesk&&!t.skryty){ const g=t.m.getWorldPosition(new V()), fw=new V(0,0,1).applyQuaternion(t.m.getWorldQuaternion(new THREE.Quaternion())); const k=cam.clone().sub(g); k.y=0; k.normalize(); const ang=Math.max(-1.2,Math.min(1.2,Math.atan2(fw.clone().cross(k).y,fw.dot(k)))); mx.yaw+=(ang-mx.yaw)*Math.min(1,dt*3); }
+  t.telo.rotation.set(0,mx.yaw,0); t.telo.position.z=0;
+  t.root.updateMatrixWorld(true);
+  // zbraň v pravé ruce, telefon u ucha
+  if(t.zbran&&!t.padaZbran){ if(!t.zbran.parent) TGROUP.add(t.zbran); const h=K.rukaR.getWorldPosition(new V()), m=K.rukaR.children.find(c=>c.isBone&&/middle/i.test(c.name)), ix=K.rukaR.children.find(c=>c.isBone&&/index/i.test(c.name)); const d=m?m.getWorldPosition(new V()).sub(h).normalize():new V(0,0,1);
+    t.zbran.position.copy(h).addScaledVector(d,0.05); const up=ix&&m?new V().crossVectors(d,ix.getWorldPosition(new V()).sub(m.getWorldPosition(new V()))).normalize():new V(0,1,0); const M4=new THREE.Matrix4().lookAt(new V(0,0,0),d.clone().negate(),up); t.zbran.quaternion.setFromRotationMatrix(M4); t.zbran.rotateY(Math.PI); }
+  if(t.padaZbran){ const p=t.padaZbran, z=t.zbran; if(z.position.y>0.03){ p.v.y-=9.81*dt; z.position.addScaledVector(p.v,dt); z.rotation.x+=p.w.x*dt; z.rotation.z+=p.w.z*dt; } else z.position.y=0.03; }
+  if(t.telefon){ if(!t.telefon.parent) TGROUP.add(t.telefon); const L=/telefon_z/.test(mx.klid)?K.rukaL:K.rukaR; const h=L.getWorldPosition(new V()); t.telefon.position.copy(h).add(new V(0,0.05,0)); t.telefon.lookAt(cam); }
+  if(st.padC&&!mx.padl) _onHitMX(t);
+};
+// zásah: nahraná reakce místo počítané
+const _postavaMX2=postavaTarget; postavaTarget=function(x,y,z,o){ const t=_postavaMX2(x,y,z,o); if(t&&t.mx){ const _oh=t.onHit; t.onHit=function(s,zz){ _oh(s,zz); _onHitMX(t,s,zz); }; } return t; };
+// načíst nahrávky spolu s postavami
+const _postavyNactiMX=postavyNacti; postavyNacti=function(){ if(POST.nacitam) return POST.nacitam; const p=_postavyNactiMX(); POST.nacitam=Promise.all([p,mxNacti()]).then(()=>true); return POST.nacitam; };
 
 /* ================= OVLÁDÁNÍ, POHYB, SMYČKA ================= */
 const keys={};
