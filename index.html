@@ -558,7 +558,7 @@ const st={vid:true,ukVrh:true,auto:false,autoPause:4,autoT:0,hand:'right',wind:1
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.18-2';
+const VERZE='2026.11.18-3';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -2028,7 +2028,8 @@ function dohnat(sh,L){ if(!(L>0)) return; const now=performance.now()/1000, T0=n
 // měření zpoždění: metronom, 12× spoušť na zbrani, pak 12× spoušť ovladače; rozdíl = zpoždění Bluetooth, rozptyl = kolísání
 const LAGT={on:false,faze:0,beaty:[],ble:[],ovl:[]};
 function lagTestStart(){ audio(); LAGT.on=true; LAGT.faze=0; LAGT.ble=[]; LAGT.ovl=[]; const m='Měření zpoždění spouště: dvanáctkrát cvakněte SPOUŠTÍ NA ZBRANI přesně do rytmu pípání.'; say(m); mluv(m,VOICE[LANG]||'cs-CZ',{prerusit:true}); setTimeout(lagBeaty,5200); }
-function lagBeaty(){ LAGT.beaty=[]; const t0=performance.now()+400; for(let k=0;k<12;k++){ const T=t0+k*900; LAGT.beaty.push(T); setTimeout(()=>noise(0.035,2600,0.6,0.004),T-performance.now()); } setTimeout(lagFaze,t0+12*900+600-performance.now()); }
+function pipV(T){ const a=audio(); if(!a) return; const t=a.currentTime+Math.max(0,(T-performance.now())/1000), o=a.createOscillator(), g=a.createGain(); o.type='square'; o.frequency.value=2000; g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); o.connect(g).connect(a.destination); o.start(t); o.stop(t+0.05); }   // pípnutí přesně podle hodin zvuku, ne podle časovače
+function lagBeaty(){ LAGT.beaty=[]; const t0=performance.now()+400; for(let k=0;k<12;k++){ const T=t0+k*900; LAGT.beaty.push(T); pipV(T); } setTimeout(lagFaze,t0+12*900+600-performance.now()); }
 function lagTestZaznam(tEv){ if(!LAGT.on||!LAGT.beaty.length) return; const T=tEv||performance.now(); let b=LAGT.beaty[0]; for(const x of LAGT.beaty) if(Math.abs(x-T)<Math.abs(b-T)) b=x; const d=T-b; if(Math.abs(d)>420) return; (LAGT.faze===0?LAGT.ble:LAGT.ovl).push(d); }
 function lagFaze(){ if(LAGT.faze===0){ LAGT.faze=1; LAGT.beaty=[]; const m='Teď totéž SPOUŠTÍ NA OVLADAČI (ukazováček na ovladači).'; say(m); mluv(m,VOICE[LANG]||'cs-CZ',{prerusit:true}); setTimeout(lagBeaty,4200); return; }
   LAGT.on=false; LAGT.beaty=[]; const med=a=>{ const b=[...a].sort((x,y)=>x-y); return b[Math.floor(b.length/2)]; }, sd=a=>{ const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length); };
