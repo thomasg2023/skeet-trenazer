@@ -133,7 +133,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
       <h2>Podmínky na střelnici</h2>
       <div class="opt"><span class="ol">Prostředí</span><div class="seg" id="envSeg"><button type="button" data-e="les">Lesní střelnice</button><button type="button" data-e="mesto">Město</button><button type="button" data-e="stadion">Stadion</button><button type="button" data-e="poust">Poušť</button><button type="button" data-e="hala">Krytá hala</button><button type="button" data-e="hory">Hory (biatlon)</button></div></div>
       <div class="opt"><span class="ol">Denní doba</span><div class="seg" id="dobaSeg"><button type="button" data-d="den">Den</button><button type="button" data-d="zlata">Zlatá hodina</button><button type="button" data-d="soumrak">Soumrak</button></div></div>
-      <div class="opt"><span class="ol">Počasí</span><div class="seg" id="pocasiSeg"><button type="button" data-p="jasno">Jasno</button><button type="button" data-p="dest">Déšť</button><button type="button" data-p="mlha">Mlha</button><button type="button" data-p="snih">Sníh</button><button type="button" data-p="vitr">Silný vítr</button></div></div>
+      <div class="opt"><span class="ol">Počasí</span><div class="seg" id="pocasiSeg"><button type="button" data-p="jasno">Jasno</button><button type="button" data-p="mlha">Mlha</button><button type="button" data-p="snih">Sníh</button><button type="button" data-p="vitr">Silný vítr</button></div></div>
       <div class="opt"><span class="ol">Psychický tlak</span><div class="seg" id="tlakSeg"><button type="button" data-t="klid">Klid</button><button type="button" data-t="zavod">Závod (diváci, rekordy)</button><button type="button" data-t="stres">Stres (tep, hluk, chvění)</button></div></div>
       <div class="opt"><span class="ol">Terče</span><div class="seg"><button type="button" id="nahodneBtn">Náhodné prezentace terčů</button><button type="button" id="postavyBtn">Realistické postavy místo kartonu</button><button type="button" id="zvyrazBtn">Zvýraznit zásahy</button><select id="vzdSel" hidden aria-label="Vzdálenost"></select></div></div>
     </section>
@@ -157,7 +157,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.17-5';
+const VERZE='2026.11.18-1';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -655,12 +655,12 @@ function fire(){ audio(); const now=performance.now()/1000, S=ST.stage;
   for(const h of hits){ const t=h.object.userData.t; if(!t) break; if(zasahy.some(z=>z.t===t)) continue; if(t.skryty) continue;   // skrytý (natočený bokem) terč je jen hrana kartonu
     if(t.typ==='steel'||t.typ==='popper'||t.typ==='biatlon'){ if(t.down&&!t.stav) continue; zasahy.push({t,sc:t.score(),dist:h.distance,p:h.point}); break; }
     const l=t.m.worldToLocal(h.point.clone()); const vv=vitrCelkem(); if(vv) l.x+=typeof bLag==='function'?vv*bLag(h.distance):vv*(S&&S.zbran==='puska'?0.12:0.05)*Math.pow(h.distance/100,2);
-    const sc=t.score(l); if(!sc) continue; zasahy.push({t,sc,l,dist:h.distance,p:h.point}); if(zasahy.length>=3) break; }
+    const sc=t.score(l,h); if(!sc) continue; zasahy.push({t,sc,l,dist:h.distance,p:h.point}); if(zasahy.length>=3) break; }
   const zasah=zasahy[0]||null;
   if(typeof realVystrel==='function'){ realVystrel(A,puska); ozvena(puska); let mp=null; if(zasah) mp=zasah.p; else if(hits.length) mp=hits[0].point; else if(A.d.y<-0.001){ const k=-A.o.y/A.d.y; if(k<400) mp=A.o.clone().addScaledVector(A.d,k); }
     if(mp){ const ty=zasah?(['steel','popper','biatlon'].includes(zasah.t.typ)?'ocel':'papir'):'prach'; const dx_=zasah?zasah.dist:A.o.distanceTo(mp), dl=(typeof bTof==='function'?bTof(dx_):dx_/800)*1000; setTimeout(()=>realDopad(mp,ty),dl); if(zasah&&ty==='papir') setTimeout(()=>realDopad(mp.clone().addScaledVector(A.d,0.6),'prach'),dl+20); } }
   const shot={t:ST.phase==='run'?now-ST.t0:null, dist:zasah?zasah.dist:null};
-  zasahy.forEach((z,i)=>{ const t=z.t, s=i===0?shot:{t:shot.t,dist:z.dist,pruster:true}; s.cil=t; s.zona=z.sc.zona; s.pts=z.sc.pts; t.hits.push(s);
+  zasahy.forEach((z,i)=>{ const t=z.t, s=i===0?shot:{t:shot.t,dist:z.dist,pruster:true}; s.cil=t; s.zona=z.sc.zona; s.pts=z.sc.pts; t.hits.push(s); if(t.onHit) setTimeout(()=>t.onHit(s,z),(z.dist/800)*1000);
     if(t.typ==='steel'||t.typ==='popper'||t.typ==='biatlon'){ t.down=true; const zp=(z.dist/343+(typeof bTof==='function'?bTof(z.dist):z.dist/800))*1000; if(t.typ==='biatlon'){ t.kl.visible=true; setTimeout(()=>noise(0.06,2500,0.35,0.01),zp); } else setTimeout(sSteel,zp); if(typeof stopaOcel==='function') stopaOcel(t,z.p); if(t.stav){ const mm=t.m.material; mm.color.setHex(0xffd36a); setTimeout(()=>mm.color.setHex(t.stop?0xd23a2a:0xe9e9e4),300); } if(t.stop&&ST.phase==='run') setTimeout(()=>{ if(ST.phase==='run') konec('stop'); },50); }
     else { s.l=z.l; drawHole(t,z.l); } });
   if(zasahy.length>1) shot.dalsi=zasahy.slice(1).map(z=>(z.t.name||'')+' '+z.sc.zona);
@@ -811,7 +811,7 @@ function drawPanel(){ if(!panel.visible) return; const x=pCan.getContext('2d'); 
     btn(30,y1+92,480,76,OKO.p?'KALIBRACE ZBRANĚ ✓':'KALIBRACE ZBRANĚ',!!OKO.p,()=>kalibrujOko());
     btn(525,y1+92,230,76,OKO.oko==='leve'?'OKO: LEVÉ':'OKO: PRAVÉ',false,()=>{ OKO.oko=OKO.oko==='leve'?'prave':'leve'; LS.set('st-oko',OKO); });
     btn(770,y1+92,224,76,'UKONČIT VR',false,()=>{ const s=renderer.xr.getSession(); if(s) s.end(); },'#8e2b20');
-    btn(30,y1+184,310,76,ST.postavy?'TERČE: POSTAVY':'TERČE: KARTON',!!ST.postavy,()=>{ setOpt('postavy',!ST.postavy); if(S) vyberCviceni(S.id); });
+    btn(30,y1+184,310,76,ST.postavy==='palba'?'POSTAVY + PALBA':ST.postavy?'TERČE: POSTAVY':'TERČE: KARTON',!!ST.postavy,()=>postavyDalsi());
     btn(355,y1+184,310,76,ST.zvyraz?'ZÁSAHY: ZVÝRAZNIT':'ZÁSAHY: JEN DÍRA',!!ST.zvyraz,()=>setOpt('zvyraz',!ST.zvyraz));
     btn(680,y1+184,314,76,ST.nahodne?'NÁHODNĚ ZAP':'NÁHODNĚ VYP',!!ST.nahodne,()=>{ ST.nahodne=!ST.nahodne; LS.set('st-nahodne',ST.nahodne); if(S) vyberCviceni(S.id); syncReal(); });
     if(typeof nebeVR==='function'){ const nb=nebeVR(); btn(30,y1+276,90,76,'◀',false,()=>nebeVR(-1)); btn(130,y1+276,560,76,'OBLOHA: '+nb,false,()=>nebeVR(1)); btn(700,y1+276,90,76,'▶',false,()=>nebeVR(1));
@@ -855,7 +855,8 @@ function syncOpt(){ $('vyukaBtn').setAttribute('aria-pressed',ST.vyuka); $('hlas
 /* ================= REALISMUS: počasí, psychický tlak, náhodné prezentace, vzdálenost ================= */
 // ---- počasí: déšť, mlha, sníh, silný vítr ----
 ST.pocasi=LS.get('st-pocasi','jasno'); ST.tlak=LS.get('st-tlak','klid'); ST.nahodne=LS.get('st-nahodne',false);
-const POCASI={jasno:'Jasno',dest:'Déšť',mlha:'Mlha',snih:'Sníh',vitr:'Silný vítr'};
+const POCASI={jasno:'Jasno',mlha:'Mlha',snih:'Sníh',vitr:'Silný vítr'};   // déšť vyřazen – na začátku trhal obraz
+if(!POCASI[ST.pocasi]) ST.pocasi='jasno';
 const SRAZKY=(()=>{ const N=2600, pos=new Float32Array(N*6); for(let i=0;i<N;i++){ const x=(Math.random()-0.5)*60, y=Math.random()*25, z=(Math.random()-0.5)*60; pos.set([x,y,z,x,y-0.35,z],i*6); }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); const l=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xaabbcc,transparent:true,opacity:0.5})); l.visible=false; l.frustumCulled=false; scene.add(l); return l; })();
 function pocasiApply(){ const p=ST.pocasi, sn=p==='snih'; SRAZKY.visible=(p==='dest'||sn)&&!ENVSET[ST.env].uvnitr;
@@ -1082,7 +1083,7 @@ new THREE.TextureLoader().load('tex/asfalt_d.jpg',t=>{ asphaltTex.image=t.image;
 
 // ---- 3D modely (GLB) ----
 const MODELY={}, GLTF=typeof THREE.GLTFLoader==='function'?new THREE.GLTFLoader():null;
-function model(id){ if(!GLTF) return Promise.resolve(null); return MODELY[id]||(MODELY[id]=new Promise(res=>GLTF.load('modely/'+id+'.glb',g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; if(o.material){ o.material.userData.real=true; o.material.envMapIntensity=0.6; } } }); res(g.scene); },undefined,()=>res(null)))); }
+function model(id){ if(!GLTF) return Promise.resolve(null); return MODELY[id]||(MODELY[id]=new Promise(res=>GLTF.load('modely/'+id+'.glb',g=>{ g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; if(o.material){ o.material.userData.real=true; o.material.envMapIntensity=0.6; } } }); g.scene.userData._anims=g.animations; res(g.scene); },undefined,()=>res(null)))); }
 async function postav(id,x,y,z,ry,cil,kolize){ const m=await model(id); if(!m) return null; const k=m.clone(true); k.position.set(x,y,z); k.rotation.y=ry||0; cil.add(k);
   if(kolize){ const c=new THREE.Mesh(new THREE.BoxGeometry(kolize[0],kolize[1],kolize[2]),new THREE.MeshBasicMaterial()); c.visible=false; c.position.set(x,kolize[1]/2,z); c.rotation.y=ry||0; c.userData.auto=true; cil.add(c); if(cil===TGROUP) WALLS.push(c); else ENVCOL.push({env:cil.userData.env,x,z,ry:ry||0,w:kolize[0],d:kolize[2]}); }
   return k; }
@@ -1544,8 +1545,8 @@ const PAPRSKY=ctrls.map(c=>{ const g=new THREE.BufferGeometry().setFromPoints([n
 function paprsky(){ ctrls.forEach((c,i)=>{ const l=PAPRSKY[i]; const on=ST.inXR&&panel.visible&&!!c.userData.src; l.visible=on; if(!on) return; const h=panelHit(c); l.scale.z=h?Math.max(0.05,h.point.distanceTo(c.getWorldPosition(new V()))):1.5; l.material.color.setHex(h&&h.i>=0?0x7fe0a0:0xffffff); }); }
 
 // ---- volby na stránce ----
-(()=>{ const pb=$('postavyBtn'), zb=$('zvyrazBtn'); if(pb) pb.onclick=()=>{ setOpt('postavy',!ST.postavy); if(ST.stage) vyberCviceni(ST.stage.id); syncReal(); }; if(zb) zb.onclick=()=>{ setOpt('zvyraz',!ST.zvyraz); syncReal(); }; })();
-const _syncReal=syncReal; syncReal=function(){ _syncReal(); const pb=$('postavyBtn'), zb=$('zvyrazBtn'); if(pb) pb.setAttribute('aria-pressed',!!ST.postavy); if(zb) zb.setAttribute('aria-pressed',!!ST.zvyraz); };
+(()=>{ const pb=$('postavyBtn'), zb=$('zvyrazBtn'); if(pb) pb.onclick=()=>postavyDalsi(); if(zb) zb.onclick=()=>{ setOpt('zvyraz',!ST.zvyraz); syncReal(); }; })();
+const _syncReal=syncReal; syncReal=function(){ _syncReal(); const pb=$('postavyBtn'), zb=$('zvyrazBtn'); if(pb){ pb.setAttribute('aria-pressed',!!ST.postavy); pb.textContent=ST.postavy==='palba'?'Postavy, které opětují palbu':'Realistické postavy místo kartonu'; } if(zb) zb.setAttribute('aria-pressed',!!ST.zvyraz); };
 
 /* ---- HRANICE: kam se dá dojít (páčkou / WASD) a viditelné ohrady, aby se nedalo odejít mimo scénu ---- */
 const ENV_HR={les:[-12.6,12.6,-117,17.2],mesto:[-21.8,21.8,-148,38],poust:[-23.5,23.5,-10,13.5],hala:[-10.5,10.5,-31.5,10.5],hory:[-12.6,12.6,-6,11.5]};
@@ -1621,7 +1622,7 @@ const _vyberK=vyberCviceni; vyberCviceni=function(id){ _vyberK(id); try{ TGROUP.
    a zapeče do pevné sítě – zásah se pak počítá přesně tam, kam střela dopadla. Zóny podle IPSC: A = střed hrudníku a hlava,
    C = trup, D = ruce a nohy. Počátek terče je ve středu hrudníku (jako u kartonu), takže hodnocení CQB (hlava = l.y > 0,17) platí dál. */
 const POSTAVY_GLB=[['postava_eric',1.80],['postava_nathan',1.78],['postava_sophia',1.68]];
-const POZY_H=['miri','bok'], POZY_C=['ruce','telefon','klid'];
+const POZY_H=['miri','bok'], POZY_C=['ruce','klid'];   // telefon vyřazen – bez skutečné animace vypadal nejhůř
 const POST={cache:{}, nacteno:false, nacitam:null, pistole:null};
 function kost(root,re){ let b=null; root.traverse(o=>{ if(!b&&o.isBone&&re.test(o.name)) b=o; }); return b; }
 const KOSTI={ hlava:/(^|_)head_\d/i, krk:/(^|_)neck_\d/i, hrud:/spine_03_\d/i, panev:/(^|_)hip_\d/i,
@@ -1699,7 +1700,153 @@ function postavaDira(t,l){ const g=t.m, p=new V(l.x,l.y,l.z); const e=new V(); c
 const _ipscP=ipscTarget; ipscTarget=function(x,y,z,o){ o=o||{}; if(ST.postavy&&POST.nacteno){ const t=postavaTarget(x,y,z,o); if(t) return t; } return _ipscP(x,y,z,o); };
 const _vyberP=vyberCviceni; vyberCviceni=function(id){ postavaI=0; _vyberP(id);
   if(ST.postavy&&!POST.nacteno){ say('Načítám postavy…'); postavyNacti().then(()=>{ if(ST.stage&&ST.stage.id===id&&ST.phase==='idle') vyberCviceni(id); say('Postavy připraveny'); }); } };
-if(ST.postavy) postavyNacti();
+setTimeout(()=>{ if(ST.postavy) postavyNacti(); },0);
+
+/* ================= ŽIVÉ POSTAVY: animace, reakce na zásah, opětování palby =================
+   Postava je kostra (SkinnedMesh) pózovaná každý snímek: dýchá, otáčí trup za střelcem a míří mu na hlavu.
+   Zásahy se počítají na neviditelných „kolizních tělech“ přichycených ke kostem (hlava, trup, paže, nohy),
+   takže zóna sedí i když se postava hýbe, klečí nebo padá.
+   Reakce (stejné pravidlo jako u kartonu: zneškodněná = 2 zásahy A/C nebo 1 do hlavy):
+     • hlava → okamžitě padá (zbraň vypadne)         • trup 1× → škubne sebou, míří dál (POŘÁD NEBEZPEČNÁ)
+     • trup 2× → zhroutí se, zbraň pustí              • noha → klekne si, ale MÍŘÍ DÁL (nebezpečná)
+     • paže → škubne, na chvíli sklopí zbraň, pak zase míří
+     • civilista po zásahu padá (a je to penalizace)
+   Střelec tedy pozná výsledek podle chování: dokud postava drží zbraň namířenou, je hrozba. */
+const ZIVE={list:[], tpl:{}, src:{}, anim:{}};
+const _V=()=>new V();
+function zivTpl(id,H){ if(ZIVE.tpl[id]) return ZIVE.tpl[id]; const src=ZIVE.src[id]; if(!src) return null;
+  const tmp=THREE.SkeletonUtils.clone(src); const g=new THREE.Group(); g.add(tmp); g.updateMatrixWorld(true);
+  const K={}; for(const [n,re] of Object.entries(KOSTI)) K[n]=kost(tmp,re); if(!K.hlava||!K.ramR) return null;
+  let minY=1e9; tmp.traverse(o=>{ if(o.isBone){ const p=o.getWorldPosition(_V()); if(p.y<minY) minY=p.y; } });
+  const hy=K.hlava.getWorldPosition(_V()).y, s=H*0.9/(hy-minY), chestY=(K.hrud.getWorldPosition(_V()).y-minY)*s;
+  return ZIVE.tpl[id]={src,H,s,minY,chestY}; }
+const KOSTI2={ stehnoL:/upperleg_l_\d/i, stehnoR:/upperleg_r_\d/i, lytkoL:/lowerleg_l_\d/i, lytkoR:/lowerleg_r_\d/i, chodidloL:/(^|_)foot_l_\d/i, chodidloR:/(^|_)foot_r_\d/i,
+  hlavaKonec:/head_end/i, pater1:/spine_01_\d/i, pater2:/spine_02_\d/i };
+const KOL_MAT=new THREE.MeshBasicMaterial({visible:false});
+function kolTeleso(t,kost_,A,B,r,zona){ // válec mezi body A–B (svět), přichycený ke kosti
+  const L=A.distanceTo(B), m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,10),KOL_MAT); m.position.copy(A).add(B).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new V(0,1,0),B.clone().sub(A).normalize()); m.userData.t=t; m.userData.zona=zona; kost_.attach(m); return m; }
+function kolKoule(t,kost_,C,r,zona){ const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),KOL_MAT); m.position.copy(C); m.userData.t=t; m.userData.zona=zona; kost_.attach(m); return m; }
+function kolBox(t,kost_,A,B,w,d,zona){ const L=A.distanceTo(B), m=new THREE.Mesh(new THREE.BoxGeometry(w,L,d),KOL_MAT); m.position.copy(A).add(B).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new V(0,1,0),B.clone().sub(A).normalize()); m.userData.t=t; m.userData.zona=zona; kost_.attach(m); return m; }
+
+postavaTarget=function(x,y,z,o){ const ns=!!o.noshoot, i=postavaI++, [id,H]=POSTAVY_GLB[i%POSTAVY_GLB.length], T=zivTpl(id,H); if(!T) return null;
+  const poza=ns?POZY_C[(i>>1)%POZY_C.length]:(i%3===2?'bok':'miri');
+  const g=new THREE.Group(), telo=new THREE.Group(), root=THREE.SkeletonUtils.clone(T.src); telo.add(root); root.scale.multiplyScalar(1); telo.scale.setScalar(T.s); telo.position.y=-T.minY*T.s-T.chestY; g.add(telo);
+  const dno=Math.max(0,y-1.45); g.position.set(x,dno+T.chestY,z); if(o.ry) g.rotation.y=o.ry; TGROUP.add(g);
+  root.traverse(m=>{ if(m.isMesh){ m.raycast=()=>{}; m.frustumCulled=false; m.castShadow=true; if(m.material&&m.material.vertexTangents){ m.material=m.material.clone(); m.material.vertexTangents=false; } } });
+  g.updateMatrixWorld(true);
+  const K={}; for(const [n,re] of Object.entries(Object.assign({},KOSTI,KOSTI2))) K[n]=kost(root,re);
+  const t={typ:ns?'noshoot':'ipsc',m:g,hits:[],name:o.name||'',postava:true,ziva:true,size:0.5,K,telo,root,poza,ns,
+    st:{kl:0,klC:0,fl:0,flS:1,pad:0,padC:0,pad0:0,sklon:0,zbranDolu:0,znesk:false,tVid:null,tPal:0,dych:Math.random()*6}};
+  // klidová póza kostí (k ní se každý snímek vracíme)
+  // civilistka má skutečnou nahranou animaci (přešlapování) – použije se místo počítané pózy
+  const kl=ZIVE.anim[id]&&ZIVE.anim[id][0]; if(ns&&kl&&/sophia/.test(id)){ t.mixer=new THREE.AnimationMixer(root); const a=t.mixer.clipAction(kl); a.play(); a.time=Math.random()*kl.duration; t.poza='anim'; }
+  t.rest=new Map(); root.traverse(b=>{ if(b.isBone) t.rest.set(b,[b.quaternion.clone(),b.position.clone()]); });
+  // kolizní tělesa
+  const W=b=>b?b.getWorldPosition(_V()):null, hl=W(K.hlava), he=W(K.hlavaKonec)||hl.clone().add(new V(0,0.18,0)), nk=W(K.krk), hp=W(K.panev), sp2=W(K.pater2)||hp.clone().lerp(nk,0.5);
+  kolKoule(t,K.hlava,hl.clone().lerp(he,0.45),0.105,'hlava');
+  kolBox(t,K.hrud,sp2,nk.clone().add(new V(0,0.02,0)),0.36,0.24,'hrud'); kolBox(t,K.panev,hp.clone().add(new V(0,-0.08,0)),sp2,0.34,0.22,'bricho');
+  for(const s of ['L','R']){ const ra=W(K['ram'+s]), pr=W(K['pred'+s]), ru=W(K['ruka'+s]); if(ra&&pr) kolTeleso(t,K['ram'+s],ra,pr,0.048,'ruka'); if(pr&&ru) kolTeleso(t,K['pred'+s],pr,ru,0.038,'ruka'); if(ru) kolKoule(t,K['ruka'+s],ru,0.045,'ruka');
+    const st=W(K['stehno'+s]), ly=W(K['lytko'+s]), ch=W(K['chodidlo'+s]); if(st&&ly) kolTeleso(t,K['stehno'+s],st,ly,0.085,'noha'); if(ly&&ch) kolTeleso(t,K['lytko'+s],ly,ch,0.06,'noha'); }
+  // zbraň / telefon do ruky
+  if(!ns&&POST.pistole){ const p=POST.pistole.clone(true); p.traverse(m=>{ if(m.isMesh) m.raycast=()=>{}; }); t.zbran=p; }
+  if(poza==='telefon'){ const f=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.15,0.01),new THREE.MeshStandardMaterial({color:0x111318,roughness:0.3,metalness:0.4})); f.raycast=()=>{}; t.telefon=f; }
+  t.score=function(l,h){ if(ns) return {pts:-10,zona:'NS'}; const ob=h&&h.object, zo=ob&&ob.userData.zona, P=h?h.point:null; t._posledni={p:P&&P.clone(),o:ob};
+    const puska=ST.stage&&ST.stage.zbran==='puska';
+    if(zo==='hlava'){ l.y=Math.max(l.y,0.3); return {pts:5,zona:'A',hlava:true}; }
+    l.y=Math.min(l.y,0.16);
+    if(zo==='hrud'||zo==='bricho'){ const sR=W(K.ramR), sL=W(K.ramL), osaX=sL.clone().sub(sR).normalize(), nek=W(K.krk), pan=W(K.panev), osaY=nek.clone().sub(pan).normalize(), stred=W(K.hrud), d=P.clone().sub(stred);
+      const dx=d.dot(osaX), dy=d.dot(osaY); if(Math.abs(dx)<0.09&&dy>-0.2&&dy<0.12) return {pts:5,zona:'A'}; return {pts:puska?4:3,zona:'C'}; }
+    return {pts:puska?2:1,zona:'D',noha:zo==='noha',ruka:zo==='ruka'}; };
+  t.onHit=function(s){ const st=t.st; if(st.znesk) return; const z=t._posledni&&t._posledni.o&&t._posledni.o.userData.zona;
+    st.fl=1; st.flS=Math.random()<0.5?-1:1; zivZvuk(t);
+    if(ns){ st.znesk=true; st.padC=1; return; }
+    if(z==='hlava'||hrozbaZnesk(t)){ st.znesk=true; st.padC=1; pustZbran(t); return; }
+    if(z==='noha') st.klC=1;                       // klekne si – ale míří dál
+    if(z==='ruka') st.zbranDolu=1;                 // sklopí na chvíli zbraň
+  };
+  g.traverse(m=>{ if(m.isMesh&&!m.userData.t&&m.userData.zona) m.userData.t=t; });
+  TG.push(t); ZIVE.list.push(t); zivPozuj(t,0,true); return t; };
+
+function zivZvuk(t){ try{ noise(0.05,900,0.12,0.004); }catch(e){} }
+function pustZbran(t){ const p=t.zbran; if(!p||!p.parent) return; TGROUP.attach(p); t.padaZbran={v:new V((Math.random()-0.5)*0.6,0.6,(Math.random()-0.5)*0.6),w:new V(Math.random()*6,Math.random()*6,Math.random()*6)}; }
+const _q=new THREE.Quaternion(), _e=new THREE.Euler();
+// otočení kosti kolem osy zadané ve SVĚTĚ (počítáno v prostoru rodiče, takže nevadí zrcadlené/škálované kosti)
+function otocW(b,osa,uhel){ if(!b||!uhel) return; b.parent.updateMatrixWorld(true); const inv=new THREE.Matrix4().copy(b.parent.matrixWorld).invert(); const a=osa.clone().transformDirection(inv).normalize(); _q.setFromAxisAngle(a,uhel); b.quaternion.premultiply(_q); b.updateMatrixWorld(true); }
+let OS={up:new V(0,1,0),r:new V(1,0,0),f:new V(0,0,1)};
+function otoc(b,x,y,z){ if(!b) return; otocW(b,OS.r,x); otocW(b,OS.up,y); otocW(b,OS.f,z); }
+function zivPozuj(t,dt,prvni){ const K=t.K, st=t.st, ns=t.ns, now=performance.now()/1000;
+  // zpět do klidové pózy
+  if(t.mixer){ t.mixer.timeScale=st.znesk?0:1; t.mixer.update(dt||0); } else for(const [b,[q,p]] of t.rest){ b.quaternion.copy(q); b.position.copy(p); }
+  st.kl+=(st.klC-st.kl)*Math.min(1,dt*5); st.pad+=(st.padC-st.pad)*Math.min(1,dt*(st.padC?2.2:6)); st.fl=Math.max(0,st.fl-dt*3.2); st.zbranDolu=Math.max(0,st.zbranDolu-dt*0.7);
+  t.m.updateMatrixWorld(true); { const q=t.m.getWorldQuaternion(new THREE.Quaternion()); OS={up:new V(0,1,0),r:new V(1,0,0).applyQuaternion(q),f:new V(0,0,1).applyQuaternion(q)}; }
+  const dych=Math.sin(now*1.6+st.dych);
+  // dech a mírné pohupování
+  otoc(K.pater2,dych*0.012,0,0); otoc(K.hrud,dych*0.01,0,0);
+  // škubnutí po zásahu (dozadu a do strany)
+  if(st.fl>0){ const f=Math.sin(st.fl*Math.PI)*st.fl; otoc(K.pater1,-0.22*f,0,0.12*f*st.flS); otoc(K.hrud,-0.12*f,0.1*f*st.flS,0); }
+  t.root.updateMatrixWorld(true); t.m.updateMatrixWorld(true);
+  // pokleknutí: pánev dolů, levé koleno na zem, pravá noha vpředu
+  if(st.kl>0.01&&K.panev){ const d=0.42*st.kl; const pw=K.panev.getWorldPosition(_V()).add(new V(0,-d,0)); K.panev.parent.updateMatrixWorld(true); K.panev.position.copy(K.panev.parent.worldToLocal(pw)); K.panev.updateMatrixWorld(true);
+    const fw=new V(0,0,1).applyQuaternion(t.m.getWorldQuaternion(new THREE.Quaternion()));
+    for(const s of ['R','L']){ const st_=K['stehno'+s], ly=K['lytko'+s], ch=K['chodidlo'+s]; if(!st_||!ly||!ch) continue; const r0=t.nohy&&t.nohy[s]; if(!r0) continue;
+      const cil=t.m.localToWorld(r0.clone()).addScaledVector(fw,s==='R'?0.18*st.kl:-0.32*st.kl); if(s==='L') cil.y+=0.05*st.kl; ikRuka(st_,ly,ch,cil,s==='R'?fw.clone():fw.clone().add(new V(0,-1.2,0)),null); } }
+  t.root.updateMatrixWorld(true);
+  // trup a ruce
+  const cam=_V(); camera.getWorldPosition(cam); const sR=K.ramR.getWorldPosition(_V()), sL=K.ramL.getWorldPosition(_V()), sh=sR.clone().add(sL).multiplyScalar(0.5);
+  const mirit=!ns&&!st.znesk&&!t.skryty&&st.pad<0.05;
+  if(!ns&&!st.znesk){ // natočit trup ke střelci (max ±50°)
+    const fw=new V(0,0,1).applyQuaternion(t.m.getWorldQuaternion(new THREE.Quaternion())); const k=cam.clone().sub(sh); k.y=0; const a=Math.atan2(fw.clone().cross(k.clone().normalize()).y,fw.dot(k.clone().normalize()));
+    const yaw=Math.max(-0.87,Math.min(0.87,a))*(t.skryty?0:1); otoc(K.pater1,0,yaw*0.35,0); otoc(K.pater2,0,yaw*0.35,0); otoc(K.hrud,0,yaw*0.3,0); t.root.updateMatrixWorld(true); }
+  const sR2=K.ramR.getWorldPosition(_V()), sL2=K.ramL.getWorldPosition(_V()), sh2=sR2.clone().add(sL2).multiplyScalar(0.5);
+  const sm=cam.clone().sub(sh2).normalize(); const dolu=Math.max(st.zbranDolu,st.pad>0.05||st.znesk?1:0);
+  const smA=sm.clone().lerp(new V(sm.x*0.3,-0.9,sm.z*0.3).normalize(),Math.min(1,dolu)).normalize();
+  const R=new V().crossVectors(new V(0,1,0),smA).normalize();   // vpravo z pohledu postavy je −R
+  if(!ns){ if(t.poza==='miri'||mirit){ const wr=sh2.clone().addScaledVector(smA,0.52).addScaledVector(R,0.0).add(new V(0,-0.03,0)), wl=sh2.clone().addScaledVector(smA,0.48).addScaledVector(R,0.035).add(new V(0,-0.07,0));
+        ikRuka(K.ramR,K.predR,K.rukaR,wr,R.clone().negate().add(new V(0,-1.2,0)),smA); ikRuka(K.ramL,K.predL,K.rukaL,wl,R.clone().add(new V(0,-1.2,0)),smA.clone().addScaledVector(R,-0.45)); }
+    else { const wr=sR2.clone().addScaledVector(smA,0.3).add(new V(0,-0.5,0)); ikRuka(K.ramR,K.predR,K.rukaR,wr,new V(0,0,0).sub(smA).add(new V(0,-0.2,0)),new V(smA.x,-0.35,smA.z)); ikRuka(K.ramL,K.predL,K.rukaL,sL2.clone().add(new V(0,-0.58,0.06)),smA.clone().negate(),null); } }
+  else if(t.poza==='anim'){ }
+  else { if(t.poza==='ruce'){ const wv=Math.sin(now*0.9+st.dych)*0.03; ikRuka(K.ramR,K.predR,K.rukaR,sR2.clone().addScaledVector(R,-0.28).add(new V(0,0.38+wv,0)),R.clone().negate().add(new V(0,-1,0)),new V(0,1,0)); ikRuka(K.ramL,K.predL,K.rukaL,sL2.clone().addScaledVector(R,0.28).add(new V(0,0.38-wv,0)),R.clone().add(new V(0,-1,0)),new V(0,1,0)); }
+    else if(t.poza==='telefon'){ const hl=K.hlava.getWorldPosition(_V()); ikRuka(K.ramR,K.predR,K.rukaR,hl.clone().addScaledVector(R,-0.06).add(new V(0,-0.13,0)),R.clone().negate().add(new V(0,-1,0)),new V(0,1,0)); ikRuka(K.ramL,K.predL,K.rukaL,sL2.clone().add(new V(0,-0.58,0.06)),sm.clone().negate(),null); }
+    else { ikRuka(K.ramR,K.predR,K.rukaR,sR2.clone().add(new V(0,-0.58,0.06)),sm.clone().negate(),null); ikRuka(K.ramL,K.predL,K.rukaL,sL2.clone().add(new V(0,-0.58,0.06)),sm.clone().negate(),null); } }
+  // hlava sleduje střelce
+  if(!st.znesk&&K.hlava){ K.hlava.updateMatrixWorld(true); const hp=K.hlava.getWorldPosition(_V()); const d=cam.clone().sub(hp).normalize(); const fw=new V(0,0,1).applyQuaternion(K.hrud.getWorldQuaternion(new THREE.Quaternion())); const a=Math.atan2(fw.clone().cross(d).y,fw.dot(d)); otoc(K.hlava,0,Math.max(-0.6,Math.min(0.6,a))*0.6,0); }
+  // pád: celé tělo se překlopí kolem chodidel dozadu
+  t.telo.rotation.set(-1.45*st.pad*st.pad,0,0.25*st.pad*st.flS); t.telo.position.z=-0.25*st.pad;
+  t.root.updateMatrixWorld(true);
+  // zbraň do ruky
+  if(t.zbran&&!t.padaZbran){ if(!t.zbran.parent) TGROUP.add(t.zbran); const h=K.rukaR.getWorldPosition(_V()), dir=K.rukaR.children.find(c=>c.isBone&&/middle/i.test(c.name)); const d=dir?dir.getWorldPosition(_V()).sub(h).normalize():smA;
+    t.zbran.position.copy(h).addScaledVector(d,0.06).add(new V(0,0.015,0)); t.zbran.scale.setScalar(1); t.zbran.lookAt(t.zbran.position.clone().sub(d)); }
+  if(t.padaZbran){ const p=t.padaZbran, z=t.zbran; if(z.position.y>0.03){ p.v.y-=9.81*dt; z.position.addScaledVector(p.v,dt); z.rotation.x+=p.w.x*dt; z.rotation.z+=p.w.z*dt; } else { z.position.y=0.03; } }
+  if(t.telefon){ if(!t.telefon.parent) TGROUP.add(t.telefon); const h=K.rukaR.getWorldPosition(_V()); t.telefon.position.copy(h).add(new V(0,0.06,0)); t.telefon.lookAt(cam); }
+  if(prvni){ t.nohy={}; for(const s of ['R','L']){ const ch=K['chodidlo'+s]; if(ch) t.nohy[s]=t.m.worldToLocal(ch.getWorldPosition(_V())); } }
+}
+// ---- opětování palby: hrozba, která je vidět a není zneškodněná, po reakční době vystřelí ----
+function zivPalba(t,now){ const st=t.st; if(!ST.stage||ST.stage.cat!=='cqb'||ST.postavy!=='palba'||t.ns||st.znesk||t.skryty||ST.phase!=='run') { st.tVid=null; return; }
+  const h=_V(); camera.getWorldPosition(h); const hl=t.K.hlava.getWorldPosition(_V()); const d=h.clone().sub(hl), L=d.length(); const rc=new THREE.Raycaster(hl,d.normalize(),0.3,L-0.3); const vidi=L<25&&rc.intersectObjects(WALLS,false).length===0;
+  if(!vidi){ st.tVid=null; return; } if(st.tVid==null){ st.tVid=now; st.tPal=now+1.6+Math.random()*1.4; return; }
+  if(now>=st.tPal&&st.zbranDolu<0.3){ st.tPal=now+1.3+Math.random()*0.9; zivVystrel(t,L); } }
+function zivVystrel(t,L){ ST.zasazen=(ST.zasazen||0)+1; try{ noise(0.12,1400,Math.min(0.5,4/L),0.02); }catch(e){}
+  if(t.zbran){ const f=new THREE.PointLight(0xffb060,3,4); f.position.copy(t.zbran.localToWorld(new V(0,0.03,-0.22))); TGROUP.add(f); setTimeout(()=>TGROUP.remove(f),70); }
+  zasazenFlash(); say(`Zasažen! (${ST.zasazen}×) – ${t.name||'hrozba'} stihla vystřelit`); }
+const ZFL=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial({color:0xff1a10,transparent:true,opacity:0,depthTest:false,depthWrite:false})); ZFL.position.z=-0.12; ZFL.renderOrder=40; ZFL.frustumCulled=false; camera.add(ZFL);
+function zasazenFlash(){ ZFL.material.opacity=0.45; }
+// hlavní smyčka postav (volá ji smyčka přes realTick)
+const _realTickZ=realTick; realTick=function(dt){ _realTickZ(dt); const now=performance.now()/1000; if(ZFL.material.opacity>0) ZFL.material.opacity=Math.max(0,ZFL.material.opacity-dt*1.2);
+  ZIVE.list=ZIVE.list.filter(t=>t.m.parent); for(const t of ZIVE.list){ try{ zivPozuj(t,dt); zivPalba(t,now); }catch(e){ console.warn(e); } } };
+// díra v živé postavě: přichytí se ke kosti, takže se hýbe s ní
+postavaDira=function(t,l){ if(!t.ziva) return; const P=t._posledni; if(!P||!P.p||!P.o) return; const e=_V(); camera.getWorldPosition(e); const kost_=P.o.parent;
+  const mk=(geo,mat,off)=>{ const d=new THREE.Mesh(geo,mat); d.position.copy(P.p).addScaledVector(e.clone().sub(P.p).normalize(),off); d.lookAt(e); d.raycast=()=>{}; kost_.attach(d); };
+  mk(new THREE.CircleGeometry(0.007,12),DIRA_M,0.03); if(ST.zvyraz) mk(new THREE.RingGeometry(0.013,0.02,20),t.ns?DIRA_N:DIRA_Z,0.031); };
+// načtení: jen modely a pistole (bez zapékání)
+postavyNacti=function(){ if(POST.nacitam) return POST.nacitam; POST.nacitam=(async()=>{ const pm=await model('pistole_sluzebni'); if(pm) POST.pistole=pm.clone(true);
+  const ms=await Promise.all(POSTAVY_GLB.map(([id])=>model(id))); POSTAVY_GLB.forEach(([id],i)=>{ ZIVE.src[id]=ms[i]; ZIVE.anim[id]=ms[i]&&ms[i].userData._anims||[]; }); for(const [id,H] of POSTAVY_GLB) zivTpl(id,H); POST.nacteno=true; return true; })(); return POST.nacitam; };
+// konec cvičení: zásahy do střelce = penalizace v CQB
+const _konecZ=konec; konec=function(p){ const z=ST.zasazen||0; _konecZ(p); if(ST.phase==='done'&&ST.vysledek&&ST.stage&&ST.stage.cat==='cqb'&&ST.postavy==='palba'){ ST.vysledek.tr.unshift(z?`Hrozby tě zasáhly ${z}× – v reálu bys byl zraněn. Rychleji vyhodnoť a střílej, využívej kryt.`:'Žádná hrozba nestihla vystřelit – výborně.'); if(ST.vysledek.sum) ST.vysledek.sum.push(['Zasažen',z+'×']); renderVysledek(ST.vysledek); drawPanel(); } };
+const _startZ=start; start=function(){ ST.zasazen=0; return _startZ.apply(this,arguments); };
+// karton → postavy → postavy s palbou
+function postavyDalsi(){ const v=!ST.postavy?true:ST.postavy===true?'palba':false; setOpt('postavy',v); if(ST.stage) vyberCviceni(ST.stage.id); syncReal(); }
 
 /* ================= OVLÁDÁNÍ, POHYB, SMYČKA ================= */
 const keys={};
