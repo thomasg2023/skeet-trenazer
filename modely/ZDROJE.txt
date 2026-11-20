@@ -52,3 +52,13 @@ kuzel.glb – „Traffic Cone“, jamiemcfarlane, https://sketchfab.com/3d-model
 policie.glb – „Volvo Police Car-British Police“, David_Holiday, https://sketchfab.com/3d-models/volvo-police-car-british-police-a6e99776c35645c5b11e03a753f7c3e7
 zatarasa.glb – „Fence Barricade 03“, rocz3d, https://sketchfab.com/3d-models/fence-barricade-03-2a09091d4e7b4539abe03f6a50762409
 anim_postava_*.json – pohyby z Adobe Mixamo (mixamo.com, licence Mixamo pro použití v projektech), přenesené na kostry postav Renderpeople
+
+--- Střelnice CQB 2 (2026-11-20, Sketchfab, CC BY 4.0) – upraveno: měřítko, natočení, zmenšené textury, u autobusu a vagonu zjednodušená síť ---
+cq_regal_a.glb – „Supermarket Potato Chips Shelf Asset“, Rendevr, https://sketchfab.com/3d-models/4e4ccc3074f0474bbfa23611c46a4029
+cq_vitrina.glb – „Display Case for Groceries“, k.che4in, https://sketchfab.com/3d-models/2b777f898a3d4ee9bf124390f0440b31
+cq_voziky.glb – „Low Poly Shopping Cart“, mauriciopb1111, https://sketchfab.com/3d-models/dfffb6c91b4744eaae6e0e2dcc8da914
+cq_eskalator.glb – „Metaretail: Escalator“, vmmaniac, https://sketchfab.com/3d-models/d1706d72bf7943ab9bd7f48f18cb591e
+cq_turnikety.glb – „Low Poly Turnstiles“, anDDDres, https://sketchfab.com/3d-models/12536f966f9048dcba7e33fa08d9d6b5
+cq_vagon_int.glb – „Subway_[interior]“, yuuuusukeeee, https://sketchfab.com/3d-models/b7f25426ac674a9291ba092fb9fe8406 (odstraněná dveřní křídla)
+cq_vagon_r62.glb – „Subway Car (R62A)“, subink, https://sketchfab.com/3d-models/eeccd33aab144e76937c1ebdbc1faa74
+cq_autobus.glb – „A long City Bus (FULL INTERIOR)“, mixmamo.studio, https://sketchfab.com/3d-models/43d21ebcf51f45da9da0ccb0e6aad19a

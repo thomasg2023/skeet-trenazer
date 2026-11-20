@@ -159,7 +159,7 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
    STŘELNICE VR – pistole, puška, IPSC, drily, CQB
    Souřadnice: střelec stojí u z=0 a dívá se k -z (dolů po střelnici), y nahoru, metry.
    ========================================================================= */
-const VERZE='2026.11.18-5';
+const VERZE='2026.11.20-1';
 const $=id=>document.getElementById(id), V=THREE.Vector3;
 window.addEventListener('error',e=>{ try{ $('fb').textContent='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); }catch(_){} });
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -1941,6 +1941,242 @@ function postavyUvolni(){ const L=TG.filter(t=>t.postava); if(!L.length) return;
     if(!hotovo) console.warn('postava bez volného místa',t.name); }
   if(n) console.log('posunuto postav z překážek:',n); }
 const _vyberUv=vyberCviceni; vyberCviceni=function(id){ _vyberUv(id); const u=()=>{ try{ if(ST.stage&&ST.stage.id===id&&ST.phase!=='run') postavyUvolni(); }catch(e){ console.warn(e); } }; u(); setTimeout(u,500); setTimeout(u,1500); setTimeout(u,3500); };   // auta a domy se dotahují později
+
+/* ================= CQB 2: NEPŘEHLEDNÉ PROSTORY – supermarket, obchodní centrum, metro (nástupiště + odstavený vagon), chodby metra, autobus =================
+   Všude „výpadek proudu“: svítí jen nouzová světla a svítilna na zbrani (pořád zapnutá).
+   Scény jsou uzavřené (stěny + strop), venkovní prostředí se při nich schová. Kryty (regály, sedačky, sloupy) mají neviditelné kolizní kvádry. */
+const CQ={tex:{}, svetla:[]};
+// kolizní kvádr: blokuje chůzi; strela=false → střela projde (sklo, zábradlí)
+function cqKryt(w,h,d,x,y,z,ry,strela=true){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial()); m.visible=false; m.position.set(x,y+h/2,z); m.rotation.y=ry||0; if(!strela) m.raycast=()=>{}; m.userData.cqKryt=true; TGROUP.add(m); WALLS.push(m); return m; }
+// viditelný kvádr (volitelně i kryt)
+function cqBox(w,h,d,x,y,z,c,o={}){ const M=o.m||new THREE.MeshStandardMaterial({color:new THREE.Color(c).convertSRGBToLinear(),roughness:o.r??0.8,metalness:o.k??0.05}); const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M); b.position.set(x,y+h/2,z); b.rotation.y=o.ry||0; b.castShadow=b.receiveShadow=true; (o.g||TGROUP).add(b); if(o.kryt){ WALLS.push(b); } if(o.prujezdne) b.raycast=()=>{}; return b; }
+// podlaha a strop
+function cqPlocha(x0,x1,z0,z1,y,tex,c,dolu){ const m=new THREE.MeshStandardMaterial({color:new THREE.Color(c||0xffffff).convertSRGBToLinear(),roughness:0.85,map:tex||null}); if(tex){ tex.repeat.set((x1-x0)/(tex.cqM||2),(z1-z0)/(tex.cqM||2)); }
+  if(tex){ m.map=tex.clone(); m.map.needsUpdate=true; m.map.repeat.copy(tex.repeat); } const p=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),m); p.rotation.x=dolu?Math.PI/2:-Math.PI/2; p.position.set((x0+x1)/2,y,(z0+z1)/2); p.receiveShadow=true; TGROUP.add(p); return p; }
+function cqTex(k,w,h,draw,m){ if(CQ.tex[k]) return CQ.tex[k]; const t=canvasTex(w,h,draw,[1,1]); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.cqM=m||2; t.encoding=THREE.sRGBEncoding; return CQ.tex[k]=t; }
+const cqDlazba=()=>cqTex('dlazba',256,256,(x,w,h)=>{ x.fillStyle='#bdbab2'; x.fillRect(0,0,w,h); for(let i=0;i<4;i++) for(let j=0;j<4;j++){ x.fillStyle=`hsl(40,6%,${66+Math.random()*8}%)`; x.fillRect(i*64+1,j*64+1,62,62); } },2);
+const cqBeton=()=>cqTex('beton',256,256,(x,w,h)=>{ x.fillStyle='#7d7c78'; x.fillRect(0,0,w,h); for(let i=0;i<900;i++){ x.fillStyle=`rgba(${Math.random()<0.5?40:200},${Math.random()<0.5?40:200},${Math.random()<0.5?40:200},0.06)`; x.fillRect(Math.random()*w,Math.random()*h,3,3); } },3);
+const cqObklad=()=>cqTex('obklad',256,256,(x,w,h)=>{ x.fillStyle='#9aa1a4'; x.fillRect(0,0,w,h); for(let i=0;i<8;i++) for(let j=0;j<16;j++){ x.fillStyle=`hsl(195,8%,${74+Math.random()*5}%)`; x.fillRect(i*32+1,j*16+1,30,14); } },1.2);
+// zboží v regálu: barevné balení po řadách (jedna textura na čelo regálu)
+const cqZbozi=()=>cqTex('zbozi',512,256,(x,w,h)=>{ x.fillStyle='#2a2a2a'; x.fillRect(0,0,w,h); const pol=4, ph=h/pol;
+  for(let r=0;r<pol;r++){ let px=2; while(px<w-4){ const bw=10+Math.random()*26, bh=ph*(0.55+Math.random()*0.38), hue=Math.floor(Math.random()*360);
+      x.fillStyle=`hsl(${hue},${55+Math.random()*35}%,${35+Math.random()*30}%)`; x.fillRect(px,r*ph+ph-bh-6,bw-2,bh); x.fillStyle='rgba(255,255,255,0.55)'; x.fillRect(px+2,r*ph+ph-bh,bw-6,3); x.fillStyle='rgba(255,255,255,0.25)'; x.fillRect(px+2,r*ph+ph-bh*0.55,bw-6,bh*0.25); px+=bw; }
+    x.fillStyle='#c9ccd0'; x.fillRect(0,r*ph+ph-6,w,6); x.fillStyle='#e8e3a0'; for(let s=8;s<w;s+=64) x.fillRect(s,r*ph+ph-6,18,5); } },2);
+// nouzové světlo (bodové, bez stínů) + svítící těleso
+function cqSvetlo(x,y,z,c=0xfff2d0,i=1.1,d=14){ const l=new THREE.PointLight(c,i,d,1.6); l.position.set(x,y,z); TGROUP.add(l); CQ.svetla.push(l); const b=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.08,0.18),new THREE.MeshBasicMaterial({color:c})); b.position.set(x,y+0.06,z); b.raycast=()=>{}; TGROUP.add(b); return l; }
+// zelená cedule VÝCHOD (svítí)
+function cqVychod(x,y,z,ry){ const t=cqTex('vychod',256,96,(c,w,h)=>{ c.fillStyle='#0c8a3a'; c.fillRect(0,0,w,h); c.fillStyle='#fff'; c.font='bold 52px Arial'; c.textAlign='center'; c.fillText('VÝCHOD',w/2+18,64); c.fillRect(18,30,30,36); }); const m=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.22),new THREE.MeshBasicMaterial({map:t})); m.position.set(x,y,z); m.rotation.y=ry||0; m.raycast=()=>{}; TGROUP.add(m); const l=new THREE.PointLight(0x30ff80,0.35,5,2); l.position.set(x,y-0.2,z); TGROUP.add(l); }
+// uzavřená hala: obvodové stěny + strop + podlaha
+function cqHala(x0,x1,z0,z1,h,o={}){ const c=o.stena||0xcfccc4, tl=0.3;
+  const S=(a,b,cc,d)=>{ const w=zed(a,b,cc,d,h,c,tl); return w; };
+  S(x0,z0,x1,z0); S(x0,z1,x1,z1); S(x0,z0,x0,z1); S(x1,z0,x1,z1);
+  cqPlocha(x0,x1,z0,z1,0.02,o.podlaha||cqDlazba()); cqPlocha(x0,x1,z0,z1,h,null,o.strop||0x8a8a86,true); }
+// terč / postava (stejně jako v domě) a terč, který se „probudí“, až ho střelec uvidí nebo dojde blízko
+function cqT(x,z,o,px,pz,y=1.45){ return ipscTarget(x,y,z,Object.assign({ry:face(x,z,px,pz)},nahodnaRole(o))); }
+function cqA(x,z,o,px,pz,ax,az,r=2.5,y=1.45){ const t=cqT(x,z,o,px,pz,y); aktivator(t,ax,az,r); return t; }
+// model ze Sketchfabu přes kreslenou náhradu: když se načte, kreslená verze zmizí (kolize zůstávají)
+function cqModel(id,x,y,z,ry,s,nahrada,vzdy){ const g=new THREE.Group(); g.position.set(x,y,z); g.rotation.y=ry||0; TGROUP.add(g); if((!FOTO.on&&!vzdy)||typeof model!=='function') return g;
+  model(id).then(m=>{ if(!m||!g.parent) return; const k=m.clone(true); if(s) k.scale.setScalar(s); k.traverse(o=>{ if(o.isMesh) o.raycast=()=>{}; }); g.add(k); if(nahrada) (Array.isArray(nahrada)?nahrada:[nahrada]).forEach(n=>{ if(n) n.visible=false; }); }); return g; }
+
+
+// po postavení scény: stěny dostanou obklad/omítku, ostatní plochy čistou bílou mapu (jinak by na ně „realismus“ dal skvrny)
+const cqBila=()=>cqTex('bila',4,4,(x,w,h)=>{ x.fillStyle='#fff'; x.fillRect(0,0,w,h); },1);
+const cqOmitka=()=>cqTex('omitka',256,256,(x,w,h)=>{ x.fillStyle='#e9e6df'; x.fillRect(0,0,w,h); for(let i=0;i<500;i++){ x.fillStyle=`rgba(0,0,0,${Math.random()*0.035})`; x.fillRect(Math.random()*w,Math.random()*h,6,6); } },3);
+function cqDokonci(stenaTex,pbrJm){ WALLS.forEach(w=>{ w.userData.pbr=true; }); TGROUP.traverse(o=>{ if(!o.isMesh||!o.material||Array.isArray(o.material)||o.material.map||o.material.isMeshBasicMaterial) return; const g=o.geometry, p=g&&g.parameters; if(!p) return;
+    if(pbrJm&&FOTO.on&&typeof pbr==='function'&&WALLS.includes(o)&&g.type==='BoxGeometry'&&p.height>=2.3&&p.width>=2){ const m=pbr(pbrJm,1.6); boxUV(o.geometry,m.userData.tile); o.material=m; return; }
+    if(stenaTex&&WALLS.includes(o)&&g.type==='BoxGeometry'&&p.height>=2.3&&p.width>=2){ const t=stenaTex.clone(); t.needsUpdate=true; t.repeat.set(p.width/(stenaTex.cqM||2),p.height/(stenaTex.cqM||2)); o.material=o.material.clone(); o.material.map=t; o.material.color.setHex(0xffffff); o.material.needsUpdate=true; return; }
+    o.material=o.material.clone(); o.material.map=cqBila(); o.material.needsUpdate=true; }); }
+/* ---------- 1) SUPERMARKET ---------- */
+function regal(x,z,L,ry=0){ // oboustranný regál: kostra + zboží na obou stranách, výška 2,1 m (přes regál není vidět)
+  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=ry; TGROUP.add(g);
+  const kostra=new THREE.MeshStandardMaterial({color:new THREE.Color(0xd9dcdf).convertSRGBToLinear(),roughness:0.5,metalness:0.4});
+  cqBox(0.1,2.1,L,0,0,0,0,{m:kostra,g}); cqBox(1.78,0.12,L,0,0,0,0,{m:kostra,g}); cqBox(1.78,0.04,L,0,2.06,0,0,{m:kostra,g});
+  const t=cqZbozi().clone(); t.needsUpdate=true; t.repeat.set(L/2.4,1); t.offset.x=Math.random();
+  for(const s of [-1,1]){ const p=new THREE.Mesh(new THREE.PlaneGeometry(L,1.85),new THREE.MeshStandardMaterial({map:t,roughness:0.7})); p.position.set(s*0.87,1.05,0); p.rotation.y=s*Math.PI/2; p.receiveShadow=true; p.raycast=()=>{}; g.add(p);
+    for(let i=0;i<4;i++){ cqBox(0.8,0.025,L,s*0.46,0.12+i*0.47,0,0,{m:kostra,g}); } }
+  // čela regálu s cenovkami
+  for(const e of [-1,1]) cqBox(1.78,2.1,0.05,0,0,e*L/2,0,{m:kostra,g});
+  cqKryt(1.78,2.1,L,x,0,z,ry);
+  // skutečné regály se zbožím (Sketchfab): 3 díly po 4,13 m na každé straně, čelem do uličky
+  const n=Math.round(L/4.13); for(let i=0;i<n;i++){ const dz=(i-(n-1)/2)*4.13; for(const s of [-1,1]) cqModel(s>0?'cq_regal_a':'cq_regal_a',x+s*0.445,0,z+dz,s*Math.PI/2,null,g); }
+  return g; }
+function buildMarket(){ const X0=-12,X1=12,Z0=-27,Z1=3.5;
+  cqHala(X0,X1,Z0,Z1,4.2,{stena:0xe4e1d8,strop:0x6e6e6a});
+  // vstup: prosklená stěna s dveřmi za startem
+  // pokladny (4 boxy s pásem) – z = -1 … -4
+  for(const x of [-7,-3.2,0.6,4.4]){ cqBox(0.9,0.9,3.2,x,0,-2.6,0x3d4a57,{kryt:true}); cqBox(0.95,0.04,2.2,x,0.9,-2.1,0x111111); cqBox(0.5,0.5,0.5,x,0.9,-3.6,0x2b2f33); }
+  // regály v uličkách
+  for(const x of [-9.5,-5.7,-1.9,1.9,5.7]) regal(x,-13.5,12.5);
+  // chladicí vitríny podél zadní stěny
+  const vit=[]; for(let x=-10.4;x<=10.4;x+=2.6){ vit.push(cqBox(2.5,2.0,0.9,x,0,-26.3,0xe8eef2,{kryt:true})); vit.push(cqBox(2.3,1.5,0.05,x,0.3,-25.83,0x9fd6ff,{m:new THREE.MeshStandardMaterial({color:0x9fd6ff,transparent:true,opacity:0.35,roughness:0.1}),prujezdne:true})); }
+  for(let x=-11.05;x<=11.1;x+=1.3) cqModel('cq_vitrina',x,0,-26.45,0,null,vit);
+  cqModel('cq_voziky',8.6,0,1.7,Math.PI,null,null); cqKryt(4.4,1.05,2.9,8.6,0,1.7,0,false);
+  // ostrůvek s ovocem / paletou
+  cqBox(2.4,0.9,1.6,8.8,0,-6.5,0x8a6a42,{kryt:true}); cqBox(2.2,0.35,1.4,8.8,0.9,-6.5,0xd6a23a);
+  cqBox(1.2,1.2,1.0,-10.6,0,-22,0x6b4f32,{kryt:true});
+  // nákupní vozíky
+  for(const [x,z,r] of [[-3.8,-8,0.4],[3.6,-21.2,2.2],[9.5,-15,1.1]]){ cqBox(0.55,0.95,0.85,x,0,z,0x9aa0a6,{ry:r,m:new THREE.MeshStandardMaterial({color:0xaab0b5,metalness:0.7,roughness:0.35,transparent:true,opacity:0.75})}); cqKryt(0.55,0.95,0.85,x,0,z,r,false); }
+  cqSvetlo(-9,3.9,1.5); cqSvetlo(9,3.9,-24,0xffe0c0,0.9); cqSvetlo(-0.1,3.9,-21,0xffe0c0,0.6,10); cqVychod(-11.8,2.6,-24,Math.PI/2); cqVychod(11.8,2.6,0,-Math.PI/2);
+  // modely (Sketchfab) přes kreslené – jen vzhled, kolize zůstávají
+  // terče: uličky (různá hloubka), konce uliček, za pokladnou, u vitrín
+  cqT(-3.8,-11,{name:'S1',zbranKresba:true},-3.8,-2); cqA(-7.6,-19.8,{name:'S2',zbranKresba:true},-7.6,-6,-7.6,-9,2.5); cqT(0,-17.5,{noshoot:true,name:'S-civ'},0,-6);
+  cqT(3.8,-8.5,{name:'S3',zbranKresba:true},3.8,-2); cqA(7.8,-24.2,{name:'S4',zbranKresba:true},-4,-24,6,-23,3); cqT(-10.9,-15,{noshoot:true,name:'S-civ2'},-6,-15);
+  cqA(-5.5,-23.8,{name:'S5',zbranKresba:true},4,-23.8,-2,-23.5,3); cqT(10.6,-11,{name:'S6',zbranKresba:true},4,-11); cqA(-8.1,-4.5,{noshoot:true,name:'S-civ3'},-3,-1,-7.6,-5.5,2.5);  cqDokonci(cqOmitka(),'omitka'); }
+
+/* ---------- 2) OBCHODNÍ CENTRUM ---------- */
+function obchod(sx,z0,z1,barva,nazev){ // obchod na straně sx (-1 vlevo / +1 vpravo): výloha se sklem a dveřmi uprostřed
+  const xf=sx*6, xb=sx*12.5, zm=(z0+z1)/2, dv=1.1;
+  zed(xf,z0,xf,zm-dv,0.6,0x2f3338); zed(xf,zm+dv,xf,z1,0.6,0x2f3338);   // parapet
+  const sklo=new THREE.MeshStandardMaterial({color:0xbfe3ff,transparent:true,opacity:0.18,roughness:0.05,metalness:0.2,depthWrite:false});
+  for(const [a,b] of [[z0,zm-dv],[zm+dv,z1]]){ const p=new THREE.Mesh(new THREE.PlaneGeometry(Math.abs(b-a),2.6),sklo); p.position.set(xf,1.9,(a+b)/2); p.rotation.y=Math.PI/2; p.raycast=()=>{}; TGROUP.add(p); cqKryt(0.2,3.2,Math.abs(b-a),xf,0,(a+b)/2,0,false); }
+  cqBox(0.15,1.2,Math.abs(z1-z0),xf,3.2,zm,0x23272c);   // nadpraží s nápisem (jen vzhled – pod ním se chodí)
+  zed(xf,z0,xb,z0,4.4,0xd9d4ca); zed(xf,z1,xb,z1,4.4,0xd9d4ca);
+  const t=canvasTex(512,96,(c,w,h)=>{ c.fillStyle='#14171b'; c.fillRect(0,0,w,h); c.fillStyle=barva; c.font='bold 60px Arial'; c.textAlign='center'; c.fillText(nazev,w/2,70); },[1,1]);
+  const n=new THREE.Mesh(new THREE.PlaneGeometry(Math.abs(z1-z0)*0.7,0.55),new THREE.MeshBasicMaterial({map:t})); n.position.set(xf-sx*0.09,3.8,zm); n.rotation.y=-sx*Math.PI/2; n.raycast=()=>{}; TGROUP.add(n);
+  // vnitřek: pult, stojany s oblečením
+  cqBox(0.8,1.0,2.6,sx*11.2,0,zm+1.5,0x5b4635,{kryt:true});
+  for(const dz of [-2.2,0.2]){ cqBox(1.6,1.3,0.5,sx*8.4,0,zm+dz,0x777e85,{kryt:true}); cqBox(1.5,0.8,0.4,sx*8.4,0.55,zm+dz,0,{m:new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(Math.random(),0.45,0.4).convertSRGBToLinear(),roughness:0.95})}); } }
+function buildOC(){ const X0=-12.5,X1=12.5,Z0=-35,Z1=3.5;
+  cqHala(X0,X1,Z0,Z1,6,{stena:0xe2ddd3,strop:0x5e5f60,podlaha:cqTex('mramor',256,256,(x,w,h)=>{ x.fillStyle='#d8d4cc'; x.fillRect(0,0,w,h); for(let i=0;i<2;i++) for(let j=0;j<2;j++){ x.fillStyle=(i+j)%2?'#cfcac0':'#e2ded6'; x.fillRect(i*128+1,j*128+1,126,126); } },3)});
+  obchod(-1,-1,-11,'#ff5a4a','MÓDA'); obchod(-1,-11,-21,'#ffd34a','ELEKTRO'); obchod(-1,-21,-31,'#5ad0ff','OBUV');
+  obchod(1,-1,-11,'#7dff8a','DROGERIE'); obchod(1,-11,-21,'#ff9ad5','HRAČKY'); obchod(1,-21,-31,'#ffffff','KNIHY');
+  zed(-12.5,-31,-6,-31,6,0xd9d4ca); zed(6,-31,12.5,-31,6,0xd9d4ca);
+  // sloupy pasáže
+  for(const z of [-6,-16,-26]) for(const x of [-4,4]){ cqBox(0.7,6,0.7,x,0,z,0xc8c2b6,{kryt:true}); }
+  // kiosek uprostřed, lavičky, květináče, eskalátor na konci (zablokovaný páskou)
+  cqBox(3.0,1.1,2.0,0,0,-11,0x3b3f46,{kryt:true}); cqBox(3.2,0.08,2.2,0,2.4,-11,0x22252a); for(const [x,z] of [[-1.4,-10.1],[1.4,-10.1],[-1.4,-11.9],[1.4,-11.9]]) cqBox(0.08,1.3,0.08,x,1.1,z,0x22252a);
+  for(const [x,z] of [[-2,-20],[2,-23]]){ cqBox(1.8,0.45,0.5,x,0,z,0x6b4a2e,{kryt:true}); }
+  for(const [x,z] of [[0,-4.5],[0,-17],[0,-28]]){ cqBox(1.1,0.75,1.1,x,0,z,0x5c5e60,{kryt:true}); cqBox(0.9,0.6,0.9,x,0.75,z,0x2f6b2f); }
+  const esk=[cqBox(3.0,1.0,6.5,0,0,-31.75,0x6c7176)]; cqKryt(3.0,3.6,6.5,0,0,-31.75,0,true);
+  for(const x of [-0.75,0.75]) cqModel('cq_eskalator',x,0,-31.75,0,null,esk);
+  cqSvetlo(-8,5.6,-6); cqSvetlo(8,5.6,-26,0xffe0c0,0.9); cqSvetlo(0,5.6,-16,0xfff0d8,0.7,12); cqVychod(-6.1,3.2,-33,Math.PI/2);
+  // terče: ve dveřích obchodů, uvnitř (probudí se u dveří), za kioskem, za sloupy, u eskalátoru
+  cqA(-9.5,-6,{name:'M1',zbranKresba:true},-6,-6,-5,-6,3); cqT(-10.2,-14,{noshoot:true,name:'M-civ'},-6,-16);
+  cqA(9.6,-15,{name:'M2',zbranKresba:true},6,-16,5,-16,3); cqT(0.2,-12.6,{name:'M3',zbranKresba:true},0,-2);
+  cqA(-4.4,-27,{name:'M4',zbranKresba:true},0,-20,-1.5,-24,3.5); cqT(4.3,-22.6,{noshoot:true,name:'M-civ2'},0,-15);
+  cqA(10.5,-26,{name:'M5',zbranKresba:true},6,-26,5,-26,3); cqT(1.6,-30.8,{name:'M6',zbranKresba:true},0,-20); cqA(-10.4,-24,{noshoot:true,name:'M-civ3'},-6,-26,-5,-26,3);  cqDokonci(cqOmitka(),'omitka'); }
+
+/* ---------- 3) METRO: ostrovní nástupiště, odstavený vagon s otevřenými dveřmi ---------- */
+const CQ_BUS_KOL=[[-1.31,-9.11,0.2,18],[-1.11,-9.11,0.2,1.2],[-1.11,-6.71,0.2,2.4],[-1.11,-3.91,0.2,0.2],[-1.11,-2.71,0.2,0.8],[-1.11,-1.71,0.2,4.6],[-1.11,4.09,0.2,0.8],[-1.11,5.29,0.2,2],[-1.11,8.49,0.2,0.6],[-0.91,-9.11,0.2,1.2],[-0.91,-6.71,0.2,2.4],[-0.91,-3.91,0.2,0.2],[-0.91,-2.71,0.2,0.8],[-0.91,-1.71,0.2,4.6],[-0.91,4.09,0.2,0.8],[-0.91,5.29,0.2,2],[-0.91,8.49,0.2,0.6],[-0.71,-9.11,0.2,1.2],[-0.71,-6.71,0.2,2.4],[-0.71,-3.91,0.2,0.2],[-0.71,-2.71,0.2,0.8],[-0.71,0.09,0.2,2.8],[-0.71,4.09,0.2,0.8],[-0.71,5.29,0.2,1.8],[-0.71,8.49,0.2,0.6],[0.29,-8.11,0.2,3.8],[0.49,-9.11,0.2,0.2],[0.49,-8.11,0.2,3.8],[0.49,-2.51,0.2,0.6],[0.49,0.09,0.2,2.8],[0.49,5.29,0.2,3.8],[0.69,-9.11,0.2,0.2],[0.69,-8.11,0.2,3.8],[0.69,-2.51,0.2,0.6],[0.69,-1.71,0.2,4.6],[0.69,4.49,0.2,0.4],[0.69,5.29,0.2,3.8],[0.89,-9.11,0.2,0.2],[0.89,-8.11,0.2,3.8],[0.89,-2.51,0.2,0.6],[0.89,-1.71,0.2,4.6],[0.89,5.29,0.2,3.8],[1.09,-9.11,0.2,18]];
+const CQ_VAGON_KOL=[[-1.5,-8.53,0.2,2],[-1.5,-6.33,0.2,0.2],[-1.5,-4.53,0.2,3.6],[-1.5,0.87,0.2,3.6],[-1.5,4.67,0.2,0.2],[-1.5,6.47,0.2,2.2],[-1.3,-8.53,0.2,2],[-1.3,-4.53,0.2,3.6],[-1.3,0.87,0.2,3.6],[-1.3,6.47,0.2,2.2],[-1.1,-8.53,0.2,0.2],[-1.1,-1.13,0.2,0.2],[-1.1,0.87,0.2,0.2],[-1.1,8.27,0.2,0.4],[-0.9,-8.53,0.2,0.2],[-0.9,8.27,0.2,0.4],[-0.7,-8.53,0.2,0.2],[-0.7,8.27,0.2,0.4],[-0.5,-8.53,0.2,0.2],[-0.5,8.27,0.2,0.4],[-0.3,-8.53,0.2,0.2],[-0.3,8.27,0.2,0.2],[-0.1,-8.53,0.2,0.2],[-0.1,8.27,0.2,0.2],[0.1,-8.53,0.2,0.2],[0.1,8.27,0.2,0.2],[0.3,-8.53,0.2,0.2],[0.3,8.27,0.2,0.4],[0.5,-8.53,0.2,0.2],[0.5,8.27,0.2,0.4],[0.7,-8.53,0.2,0.2],[0.7,8.27,0.2,0.4],[0.9,-8.53,0.2,0.2],[0.9,-1.13,0.2,0.2],[0.9,0.87,0.2,0.2],[0.9,8.27,0.2,0.4],[1.1,-8.53,0.2,2],[1.1,-4.53,0.2,3.6],[1.1,0.87,0.2,3.6],[1.1,6.47,0.2,2.2],[1.3,-8.53,0.2,2],[1.3,-6.33,0.2,0.2],[1.3,-4.53,0.2,3.6],[1.3,0.87,0.2,3.6],[1.3,4.67,0.2,0.2],[1.3,6.47,0.2,2.2]];
+const VAGON={x0:3.25,x1:6.65,z0:-24.53,z1:-7.47, dvere:[-10.5,-16,-21.5], xm:4.95, zm:-16};
+function buildMetro(){ const Z0=-42,Z1=3.5, H=4.6;
+  // nástupiště (x -3…3) na úrovni 0, kolejiště 1,1 m níž; zem města se schová (cqInterier)
+  cqPlocha(-3,3,Z0,Z1,0.02,cqTex('nastupiste',256,256,(x,w,h)=>{ x.fillStyle='#8c8a84'; x.fillRect(0,0,w,h); for(let i=0;i<8;i++) for(let j=0;j<8;j++){ x.fillStyle=`hsl(40,4%,${50+Math.random()*8}%)`; x.fillRect(i*32+1,j*32+1,30,30); } },2));
+  for(const s of [-1,1]){ cqBox(0.35,0.03,Z1-Z0,s*2.82,0.02,(Z0+Z1)/2,0xe6c23a); cqBox(0.3,1.1,Z1-Z0,s*3.15,-1.1,(Z0+Z1)/2,0x5d5b57);   // žlutý pruh, hrana
+    cqPlocha(s>0?3:-8.5,s>0?8.5:-3,Z0,Z1,-1.08,cqBeton(),0x55524c);
+    for(const k of [1.9,0.4]) cqBox(0.07,0.15,Z1-Z0,s*(4.75+(k>1?0.72:-0.72)),-1.08,(Z0+Z1)/2,0x7a7f84,{r:0.3,k:0.8}); for(let z=Z0+0.4;z<Z1;z+=0.65) cqBox(2.4,0.12,0.25,s*4.75,-1.08,z,0x4a3e33); }
+  // stěny tunelu s obkladem, strop
+  for(const s of [-1,1]){ const w=zed(s*8.6,Z0,s*8.6,Z1,H+1.1,0xb7bec2,0.3); w.position.y=(H-1.1)/2; }
+  zed(-8.6,Z1,8.6,Z1,H,0xb7bec2,0.3); zed(-8.6,Z0,-3.2,Z0,H,0x202224,0.3); zed(3.2,Z0,8.6,Z0,H,0x202224,0.3); zed(-3.2,Z0,3.2,Z0,H,0x6a6c6e,0.3);
+  cqPlocha(-8.6,8.6,Z0,Z1,H,null,0x55585a,true);
+  // hrana nástupiště: nedá se spadnout do kolejiště, kromě míst, kde stojí vagon s otevřenými dveřmi
+  cqKryt(0.2,2,Z1-Z0,-3.15,0,(Z0+Z1)/2,0,false);
+  const zd=[Z1,...VAGON.dvere.flatMap(z=>[z+0.69,z-0.69]),Z0]; for(let i=0;i<zd.length;i+=2){ const a=zd[i],b=zd[i+1]; cqKryt(0.2,2,a-b,3.15,0,(a+b)/2,0,false); }
+  // sloupy uprostřed nástupiště, lavičky, automat, koše
+  for(let z=-4;z>Z0+2;z-=7){ cqBox(0.8,H,0.8,0,0,z,0xc9cfd3,{kryt:true}); }
+  for(const z of [-7.5,-21.5,-35.5]){ cqBox(1.8,0.45,0.5,-1.6,0,z,0x7a5a36,{kryt:true}); }
+  cqBox(0.9,1.9,0.7,-2.1,0,-14.2,0xc23a2a,{kryt:true}); cqBox(0.5,0.9,0.5,1.8,0,-30.5,0x44484c,{kryt:true});
+  // ODSTAVENÝ VAGON (x 3,25…6,25, z -27…-7), podlaha v úrovni nástupiště, uvnitř sedačky podél oken
+  const {x0,x1,z0,z1}=VAGON, xm=(x0+x1)/2, telo=new THREE.Group(); TGROUP.add(telo);
+  // kolize vagonu: stěny (u nástupiště s otevřenými dveřmi), čela a lavice podle skutečného modelu
+  { const zs=[z1,...VAGON.dvere.flatMap(z=>[z+0.69,z-0.69]),z0]; for(let i=0;i<zs.length;i+=2){ const a=zs[i],b=zs[i+1]; cqKryt(0.15,2.3,a-b,x0,0,(a+b)/2,0,false); } cqKryt(0.15,2.3,z1-z0,x1,0,(z0+z1)/2,0,false); cqKryt(x1-x0,2.3,0.15,xm,0,z1,0,false); cqKryt(x1-x0,2.3,0.15,xm,0,z0,0,false);
+    for(const [bx,bz,bw,bd] of CQ_VAGON_KOL) cqKryt(bw,1.2,bd,VAGON.xm+bx+bw/2,0,VAGON.zm+bz+bd/2,0,false); }
+  const plech=new THREE.MeshStandardMaterial({color:new THREE.Color(0xb9bfc4).convertSRGBToLinear(),metalness:0.6,roughness:0.4});
+  cqPlocha(x0,x1,z0,z1,0.04,null,0x6d6a64); cqBox(x1-x0,0.06,z1-z0,xm,2.35,(z0+z1)/2,0,{m:new THREE.MeshStandardMaterial({color:0xd9dcd8,roughness:0.6}),g:telo});
+  cqBox(x1-x0+0.1,1.1,z1-z0,xm,-1.12,(z0+z1)/2,0x2b2d2f);   // podvozek
+  // boční stěny vagonu: nad pasem okna (sklo), dveře vynechané
+  const stena=(xx)=>{ const zs=[z1,...VAGON.dvere.flatMap(z=>[z+0.65,z-0.65]),z0]; for(let i=0;i<zs.length;i+=2){ const a=zs[i],b=zs[i+1],L=a-b,zc=(a+b)/2;
+      cqBox(0.08,1.0,L,xx,0,zc,0,{m:plech,g:telo}); cqBox(0.08,0.4,L,xx,1.95,zc,0,{m:plech,g:telo});
+      const g=new THREE.Mesh(new THREE.PlaneGeometry(L,0.95),new THREE.MeshStandardMaterial({color:0x9fbfcf,transparent:true,opacity:0.25,depthWrite:false,roughness:0.1})); g.position.set(xx,1.48,zc); g.rotation.y=Math.PI/2; g.raycast=()=>{}; telo.add(g); cqKryt(0.1,1.4,L,xx,1.0,zc,0,false); } };
+  stena(x0); { const w=cqBox(0.08,2.35,z1-z0,x1,0,(z0+z1)/2,0,{m:plech,g:telo}); }   // strana do tunelu je zavřená
+  cqBox(x1-x0,2.35,0.08,xm,0,z1,0,{m:plech,g:telo}); cqBox(x1-x0,2.35,0.08,xm,0,z0,0,{m:plech,g:telo});
+  for(const z of VAGON.dvere){ cqBox(0.06,2.0,0.6,x0-0.02,0,z+0.95,0x8d949a,{g:telo}); cqBox(0.06,2.0,0.6,x0-0.02,0,z-0.95,0x8d949a,{g:telo}); }
+  // sedačky (podélné), madla
+  const sed=new THREE.MeshStandardMaterial({color:new THREE.Color(0x2f6a8a).convertSRGBToLinear(),roughness:0.8});
+  for(const [a,b] of [[z1-0.3,VAGON.dvere[0]+1.0],[VAGON.dvere[0]-1.0,VAGON.dvere[1]+1.0],[VAGON.dvere[1]-1.0,VAGON.dvere[2]+1.0],[VAGON.dvere[2]-1.0,z0+0.3]]){ const L=a-b, zc=(a+b)/2;
+    for(const xx of [x0+0.3,x1-0.3]){ cqBox(0.5,0.45,L,xx,0,zc,0,{m:sed,g:telo}); cqBox(0.08,0.5,L,xx+(xx<xm?-0.21:0.21),0.45,zc,0,{m:sed,g:telo}); } }
+  for(let z=z1-1.5;z>z0+1;z-=2.2) cqBox(0.04,2.3,0.04,xm,0,z,0xc0c4c8,{r:0.3,k:0.9,g:telo});
+  cqModel('cq_vagon_int',VAGON.xm,0.66,VAGON.zm,0,null,telo,true);   // skutečný vagon s interiérem (dveře na straně nástupiště otevřené)
+  // druhá souprava odstavená na levé koleji (jen vzhled + kryt proti střelám)
+  cqModel('cq_vagon_r62',-4.75,-1.08,-21.5,Math.PI/2,null,null); cqKryt(2.9,4.0,18,-4.75,-1.08,-21.5,0,true);
+  cqSvetlo(-1,4.3,-2); cqSvetlo(0,4.3,-30,0xffe0c0,0.8); cqSvetlo(xm,2.25,-17,0xdfe8ff,0.45,6); cqVychod(0,3.2,3.3,Math.PI);
+  // terče: za sloupy, na lavičce, ve vagonu (probudí se ve dveřích), v kolejišti vlevo (vidět jen hrudník nad hranou), na konci nástupiště
+  cqT(0.55,-11.4,{name:'K1',zbranKresba:true},0,-2); cqT(-1.6,-20.6,{noshoot:true,name:'K-civ'},0,-12);
+  cqA(5.5,-12.8,{name:'V1',zbranKresba:true},3.5,-10.5,2,-10.5,2.2); cqA(4.3,-19,{noshoot:true,name:'V-civ'},3.5,-16,2,-16,2.2); cqA(5.3,-23.4,{name:'V2',zbranKresba:true},3.5,-21.5,2,-21.5,2.4);
+  cqA(-4.75,-8.6,{name:'K2',zbranKresba:true,bezStojanu:true},0,-2,-1.5,-6,5,0.25); cqT(-0.4,-32.6,{name:'K3',zbranKresba:true},0,-20); cqA(1.8,-38,{name:'K4',zbranKresba:true},0,-28,0,-30,4);  cqDokonci(cqObklad()); }
+
+/* ---------- 4) CHODBY METRA: schody z ulice, chodba se zalomením, turnikety, vestibul a eskalátory dolů ---------- */
+function buildChodby(){ const H=3.0, c=0xc9ced2;
+  cqPlocha(-14,10,-34,4,0.02,cqDlazba()); cqPlocha(-14,10,-34,4,H,null,0x5a5d60,true);
+  // vstupní chodba (x -1.6…1.6, z 3…-12)
+  zed(-1.6,4,-1.6,-12,H,c,0.25); zed(1.6,4,1.6,-9,H,c,0.25); zed(-1.6,4,1.6,4,H,c,0.25);
+  // zalomení doprava: chodba x 1.6…9, z -9…-12
+  zed(1.6,-9,9.5,-9,H,c,0.25); zed(9.5,-9,9.5,-15,H,c,0.25); zed(-1.6,-12,6,-12,H,c,0.25);
+  // spojka dolů: x 6…9.5, z -12…-18 → vestibul
+  zed(6,-12,6,-18,H,c,0.25); zed(9.5,-15,9.5,-18,H,c,0.25);
+  // vestibul (x -13…9.5, z -18…-33)
+  zed(-13,-18,6,-18,H,c,0.25); zed(9.5,-18,9.5,-33,H,c,0.25); zed(-13,-18,-13,-33,H,c,0.25); zed(-13,-33,9.5,-33,H,c,0.25);
+  // řada turniketů napříč vestibulem (z -21), průchody 0,7 m
+  // 11 turniketů po 1,93 m, mezi nimi otevřená široká branka (x -3,35…-1,95) – jediný průchod
+  const turn=[]; let tx=-13; for(let i=0;i<11;i++){ if(i===5) tx=-1.95; const cx=tx+0.965; turn.push(cqBox(1.93,1.0,0.3,cx,0,-21,0x7c8389,{k:0.6,r:0.35})); cqKryt(1.93,1.1,0.7,cx,0,-21,0,false); cqModel('cq_turnikety',cx,0,-21,Math.PI/2,null,null); tx+=1.93; }
+  if(FOTO.on) turn.forEach(t=>t.visible=false);
+  // automaty na jízdenky, info sloupek, kiosek
+  for(const x of [-12.4,-11.2,-10.0]) cqBox(0.9,1.8,0.6,x,0,-18.6,0xd23a2a,{kryt:true});
+  cqBox(2.5,1.1,1.6,4.5,0,-27,0x3b3f46,{kryt:true}); cqBox(0.8,3,0.8,-6,0,-27,0xbfc5ca,{kryt:true}); cqBox(0.8,3,0.8,0,0,-27,0xbfc5ca,{kryt:true});
+  // eskalátory dolů (zavřené) u zadní stěny
+  const esk=[cqBox(3.0,1.0,6.5,-9.3,0,-29.6,0x6c7176)]; cqKryt(3.0,3.0,6.5,-9.3,0,-29.6,0,true);
+  for(const x of [-10.05,-8.55]) cqModel('cq_eskalator',x,0,-29.6,0,null,esk);
+  cqSvetlo(0,2.8,1); cqSvetlo(7.8,2.8,-11,0xffe0c0,0.8,9); cqSvetlo(-4,2.8,-25,0xfff0d8,0.9,14); cqVychod(0,2.4,3.85,Math.PI); cqVychod(-12.85,2.4,-24,Math.PI/2);
+  // terče: za zalomením, ve spojce, u turniketů (za nimi), u automatů, za kioskem a sloupy, u eskalátorů
+  cqA(7.6,-10.4,{name:'CH1',zbranKresba:true},0,-10.4,0.8,-9.5,2.2); cqA(7.8,-16.6,{noshoot:true,name:'CH-civ'},7.8,-12,7.8,-12.5,2);
+  cqT(-4.5,-23.2,{name:'CH2',zbranKresba:true},4,-19); cqT(-11.2,-19.6,{noshoot:true,name:'CH-civ2'},4,-19.5); cqA(3.4,-28.4,{name:'CH3',zbranKresba:true},4,-19,3,-23,3);
+  cqA(-6.6,-28.2,{name:'CH4',zbranKresba:true},-2,-20,-4,-23,3); cqA(-11.6,-31.8,{name:'CH5',zbranKresba:true},-4,-24,-7,-26,4); cqT(1.2,-31.5,{noshoot:true,name:'CH-civ3'},0,-22);  cqDokonci(cqObklad()); }
+
+/* ---------- 5) AUTOBUS: kloubový autobus (18 m) v nočním depu, uvnitř úzká ulička mezi sedadly ---------- */
+function buildBus(){
+  cqHala(-9,9,-14,14,6,{stena:0x4f5154,strop:0x2a2b2c,podlaha:cqBeton()});
+  // skutečný autobus (Sketchfab), podlaha v úrovni 0 (kola zapuštěná do podlahy depa); kolize sedadel a stěn podle modelu
+  cqModel('cq_autobus',0,-0.34,0,0,null,null,true);
+  for(const [bx,bz,bw,bd] of CQ_BUS_KOL) cqKryt(bw,1.5,bd,bx+bw/2,0,bz+bd/2,0,false);
+  cqKryt(3.0,3.0,0.2,0,0,9.2,0,false); cqKryt(3.0,3.0,0.2,0,0,-9.2,0,false);
+  cqSvetlo(0,2.75,6.2,0xdfe8ff,0.9,7); cqSvetlo(0,2.75,0.5,0xdfe8ff,0.5,7); cqSvetlo(0,2.75,-5.5,0xdfe8ff,0.6,7); cqSvetlo(-6,5.6,9,0xffe0c0,0.8,16); cqVychod(8.85,2.5,9,-Math.PI/2);
+  // venku druhý autobus (kryt) a regál s díly
+  cqBox(2.5,3.0,11,-5.2,0,-1,0x2c5f8a,{kryt:true}); cqBox(1,2,4,6.6,0,-8,0x55595d,{kryt:true});
+  // terče: sedící cestující, hrozby v uličce, skrčená za sedadlem, vzadu; jedna venku za druhým autobusem (vidět okny)
+  cqT(-0.95,1.6,{noshoot:true,name:'B-civ'},0,6,1.05); cqA(-0.55,4.1,{name:'B4',zbranKresba:true},0,6.5,0,5.6,1.5);
+  cqT(-0.3,-3.2,{name:'B1',zbranKresba:true},0,6); cqA(0.05,-5.6,{name:'B2',zbranKresba:true,bezStojanu:true},0,3,0,-3.5,2.2,0.95);
+  cqT(0.9,-5.4,{noshoot:true,name:'B-civ2'},0,3,1.05); cqA(-0.6,-7.3,{name:'B3',zbranKresba:true},0,3,0,-5,2.5); cqA(-3.6,-7.2,{name:'B5',zbranKresba:true},-1,4,-0.9,-6,3.5);  cqDokonci(cqBeton()); }
+
+/* ---------- společné: schovat venkovní svět, vstup do cvičení ---------- */
+function cqInterier(on){ try{ ground.visible=!on; Object.values(ENV).forEach(g=>{ if(on) g.visible=false; }); if(!on&&ENV[ST.env]) ENV[ST.env].visible=true; if(typeof PSKY!=='undefined'&&on) PSKY.visible=false; }catch(e){} }
+const _vyberCQ=vyberCviceni; vyberCviceni=function(id){ _vyberCQ(id); const S=ST.stage; cqInterier(!!(S&&S.interier)); if(S&&S.interier&&!NOC) nocNastav(true); };
+const _setEnvCQ=setEnv; setEnv=function(e){ _setEnvCQ(e); const S=ST.stage; if(S&&S.interier) cqInterier(true); };
+const _nocCQ=nocNastav; nocNastav=function(on){ const S=ST.stage; _nocCQ(on||!!(S&&S.interier)); if(S&&S.interier){ cqInterier(true); hemi.intensity=0.06; scene.fog.near=6; scene.fog.far=34; } };
+Object.assign(HR_CQB,{market:[-11.6,11.6,-25.6,3.0],oc:[-12.1,12.1,-34.6,3.0],metro:[-2.95,6.0,-41.6,3.0],chodby:[-12.7,9.2,-32.7,3.6],bus:[-8.6,8.6,-13.6,13.6]});
+
+const CQ_LEKCE_TMA='Výpadek proudu: svítí jen nouzová světla a tvoje svítilna. Kužel světla veď se zbraní – nejdřív vidět ruce, pak spoušť.';
+STAGES.push(
+ {id:'market',cat:'cqb',n:'Supermarket – uličky mezi regály',zbran:'pistole',env:'mesto',mode:'cqb',ran:40,mag:17,cas:150,noc:true,interier:true,
+  popis:'Noční supermarket po výpadku proudu. Za pokladnami začínají uličky mezi dvoumetrovými regály – přes ně není vidět. Hrozby čekají v uličkách, na jejich koncích a u vitrín vzadu, mezi nimi zákazníci.',
+  lekce:[CQ_LEKCE_TMA,'Uličku neotvírej zprostředka: nejdřív zkontroluj konec regálu po kouscích (krájení koláče), teprve pak vstup.','Křižovatka uliček je jako dveře – na příčné uličce se rozhlédni na obě strany, nestůj v ní.','Regál se zbožím střelu nezastaví spolehlivě – je to úkryt před pohledem, ne kryt.'],
+  setup(){ buildMarket(); startPos(-9.2,2.2,0); }},
+ {id:'oc',cat:'cqb',n:'Obchodní centrum – pasáž a obchody',zbran:'pistole',env:'mesto',mode:'cqb',ran:40,mag:17,cas:150,noc:true,interier:true,
+  popis:'Pasáž obchodního centra v noci. Po stranách obchody s výlohami, uprostřed kiosek, sloupy, květináče a na konci zastavený eskalátor. Hrozby ve dveřích i uvnitř obchodů.',
+  lekce:[CQ_LEKCE_TMA,'Výloha je sklo: vidíš skrz, ale v odlesku svítilny tě vidí i protivník. Sklo střelu neodkloní spolehlivě – počítej s tím.','Otevřený prostor pasáže přejdi rychle od krytu ke krytu (sloup, kiosek, květináč).','Do obchodu nevstupuj, dokud jsi neprohlédl, co je za dveřmi po stranách.'],
+  setup(){ buildOC(); startPos(0,2.4,0); }},
+ {id:'metro',cat:'cqb',n:'Metro – nástupiště a odstavený vagon',zbran:'pistole',env:'mesto',mode:'cqb',ran:40,mag:17,cas:150,noc:true,interier:true,
+  popis:'Ostrovní nástupiště, vpravo odstavená souprava s otevřenými dveřmi. Hrozby za sloupy, ve vagonu i v kolejišti pod hranou nástupiště. Do vagonu se dá vejít dveřmi.',
+  lekce:[CQ_LEKCE_TMA,'Sloupy jsou jediný kryt na nástupišti – postupuj od jednoho ke druhému.','Vagon prohlížej z nástupiště oknem i dveřmi dřív, než vstoupíš. Ve vagonu je úzko – zbraň drž blízko těla.','Nezapomeň na kolejiště: hrozba v něm má nad hranou jen hlavu a ramena.'],
+  setup(){ buildMetro(); startPos(0,2.2,0); }},
+ {id:'chodby',cat:'cqb',n:'Metro – chodby, turnikety a vestibul',zbran:'pistole',env:'mesto',mode:'cqb',ran:40,mag:17,cas:150,noc:true,interier:true,
+  popis:'Ze schodů z ulice vede úzká chodba se zalomením do vestibulu s turnikety, automaty a zastavenými eskalátory. Každý roh je nebezpečný.',
+  lekce:[CQ_LEKCE_TMA,'U zalomení chodby se drž vnější stěny a odkrývej roh po malých krocích.','Turnikety jsou překážka – hrozba za nimi je kryta do pasu. Míř na hrudník a hlavu.','Ve vestibulu je mnoho úkrytů – po každém zneškodnění se znovu rozhlédni (assess).'],
+  setup(){ buildChodby(); startPos(0,2.6,0); }},
+ {id:'bus',cat:'cqb',n:'Autobus – úzká ulička mezi sedadly',zbran:'pistole',env:'mesto',mode:'cqb',ran:30,mag:17,cas:90,noc:true,interier:true,
+  popis:'Kloubový autobus v nočním depu. Stojíš vpředu u řidiče, před tebou 18 m dlouhá ulička mezi sedadly a kloubem. Cestující sedí, hrozby jsou v uličce, skrčené za sedadlem a vzadu; další hrozba venku za druhým autobusem.',
+  lekce:[CQ_LEKCE_TMA,'V autobuse je všechno na pár metrů – nemiř přes cestující, posuň se, aby za cílem nikdo neseděl.','Sedadla jsou nízký úkryt – hrozba skrčená za opěradlem má vidět jen hlavu.','Venku za okny může být další hrozba – sklo nekryje.'],
+  setup(){ buildBus(); startPos(0,6.4,0); }});
 
 /* ================= OVLÁDÁNÍ, POHYB, SMYČKA ================= */
 const keys={};
