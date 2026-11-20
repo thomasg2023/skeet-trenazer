@@ -82,8 +82,8 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
   <header>
     <div>
       <h1>Skeet <span>trenažér</span></h1>
-      <p class="small" style="margin:0"><a href="index.html">Rozcestník</a> · <a href="brokovnice.html#skeet">Skeet</a> · <a href="brokovnice.html#trap">Trap</a> · <a href="brokovnice.html#parkur">Parkur</a> · <a href="kulove.html#pistole">Pistole a puška →</a></p>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 2026.11.13-9</p>
+      <p class="small" style="margin:0"><a href="index.html">Rozcestník</a> · <a href="brokovnice.html#skeet">Skeet</a> · <a href="brokovnice.html#trap">Trap</a> · <a href="brokovnice.html#parkur">Parkur</a> · <a href="brokovnice.html#compak">Compak</a> · <a href="brokovnice.html#bazanti">Lov</a> · <a href="kulove.html#pistole">Pistole a puška →</a></p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 1.0 (2026.11.20)</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -109,9 +109,10 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
       <h2>Ovládání</h2>
       <div class="controls">
         <div class="seg" id="discSeg" aria-label="Disciplína"><button type="button" data-d="skeet">Skeet</button><button type="button" data-d="trap">Trap</button></div>
-        <div class="seg" id="trapSeg" aria-label="Druh trapu" hidden><button type="button" data-k="at">Automatický</button><button type="button" data-k="ata">Americký</button><button type="button" data-k="ot">Olympijský</button><button type="button" data-k="ut">Univerzální</button><button type="button" data-k="dtl">DTL</button><button type="button" data-k="park">Parkur v lese</button>
+        <div class="seg" id="trapSeg" aria-label="Druh trapu" hidden><button type="button" data-k="at">Automatický</button><button type="button" data-k="ata">Americký</button><button type="button" data-k="ot">Olympijský</button><button type="button" data-k="ut">Univerzální</button><button type="button" data-k="dtl">DTL</button><button type="button" data-k="park">Parkur v lese</button><button type="button" data-k="compak">Compak sporting</button><button type="button" data-k="lov">Lov</button>
           <label class="small" style="display:flex;gap:6px;align-items:center">Úhel vrhačky <select id="trapArc"><option value="60">60°</option><option value="75">75°</option><option value="90">90°</option></select></label>
           <label class="small" style="display:flex;gap:6px;align-items:center">Handicap (americký) <select id="ataYd"><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option></select> yd</label></div>
+        <div class="seg" id="lovSeg" aria-label="Druh lovu" hidden><button type="button" data-l="bazant">Bažanti – naháňka</button><button type="button" data-l="holub">Holubi – tah</button><button type="button" data-l="prisera">Létající příšery</button></div>
         <div class="seg" id="stSeg" aria-label="Stanoviště"></div>
         <div class="seg" id="modeSeg" aria-label="Druh terče"></div>
         <div class="seg"><button type="button" id="pullBtn">Terč (Pull)</button></div>
@@ -559,11 +560,11 @@ const st={vid:true,ukVrh:true,auto:false,autoPause:4,autoT:0,hand:'right',wind:1
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='2026.11.18-4';
+const VERZE='1.0 (2026.11.20)';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
-try{ const tr=JSON.parse(localStorage.getItem('skeet-trap')||'null'); if(tr){ if(['at','ata','dtl','ot','ut','park'].includes(tr.kind)) st.trapKind=tr.kind; if(tr.arc>=40&&tr.arc<=90) st.trapArc=tr.arc; if(tr.yd>=16&&tr.yd<=27) st.ataYd=tr.yd; } }catch(e){}
+try{ const tr=JSON.parse(localStorage.getItem('skeet-trap')||'null'); if(tr){ if(['at','ata','dtl','ot','ut','park','compak','lov'].includes(tr.kind)) st.trapKind=tr.kind; if(tr.arc>=40&&tr.arc<=90) st.trapArc=tr.arc; if(tr.yd>=16&&tr.yd<=27) st.ataYd=tr.yd; } }catch(e){}
 
 /* ---------- Renderer & scéna ---------- */
 const stage=$('stage');
@@ -772,7 +773,7 @@ REC=null;
    Automatický: 1 vrhačka uprostřed, kývá do stran (nastavitelně, výchozí 90° = ±45°) a nahoru (výška 1,5–3,5 m ve 10 m), dolet 76 m.
    Americký (ATA): 1 vrhačka, oblouk 54°, výška 2,4–3 m ve 10 m, dolet ~46 m. */
 const TZ=-12, TRAP_ST=[-6,-3,0,3,6].map(x=>new V(x,0,TZ+15));
-const TRAP_KIND={at:{n:'Automatický',arc:true,v0:30.5,h:[1.5,3.5]},ata:{n:'Americký',v0:20,h:[2.4,3.0],a:27},dtl:{n:'DTL',v0:22,h:[2.2,3.0],a:22.5},ot:{n:'Olympijský',v0:31.5,h:[1.5,3.5]},ut:{n:'Univerzální',v0:30.5,h:[1.5,3.0],a:40},park:{n:'Parkur v lese',v0:24,h:[1,3]}};
+const TRAP_KIND={at:{n:'Automatický',arc:true,v0:30.5,h:[1.5,3.5]},ata:{n:'Americký',v0:20,h:[2.4,3.0],a:27},dtl:{n:'DTL',v0:22,h:[2.2,3.0],a:22.5},ot:{n:'Olympijský',v0:31.5,h:[1.5,3.5]},ut:{n:'Univerzální',v0:30.5,h:[1.5,3.0],a:40},park:{n:'Parkur v lese',v0:24,h:[1,3]},compak:{n:'Compak sporting',v0:24,h:[1,3]},lov:{n:'Lov',v0:24,h:[1,3]}};
 const TRAP_GROUP=new THREE.Group(); TRAP_GROUP.visible=false; scene.add(TRAP_GROUP);
 const trapLabels=[];
 { const conc=M_BETON, dark=mat(0x55554f), G=TRAP_GROUP;
@@ -790,7 +791,7 @@ const trapLabels=[];
 // oranžový holub položený na krytu nad každou vrhačkou, ze které teď poletí terč (jako na střelnici)
 const TRAP_MARKS=[]; { const g=new THREE.CylinderGeometry(0.12,0.12,0.04,28), m=new THREE.MeshBasicMaterial({color:0xff6a1a});
   for(let i=0;i<15;i++){ const c=new THREE.Mesh(g,m); c.position.set(0,0.32,TZ-0.35); c.visible=false; TRAP_GROUP.add(c); TRAP_MARKS.push(c); } }
-function trapMachines(){ if(st.trapKind==='park') return []; if(st.mode==='W') return [-1,1];
+function trapMachines(){ if(jePark()) return []; if(st.mode==='W') return [-1,1];
   const si=st.station; if(st.trapKind==='ot') return [-1,0,1].map(o=>(si-2)*3+o*1.05);
   if(st.trapKind==='ut') return [-2,-1,0,1,2].map(o=>o*1.1); return [0]; }
 function trapMarks(){ const xs=st.disc==='trap'&&st.mode!=='N'?trapMachines():[]; TRAP_MARKS.forEach((c,i)=>{ c.visible=i<xs.length; if(i<xs.length) c.position.x=xs[i]; }); }
@@ -802,9 +803,9 @@ function setDisc(d){ if(d===st.disc) return; progExit(); st.disc=d; const isTr=d
 const trapKindTxt=()=>tr(TRAP_KIND[st.trapKind].n)+(st.trapKind==='at'?` ${st.trapArc}°`:st.trapKind==='ata'?` ${st.ataYd} yd`:'');
 function trapSave(){ try{localStorage.setItem('skeet-trap',JSON.stringify({kind:st.trapKind,arc:st.trapArc,yd:st.ataYd}));}catch(e){} }
 function setAtaYd(y){ st.ataYd=y; trapSave(); placeDolly(); syncTrapUi(); say(`Handicap ${y} yd (${(y*0.9144).toFixed(1).replace('.',',')} m)`); }
-function setTrapKind(k){ st.trapKind=k; st.parkK=0; trapSave(); clearField(); parkVis(); placeDolly(); syncTrapUi(); trapMarks(); say('Trap · '+trapKindTxt()); }
+function setTrapKind(k){ st.trapKind=k; st.parkK=0; st.naRanu=[]; if(st.station>=nSt()) st.station=0; trapSave(); clearField(); parkVis(); placeDolly(); syncTrapUi(); trapMarks(); say('Trap · '+trapKindTxt()); }
 function setTrapArc(a){ st.trapArc=a; trapSave(); syncTrapUi(); say('Úhel vrhačky '+a+'°'); }
-function syncTrapUi(){ const ts=$('trapSeg'); if(ts){ ts.hidden=st.disc!=='trap'; ts.querySelectorAll('button[data-k]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.trapKind)); }
+function syncTrapUi(){ const ls=$('lovSeg'); if(ls){ ls.hidden=!(st.disc==='trap'&&st.trapKind==='lov'); ls.querySelectorAll('button[data-l]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===st.lovDruh)); } const ts=$('trapSeg'); if(ts){ ts.hidden=st.disc!=='trap'; ts.querySelectorAll('button[data-k]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.trapKind)); }
   const ar=$('trapArc'); if(ar){ ar.value=st.trapArc; ar.disabled=st.trapKind!=='at'; }
   const yd=$('ataYd'); if(yd){ yd.value=st.ataYd; yd.disabled=st.trapKind!=='ata'; }
   if(typeof panel!=='undefined'&&panel.visible) drawPanel(); drawHud(); }
@@ -829,6 +830,7 @@ function launchTrap(which){
 /* ---------- PARKUR V LESE (lovecký parkur / sporting podle FITASC) ----------
    5 stanovišť na lesní cestě, na každém dvě skryté vrhačky A a B. Položka 25: na stanovišti A, B, jeden náhodný a dvojice současně (A+B).
    Nízká pozice do vyletění terče (pažba pod paží), jednotlivý terč smí dostat dvě rány, ve dvojici jednu na každý. Terč letí do 3 s po povelu. */
+var VEN=null; const jePark=()=>!!VEN&&st.disc==='trap'&&!!VEN[st.trapKind]; const ven=()=>VEN[st.trapKind];
 const PC=new V(0,0,330), PARK=new THREE.Group(); PARK.visible=false; scene.add(PARK);
 const PARK_ST=[
  {p:[-34,0,6],yaw:0.25,n:'Bažanti přes stromy',A:{n:'bažant zepředu přes koruny',typ:'standard',p:[-4,2.0,-38],dir:[0.12,0.62,1],v:23},B:{n:'křížák zleva',typ:'standard',p:[-26,1.2,-24],dir:[1,0.18,0.1],v:24}},
@@ -838,7 +840,7 @@ const PARK_ST=[
  {p:[34,0,4],yaw:-0.3,n:'Holub přes paseku',A:{n:'křížák zprava vysoko',typ:'standard',p:[24,4,-30],dir:[-1,0.2,-0.05],v:25},B:{n:'přilétající zleva nízko',typ:'midi',p:[-22,0.8,-40],dir:[0.5,0.25,1],v:24}}];
 function parkMach(S,M){ const c=Math.cos(S.yaw), sn=Math.sin(S.yaw), r=(x,z)=>[x*c+z*sn,-x*sn+z*c]; const [lx,lz]=r(M.p[0],M.p[2]), [dx,dz]=r(M.dir[0],M.dir[2]);
   return {p:new V(PC.x+S.p[0]+lx,M.p[1],PC.z+S.p[2]+lz), d:new V(dx,M.dir[1],dz).normalize()}; }
-function parkVis(){ const park=st.disc==='trap'&&st.trapKind==='park'; PARK.visible=park; TRAP_GROUP.visible=st.disc==='trap'&&!park; const T=window._trees; if(T&&T.real) T.real.ims.forEach(im=>im.visible=!park); if(T){ T.spruce.visible=T.decid.visible=T.trunks.visible=!park&&!T.real; } if(typeof GROUND_FADE!=='undefined'&&park) GROUND_FADE.visible=false; }
+function parkVis(){ const V0=VEN&&st.disc==='trap'?VEN[st.trapKind]:null, park=!!V0&&V0.G===PARK; PARK.visible=park; if(VEN){ COMPAK.visible=!!V0&&V0.G===COMPAK; lovPeg(!!V0&&!!V0.lov); } TRAP_GROUP.visible=st.disc==='trap'&&!V0; const T=window._trees; if(T&&T.real) T.real.ims.forEach(im=>im.visible=!park); if(T){ T.spruce.visible=T.decid.visible=T.trunks.visible=!park&&!T.real; } if(typeof GROUND_FADE!=='undefined'&&park) GROUND_FADE.visible=false; }
 function tercTyp(t,k){ const T=TERC[k]; if(!T||k==='standard') return; const sc=T.d/110; t.m.children.forEach(c=>{ if(c!==t.m.userData.halo) c.scale.multiplyScalar(sc); }); if(T.battue) t.m.children.forEach(c=>{ if(c!==t.m.userData.halo) c.scale.y*=0.5; });
   t.v.multiplyScalar(T.v); t.K=T_K*T.k; t.area=CLAY_AREA*sc*sc*(T.battue?0.55:1); if(T.battue){ t.battue=true; t.lift-=0.4; } }
 function launchPark(w){ st.parkLast=w+'@'+st.station; const S=PARK_ST[st.station], M=S[w==='PA'?'A':'B'], q=parkMach(S,M), p=q.p, v=q.d.multiplyScalar(M.v*(0.97+Math.random()*0.06));
@@ -872,6 +874,130 @@ function launchPark(w){ st.parkLast=w+'@'+st.station; const S=PARK_ST[st.station
   PARK.userData.les={spot,grp:PARK}; }
 lesSkutecny(PARK.userData.les,23);
 function vrhUkazP(p){ if(!st.ukVrh) return; const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:vrhTex,transparent:true,depthWrite:false,fog:false})); sp.position.copy(p); sp.position.y+=0.3; sp.scale.set(1.1,1.1,1); scene.add(sp); VRH_FX.push({sp,t:0}); }
+
+/* ---------- COMPAK SPORTING a LOV (bažanti, holubi, příšery) ----------
+   Compak sporting (FITASC): 5 stanovišť v řadě, 6 vrhaček A–F společných pro všechna stanoviště (každé je vidí z jiného úhlu).
+   Na stanovišti 5 terčů podle „menu“: 3 jednotlivé a jedna dvojice (současně, nebo „na ránu“ – druhý terč vyletí na výstřel).
+   Lov: postavení na průseku v lese, naháňka – bažanti (kohout ano, slepice NE), tah holubů, pro zábavu létající příšery. */
+VEN={};
+// --- COMPAK: na ploše trapu (vrhací příkop se schová), stanoviště v řadě na z = TZ+15
+const CC=new V(0,0,TZ+15), COMPAK=new THREE.Group(); COMPAK.visible=false; scene.add(COMPAK);
+const COMPAK_M={ // vrhačky (souřadnice od středu řady stanovišť), typ terče, rychlost
+  A:{n:'křížák zleva nízko',typ:'standard',p:[-24,1.0,-14],dir:[1,0.16,-0.08],v:22},
+  B:{n:'křížák zprava z věže',typ:'standard',p:[26,8,-22],dir:[-1,0.06,0.1],v:23},
+  C:{n:'odcházející z bunkru',typ:'midi',p:[0,0.4,-6],dir:[0.12,0.34,-1],v:24},
+  D:{n:'přilétající vysoko',typ:'standard',p:[-8,2,-62],dir:[0.12,0.44,1],v:25},
+  E:{n:'zajíc zprava',typ:'zajic',p:[20,0.06,-12],dir:[-1,0,-0.05],v:11},
+  F:{n:'skokan (teal)',typ:'midi',p:[10,0.4,-24],dir:[-0.05,1,0.04],v:21}};
+const COMPAK_ST=[-10,-5,0,5,10].map((x,i)=>({p:[x,0,0],yaw:0,n:'Compak '+(i+1),
+  menu:[[['A'],['C'],['D'],['B','F','sim']],[['B'],['E'],['F'],['A','C','rana']],[['C'],['D'],['A'],['E','B','sim']],[['F'],['A'],['E'],['D','C','rana']],[['E'],['B'],['D'],['F','A','rana']]][i]}));
+VEN.compak={C:CC,G:COMPAK,st:COMPAK_ST,stroje:COMPAK_M};
+{ const wood=fotoMat('preklizka',1.2,0x9a7a55), dark=mat(0x4a3826), G=COMPAK;
+  COMPAK_ST.forEach((S,i)=>{ const g=new THREE.Group(); g.position.set(CC.x+S.p[0],0,CC.z+S.p[2]); G.add(g);
+    const pad=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.06,1.5),M_BETON); pad.position.y=0.03; g.add(pad);
+    for(const [x,z] of [[-0.75,-0.75],[0.75,-0.75],[-0.75,0.75],[0.75,0.75]]){ const po=new THREE.Mesh(new THREE.BoxGeometry(0.06,1.1,0.06),dark); po.position.set(x,0.55,z); g.add(po); }
+    for(const [x,z,w,d] of [[0,-0.75,1.5,0.05],[-0.75,0,0.05,1.5],[0.75,0,0.05,1.5]]){ const r=new THREE.Mesh(uvBox(new THREE.BoxGeometry(w,0.06,d),1.2),wood); r.position.set(x,1.08,z); g.add(r); }
+    const l=label(String(i+1),0.45); l.position.set(0,1.45,-0.8); g.add(l); });
+  // vrhačky: kryt z prken, u B věž, u C bunkr, u E zajíc v příkopu
+  for(const [k,M] of Object.entries(COMPAK_M)){ const p=new V(CC.x+M.p[0],0,CC.z+M.p[2]);
+    if(M.p[1]>3){ const t=new THREE.Group(); t.position.copy(p); for(const [x,z] of [[-0.9,-0.9],[0.9,-0.9],[-0.9,0.9],[0.9,0.9]]){ const po=new THREE.Mesh(new THREE.BoxGeometry(0.16,M.p[1],0.16),dark); po.position.set(x,M.p[1]/2,z); t.add(po); }
+      const pl=new THREE.Mesh(uvBox(new THREE.BoxGeometry(2.2,0.14,2.2),1.2),wood); pl.position.y=M.p[1]-0.2; t.add(pl); const st2=new THREE.Mesh(uvBox(new THREE.BoxGeometry(2.2,1.0,0.08),1.2),wood); st2.position.set(0,M.p[1]+0.3,-1.1); t.add(st2); COMPAK.add(t); }
+    else { const d=new V(...M.dir).setY(0).normalize(); const kr=new THREE.Mesh(uvBox(new THREE.BoxGeometry(1.4,M.typ==='zajic'?0.7:1.1,1.4),1.2),wood); kr.position.set(p.x-d.x*0.9,M.typ==='zajic'?0.35:0.55,p.z-d.z*0.9); COMPAK.add(kr); }
+    const l=label(k,0.6); l.position.set(p.x,(M.p[1]>3?M.p[1]+1.2:1.7),p.z); COMPAK.add(l); } }
+// --- LOV: postavení (stanoviště 1–3) na lesní cestě parkuru, střelec čelem do lesa
+const LOV_ST=[{p:[-25,0,1],yaw:0.08,n:'Postavení 1'},{p:[8,0,0],yaw:0,n:'Postavení 2'},{p:[26,0,1],yaw:-0.08,n:'Postavení 3'}];
+const LOV_DRUH={bazant:{n:'Bažanti – naháňka',k:'BAŽANTI'},holub:{n:'Holubi – tah přes paseku',k:'HOLUBI'},prisera:{n:'Létající příšery (zábava)',k:'PŘÍŠERY'}};
+st.lovDruh='bazant'; try{ const d=localStorage.getItem('skeet-lov'); if(LOV_DRUH[d]) st.lovDruh=d; }catch(e){}
+VEN.park={C:PC,G:PARK,st:PARK_ST}; VEN.lov={C:PC,G:PARK,st:LOV_ST,lov:true};
+{ const dark=mat(0x4a3826); LOV_ST.forEach((S,i)=>{ const g=new THREE.Group(); g.position.set(PC.x+S.p[0],0,PC.z+S.p[2]); g.rotation.y=S.yaw; g.visible=false; g.userData.lovPeg=true; PARK.add(g);
+  const k=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,1.3,6),dark); k.position.set(0.7,0.65,0.3); g.add(k); const l=label(String(i+1),0.4); l.position.set(0.7,1.45,0.3); g.add(l); }); }
+function lovPeg(on){ PARK.children.forEach(c=>{ if(c.userData.lovPeg) c.visible=on; }); }
+// vrhačka stanoviště / venue: kde a kam
+function venMach(S,key){ const V0=ven(); if(V0.stroje){ const M=V0.stroje[key]; return {M,p:new V(V0.C.x+M.p[0],M.p[1],V0.C.z+M.p[2]),d:new V(...M.dir).normalize()}; }
+  const M=S[key], q=parkMach(S,M); return {M,p:q.p,d:q.d}; }
+function launchVen(key){ const S=ven().st[st.station], {M,p,d}=venMach(S,key); st.parkLast=key+'@'+st.station; const v=d.clone().multiplyScalar(M.v*(0.97+Math.random()*0.06));
+  vrhUkazP(p); const m=makeClay(); m.position.copy(p); applyBig(m); scene.add(m);
+  if(M.typ==='zajic'){ v.y=0.6; st.targets.push({G:9.81,m,p:p.clone(),v,alive:true,house:'Z',spin:0,wind:new V(),lift:0,ph:0,age:0,K:0.002,area:CLAY_AREA*1.4,rabbit:true,run:0}); sThrow(); return; }
+  const el=Math.asin(Math.min(1,v.clone().normalize().y)), G=el>0.6?9.81:el>0.35?6:3.05; const {wind,lift}=windFor();
+  const t={G,m,p:p.clone(),v,alive:true,house:'P',spin:Math.random()*6,wind,lift,ph:Math.random()*6,age:0}; st.targets.push(t); tercTyp(t,M.typ); noBirdMaybe(t); sThrow(); }
+// dvojice „na ránu“: druhý terč vyletí na zvuk první rány (nebo nejpozději za 3 s)
+st.naRanu=[];
+
+/* ---- PTÁCI a PŘÍŠERY: vlastní let (mávání / plachtění), zásah = složený pták padá k zemi ---- */
+const PT_MAT={};
+const ptM=(k,c,o={})=>PT_MAT[k]||(PT_MAT[k]=new THREE.MeshLambertMaterial(Object.assign({color:c},o)));
+function ptKoule(r,sx,sy,sz,m,x,y,z){ const g=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),m); g.scale.set(sx,sy,sz); g.position.set(x,y,z); return g; }
+function kridlo(rozpeti,hloubka,m,strana){ const sh=new THREE.Shape(); sh.moveTo(0,0); sh.lineTo(rozpeti*0.55,hloubka*0.35); sh.lineTo(rozpeti,-hloubka*0.15); sh.lineTo(rozpeti*0.75,-hloubka*0.6); sh.lineTo(0,-hloubka*0.7); sh.lineTo(0,0);
+  const g=new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI/2); if(strana<0) g.scale(-1,1,1); const w=new THREE.Mesh(g,m); w.material.side=THREE.DoubleSide; const p=new THREE.Group(); p.add(w); return p; }
+function makePtak(druh,slepice){ const g=new THREE.Group(), body=new THREE.Group(); g.add(body); let kL,kR;
+  if(druh==='bazant'){ const tel=slepice?ptM('bzS',0x9a7a52):ptM('bzK',0xb5582a), hlava=slepice?ptM('bzS',0x9a7a52):ptM('bzH',0x1f4a3a), ocas=slepice?ptM('bzSo',0x8a6a45):ptM('bzO',0x9b6a3a), kr=slepice?ptM('bzSk',0x7d6440):ptM('bzKk',0x8f6b45);
+    body.add(ptKoule(0.1,1,0.95,2.0,tel,0,0,0)); body.add(ptKoule(0.055,1,1,1.1,hlava,0,0.07,0.22));
+    if(!slepice){ body.add(ptKoule(0.022,1,1.4,1,ptM('bzR',0xd0201a),0.035,0.07,0.24)); body.add(ptKoule(0.022,1,1.4,1,ptM('bzR',0xd0201a),-0.035,0.07,0.24)); const kr2=new THREE.Mesh(new THREE.TorusGeometry(0.05,0.008,6,12),ptM('bzW',0xf2f2ee)); kr2.rotation.x=Math.PI/2.4; kr2.position.set(0,0.03,0.17); body.add(kr2); }
+    const oc=new THREE.Mesh(new THREE.ConeGeometry(0.035,slepice?0.3:0.55,6),ocas); oc.rotation.x=-Math.PI/2; oc.position.set(0,0.02,-(slepice?0.32:0.45)); body.add(oc);
+    kL=kridlo(0.36,0.24,kr,-1); kR=kridlo(0.36,0.24,kr,1); }
+  else if(druh==='holub'){ const tel=ptM('hoT',0x7d8590), kr=ptM('hoK',0x8b939e);
+    body.add(ptKoule(0.075,1,0.95,2.0,tel,0,0,0)); body.add(ptKoule(0.042,1,1,1.1,ptM('hoH',0x5d6670),0,0.05,0.15)); body.add(ptKoule(0.03,1.3,0.7,0.8,ptM('hoW',0xeeeeee),0,0.035,0.11));
+    const oc=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.012,0.14),ptM('hoO',0x4b525a)); oc.position.set(0,0,-0.2); body.add(oc);
+    kL=kridlo(0.34,0.17,kr,-1); kR=kridlo(0.34,0.17,kr,1); }
+  else { // příšera: zelená svítící koule s očima, zuby a netopýřími křídly
+    const tel=ptM('prT',0x44c95a,{emissive:0x1b6b24}), oko=ptM('prO',0xffffff,{emissive:0x888888}), zen=ptM('prZ',0x111111);
+    body.add(ptKoule(0.35,1,0.9,1.1,tel,0,0,0)); for(const s of [-1,1]){ body.add(ptKoule(0.1,1,1,0.6,oko,s*0.13,0.12,0.3)); body.add(ptKoule(0.045,1,1,0.6,zen,s*0.13,0.12,0.36)); }
+    for(let i=-2;i<=2;i++){ const z=new THREE.Mesh(new THREE.ConeGeometry(0.03,0.09,4),oko); z.rotation.x=Math.PI; z.position.set(i*0.06,-0.1,0.33); body.add(z); }
+    for(const s of [-1,1]){ const r=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.22,5),zen); r.position.set(s*0.18,0.32,0); r.rotation.z=-s*0.4; body.add(r); }
+    kL=kridlo(0.9,0.55,ptM('prK',0x2b5c34,{emissive:0x0d2a12}),-1); kR=kridlo(0.9,0.55,ptM('prK',0x2b5c34,{emissive:0x0d2a12}),1); }
+  kL.position.set(-0.06,0.03,0.05); kR.position.set(0.06,0.03,0.05); body.add(kL); body.add(kR); g.userData.kL=kL; g.userData.kR=kR; return g; }
+const PT={bazant:{v:[15,19],area:0.018,minPel:2,minE:1.2,jm:'Bažant',flap:12},holub:{v:[18,24],area:0.011,minPel:2,minE:1.0,jm:'Holub',flap:16},prisera:{v:[5,9],area:0.11,minPel:3,minE:0.6,jm:'Příšera',flap:4}};
+function spawnPtak(druh){ const S=ven().st[st.station], c=Math.cos(S.yaw), sn=Math.sin(S.yaw), loc=(x,y,z)=>new V(PC.x+S.p[0]+x*c+z*sn,y,PC.z+S.p[2]-x*sn+z*c);
+  const P=PT[druh], sp=P.v[0]+Math.random()*(P.v[1]-P.v[0]); let p, cil, vys, slepice=false;
+  if(druh==='bazant'){ p=loc(-28+Math.random()*56,1.2,-55-Math.random()*25); cil=loc(-14+Math.random()*28,0,12+Math.random()*10); vys=17+Math.random()*13; slepice=Math.random()<0.35; }
+  else if(druh==='holub'){ const s=Math.random()<0.5?-1:1; p=loc(s*(45+Math.random()*20),8+Math.random()*14,-25-Math.random()*35); cil=loc(-s*(40+Math.random()*20),0,-5+Math.random()*25); vys=9+Math.random()*16; }
+  else { p=loc(-30+Math.random()*60,4+Math.random()*16,-70-Math.random()*20); cil=loc(0,0,0); vys=1.6+Math.random()*2; }
+  const m=makePtak(druh,slepice); m.position.copy(p); scene.add(m);
+  const d=cil.clone().sub(p); d.y=0; d.normalize(); const v=d.multiplyScalar(druh==='bazant'?sp*0.55:sp); if(druh==='bazant') v.y=7+Math.random()*3;
+  const t={ptak:druh,m,p:p.clone(),v,alive:true,house:'B',age:0,spin:0,ph:Math.random()*6,wind:new V(),lift:0,G:0,K:0,area:P.area,sp,vys,cil,smer:d.clone(),zakazany:slepice,jink:0,flapT:0};
+  st.targets.push(t); if(druh==='bazant') noise(0.5,380,0.35,0.12); else if(druh==='prisera') noise(0.9,120,0.45,0.4); }
+function ptakKrok(t,dt){ const P=PT[t.ptak]; const h=t.p.y;
+  if(t.ptak==='bazant'){ // vyletí strmě z krytu, pak srovná let ve výšce a táhne nad střelce
+    if(h<t.vys){ t.v.y+=(t.vys-h>4?2:-3)*dt; } else t.v.y+=(-t.v.y*1.5)*dt;
+    const hor=Math.hypot(t.v.x,t.v.z); if(hor<t.sp){ const k=Math.min(1,(t.sp-hor)*0.6*dt); t.v.x+=t.smer.x*t.sp*k; t.v.z+=t.smer.z*t.sp*k; }
+    t.v.x+=Math.sin(t.age*0.5+t.ph)*0.6*dt; }
+  else if(t.ptak==='holub'){ // rychlý, každou chvíli uhne do strany a změní výšku
+    t.jink-=dt; if(t.jink<=0){ t.jink=0.5+Math.random()*0.9; const b=new V(-t.v.z,0,t.v.x).normalize(); t.v.addScaledVector(b,(Math.random()-0.5)*9); t.v.y=(t.vys-h)*0.5+(Math.random()-0.5)*4; const s=t.v.length(); t.v.multiplyScalar(t.sp/s); } }
+  else { // příšera: vlní se a míří na střelce
+    const e=new V(); camera.getWorldPosition(e); const k=e.clone().sub(t.p); const L=k.length(); k.normalize();
+    t.v.lerp(k.multiplyScalar(t.sp),Math.min(1,dt*0.7)); t.v.y+=Math.sin(t.age*2.2+t.ph)*2.5*dt; t.v.x+=Math.cos(t.age*1.7+t.ph)*2.5*dt;
+    if(L<2.2){ t.alive=false; scene.remove(t.m); st.prisera=(st.prisera||0)+1; noise(0.9,90,0.9,0.3); noise(0.4,1800,0.4,0.1); say('Příšera tě dostala!'); try{ mluv('Příšera tě dostala',VOICE[LANG]||'cs-CZ',{prerusit:true}); }catch(e){} return; } }
+  t.p.addScaledVector(t.v,dt);
+  const e=new V(); dolly.getWorldPosition(e); if(t.age>22||(t.age>3&&t.p.distanceTo(e)>110)){ t.alive=false; scene.remove(t.m); } }
+function ptakVzhled(t,dt){ const P=PT[t.ptak], m=t.m; const dir=t.v.clone(); if(dir.lengthSq()>1e-4){ m.lookAt(m.position.clone().add(dir)); }
+  // bažant: mává při vzletu, ve výšce střídá plachtění a mávání
+  const mava=t.ptak!=='bazant'||t.p.y<t.vys-2||Math.sin(t.age*1.3+t.ph)>0.2; t.flapT+=dt*(mava?P.flap:0);
+  const a=mava?Math.sin(t.flapT)*0.9:-0.12; m.userData.kL.rotation.z=-a; m.userData.kR.rotation.z=a; }
+function ptakPad(t,res){ const m=t.m; t.alive=false; m.userData.kL.rotation.z=1.1; m.userData.kR.rotation.z=-1.1;
+  if(t.ptak==='prisera'){ scene.remove(m); for(let i=0;i<14;i++){ const s=new THREE.Mesh(new THREE.SphereGeometry(0.08+Math.random()*0.12,6,5),new THREE.MeshBasicMaterial({color:0x6dff4a,transparent:true,opacity:0.9})); s.position.copy(t.p); scene.add(s); st.fx.push({m:s,v:new V((Math.random()-0.5)*6,Math.random()*5,(Math.random()-0.5)*6),life:1.6,spin:new V(),fade:true}); } noise(0.5,260,0.6,0.15); return; }
+  st.fx.push({m,v:t.v.clone().multiplyScalar(0.55).add(new V(0,-1,0)),life:6,spin:new V((Math.random()-0.5)*4,(Math.random()-0.5)*3,(Math.random()-0.5)*4)});
+  const pm=new THREE.MeshBasicMaterial({color:t.ptak==='holub'?0x9aa2ab:(t.zakazany?0x9a7a52:0xb5703a),transparent:true,opacity:0.9,side:THREE.DoubleSide});
+  for(let i=0;i<12;i++){ const f=new THREE.Mesh(new THREE.PlaneGeometry(0.05,0.025),pm.clone()); f.position.copy(t.p); f.rotation.set(Math.random()*6,Math.random()*6,0); scene.add(f); st.fx.push({m:f,v:t.v.clone().multiplyScalar(0.15).add(new V((Math.random()-0.5)*2,Math.random()*0.8,(Math.random()-0.5)*2)),life:2.5+Math.random()*2,spin:new V(),fade:true}); } }
+// zásah ptáka: stačí méně broků než u terče? ne – na čisté složení musí být aspoň 2 (příšera 3) broky s dost energií
+const _judgePt=judge; judge=function(shot,t,along,perpV,r){ const R=_judgePt(shot,t,along,perpV,r); if(!t.ptak) return R; const P=PT[t.ptak];
+  R.hit=R.pellets>=P.minPel&&R.E>=P.minE; R.kind=R.hit?'kusy':null; R.postrel=!R.hit&&R.pellets>0; return R; };
+const _shatterPt=shatter; shatter=function(t,kind){ if(t.ptak) return ptakPad(t); return _shatterPt(t,kind); };
+const _reportPt=report; report=function(t,res){ if(!t.ptak) return _reportPt(t,res); const P=PT[t.ptak];
+  if(VRR.cur) VRR.cur.hits[res.barrel]=!!res.hit;
+  if(res.hit){ if(t.zakazany){ st.lovTrest=(st.lovTrest||0)+1; say('SLEPICE! Ta se na naháňce nestřílí – trestný bod'); noise(0.3,400,0.4,0.1); rozhodci&&rozhodci('Slepice'); return; }
+    if(st.pullBestBarrel==null||res.barrel<st.pullBestBarrel) st.pullBestBarrel=res.barrel; st.pullHits++; say(`${P.jm} ${t.ptak==='prisera'?'rozprsknuta':'složen'} · ${res.barrel+1}. rána · ${res.pellets} broků · ${Math.round(res.along)} m`); return; }
+  return _reportPt(t,res); };
+const _firePt=fire; fire=function(src,lagMs){ const r=_firePt(src,lagMs); if(st.naRanu.length){ const q=st.naRanu.splice(0); q.forEach(w=>st.pending.push({t:0.12,w})); st.pending=st.pending.filter(p=>!String(p.w).startsWith('R:')); } return r; };
+function setLovDruh(d){ st.lovDruh=d; try{ localStorage.setItem('skeet-lov',d); }catch(e){} clearField(); syncTrapUi(); say('Lov: '+LOV_DRUH[d].n); }
+// povel: compak podle menu, lov = naháňka (víc ptáků po sobě), parkur beze změny
+function pullVen(){ const V0=ven(), k=st.parkK||0; st.parkK=k+1;
+  if(V0.lov){ const n=st.lovDruh==='prisera'?3+Math.floor(Math.random()*4):st.lovDruh==='holub'?1+Math.floor(Math.random()*3):2+Math.floor(Math.random()*3); let t=0.4;
+    for(let i=0;i<n;i++){ st.pending.push({t,w:'B:'+st.lovDruh}); t+=st.lovDruh==='prisera'?0.8+Math.random()*1.6:1.2+Math.random()*3.5; }
+    st.pullMode='W'; st.pullCount=n; st.shells=99; say(st.lovDruh==='bazant'?'Naháňka! Kohouti ano, slepice ne.':st.lovDruh==='holub'?'Holubi táhnou…':'Příšery letí!'); return; }
+  const S=V0.st[st.station], item=S.menu[k%S.menu.length], d=0.2+Math.random()*0.8;
+  if(item.length===1){ st.pending.push({t:d,w:'P:'+item[0]}); st.pullMode='T'; st.pullCount=1; st.shells=2; say(`Pull! ${item[0]} – ${COMPAK_M[item[0]].n}`); }
+  else { st.pending.push({t:d,w:'P:'+item[0]}); if(item[2]==='sim') st.pending.push({t:d,w:'P:'+item[1]}); else { st.naRanu=['P:'+item[1]]; st.pending.push({t:d+3,w:'R:'+item[1]}); }
+    st.pullMode='W'; st.pullCount=2; st.shells=2; say(`Pull! Dvojice ${item[0]}+${item[1]} ${item[2]==='sim'?'současně':'na ránu'}`); } }
 
 /* ---------- Zázemí jako na skutečné střelnici: klubovna s verandou, výsledková tabule, ochranné valy ---------- */
 const KLUB=new THREE.Group(); scene.add(KLUB);
@@ -1037,7 +1163,7 @@ function weatherTick(dt){ if(st.pocasi!=='bourka'){ blesk=0; return; } bleskT-=d
 if(!window.POZADI) window.POZADI={list:[],cur:null,mesh:null,init(){},nacti:async()=>[],vypni(){},nastav:async()=>false,natoc(){},sleduj(){},pridejVlastni:async()=>'',smazVlastni:async()=>{}};   // náhrada, kdyby se pozadi.js nenačetlo
 const POZ={v:(()=>{try{const v=localStorage.getItem('skeet-poz'); return v==null?'kloofendal_48d_partly_cloudy_puresky':v;}catch(e){return 'kloofendal_48d_partly_cloudy_puresky';}})()};
 let pozPM=null, pozEnv=null;
-function pozVzhled(on,it){ const kr=on&&it&&it.typ==='krajina'&&KRAJ.v!=='mesic'; ground.visible=!kr; GROUND_FADE.visible=kr&&(typeof st==='undefined'||st.disc!=='trap'||st.trapKind!=='park'); if(typeof treesForPano==='function') treesForPano();
+function pozVzhled(on,it){ const kr=on&&it&&it.typ==='krajina'&&KRAJ.v!=='mesic'; ground.visible=!kr; GROUND_FADE.visible=kr&&(typeof st==='undefined'||st.disc!=='trap'||!['park','lov'].includes(st.trapKind)); if(typeof treesForPano==='function') treesForPano();
   if(!on){ scene.environment=null; return; }
   if(it&&it.slunce&&typeof sun!=='undefined'&&POZADI.mesh){ const [u,v]=it.slunce, ph=u*Math.PI*2, th=v*Math.PI, d=new V(-Math.cos(ph)*Math.sin(th),Math.cos(th),Math.sin(ph)*Math.sin(th)); d.x*=-1; d.applyAxisAngle(new V(0,1,0),POZADI.mesh.rotation.y); if(d.y>0.05) sun.position.copy(d.multiplyScalar(200)); }
 try{ if(POZADI.tex&&POZADI.tex!==pozVzhled.tex){ pozVzhled.tex=POZADI.tex; if(!pozPM) pozPM=new THREE.PMREMGenerator(renderer); if(pozEnv) pozEnv.dispose(); pozEnv=pozPM.fromEquirectangular(POZADI.tex).texture; } scene.environment=pozEnv; }catch(e){} if(window._sky) window._sky.visible=false; if(window._sunSp) window._sunSp.visible=false; (window._clouds||[]).forEach(c=>c.visible=false);
@@ -1209,7 +1335,7 @@ function gunDrop(){ const g=controllers.find(c=>isGun(c)&&c.userData.src); if(!g
 const nasazeno=d=>d!=null&&d<(DRZ.low!=null?DRZ.low-0.14:0.24);
 function drzKalibruj(){ const d=gunDrop(); if(d==null){ say('Kalibrace držení jde jen ve VR se zbraní v ruce'); return; } DRZ.low=d; drzSave(); say(`Nízké držení uloženo (${Math.round(d*100)} cm pod očima)`); }
 function drzeniPull(){ if(!DRZ.on||!st.inXR) return; const d=gunDrop(); if(d==null) return;
-  if(st.disc==='trap'&&st.trapKind!=='park'){ if(!nasazeno(d)){ DRZ.chyby++; setTimeout(()=>say('Trap: při HOP nebyla zbraň zalícovaná'),50); } }
+  if(st.disc==='trap'&&!jePark()){ if(!nasazeno(d)){ DRZ.chyby++; setTimeout(()=>say('Trap: při HOP nebyla zbraň zalícovaná'),50); } }
   else DRZ.checking=true; }
 function drzTick(){ if(!DRZ.checking) return; if(!st.pending.length){ DRZ.checking=false; return; }   // terč už letí – kontrola končí
   const d=gunDrop(); if(nasazeno(d)){ DRZ.checking=false; DRZ.chyby++;
@@ -1400,7 +1526,9 @@ function makeGun(id){ const M0=GUN_MODELY[id]||GUN_MODELY.kozlice76;
   const krk=new THREE.Mesh(new THREE.BoxGeometry(0.036,0.05,0.12),dr); krk.position.set(0,-0.03,0.11); krk.rotation.x=-0.25; g.add(krk);
   return g;}
 // parkur: na stanovišti řekni, co tam letí
-const _setStationP=setStation; setStation=function(i){ _setStationP(i); if(st.disc==='trap'&&st.trapKind==='park'){ const S=PARK_ST[st.station]; say(`Stanoviště ${st.station+1}: ${S.n} · A ${S.A.n} · B ${S.B.n}`); } };
+const _setStationP=setStation; setStation=function(i){ _setStationP(i); if(st.disc==='trap'&&st.trapKind==='park'){ const S=PARK_ST[st.station]; say(`Stanoviště ${st.station+1}: ${S.n} · A ${S.A.n} · B ${S.B.n}`); }
+  else if(st.disc==='trap'&&st.trapKind==='compak'){ const S=COMPAK_ST[st.station]; say(`Compak – stanoviště ${st.station+1}: `+S.menu.map(m=>m.length===1?m[0]:m[0]+'+'+m[1]+(m[2]==='sim'?' současně':' na ránu')).join(', ')); }
+  else if(st.disc==='trap'&&st.trapKind==='lov'){ say(`${LOV_ST[st.station].n} · ${LOV_DRUH[st.lovDruh].n}`); } };
 window._gunDbg={GUN_MODELY:()=>GUN_MODELY,makeGun:id=>makeGun(id),makeClay:()=>makeClay()};
 function makeLaser(){const l=new THREE.Mesh(new THREE.CylinderGeometry(0.0015,0.0015,60,4),new THREE.MeshBasicMaterial({color:0xff3b2f,transparent:true,opacity:0.5}));
   l.rotation.x=Math.PI/2; l.position.z=-30.76; l.visible=false; return l;}
@@ -1475,7 +1603,7 @@ const VRH_FX=[]; const vrhTex=(()=>{const c=document.createElement('canvas');c.w
 function vrhUkaz(x){ if(!st.ukVrh) return; const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:vrhTex,transparent:true,depthWrite:false,fog:false})); sp.position.set(x,0.45,TZ-0.25); sp.scale.set(1.1,1.1,1); scene.add(sp); VRH_FX.push({sp,t:0}); }
 function vrhTick(dt){ for(let i=VRH_FX.length-1;i>=0;i--){ const f=VRH_FX[i]; f.t+=dt; const a=Math.max(0,1-f.t/0.9); f.sp.material.opacity=a; f.sp.scale.setScalar(1.1+f.t*0.6); if(a<=0){ scene.remove(f.sp); f.sp.material.dispose(); VRH_FX.splice(i,1); } } }
 function applyBig(m){const k=st.big?2.5:1; m.children.forEach(c=>{if(c!==m.userData.halo)c.scale.setScalar(k);}); m.userData.halo.visible=st.big;}
-function launch(which){ if(which==='PA'||which==='PB') return launchPark(which); if(st.terc==='zajic') return launchRabbit(); if(which==='T'||which==='W1'||which==='W2') return launchTrap(which);
+function launch(which){ if(which==='PA'||which==='PB') return launchPark(which); if(typeof which==='string'&&which[1]===':'){ const k=which.slice(2); if(which[0]==='P') return launchVen(k); if(which[0]==='B') return spawnPtak(k); if(which[0]==='R'){ const i=st.naRanu.indexOf('P:'+k); if(i>=0){ st.naRanu.splice(i,1); launchVen(k); } return; } } if(st.terc==='zajic') return launchRabbit(); if(which==='T'||which==='W1'||which==='W2') return launchTrap(which);
   const house=which==='H'?HOUSE_H:HOUSE_L, p=house.mouth.clone();
   const aim=CROSS.clone(); aim.y+=T_AIMUP[which];
   const v=aim.sub(p).normalize().multiplyScalar(T_V0*(0.97+Math.random()*0.06));
@@ -1493,6 +1621,7 @@ function pull(){
   const dvoj=st.mode==='D'||st.mode==='W';
   st.shells=(st.prog!=='volny'&&!dvoj)?PROG[st.prog].shells1:2; st.shotN=0; st.pullMode=st.mode; st.pullHits=0; st.pullCount=dvoj?2:1;
   drzeniPull(); vrrPull(); SEQ={tPull:performance.now()/1000,launch:{},shots:[]};
+  if(st.disc==='trap'&&(st.trapKind==='compak'||st.trapKind==='lov')){ pullVen(); if(DRZ.on&&st.inXR) DRZ.checking=true; return; }
   if(st.disc==='trap'&&st.trapKind==='park'){ // parkur (FITASC sporting): nízká pozice, terč do 3 s po povelu; jednotlivě A, B, náhodně, pak dvojice současně
     const d=0.2+Math.random()*2.8; if(st.mode==='W') st.pending.push({t:d,w:'PA'},{t:d,w:'PB'}); else { const k=st.parkK||0; st.parkK=k+1; st.pending.push({t:d,w:k%3===0?'PA':k%3===1?'PB':(Math.random()<0.5?'PA':'PB')}); }
     if(DRZ.on&&st.inXR) DRZ.checking=true; say('Pull!'); return; }
@@ -1766,12 +1895,12 @@ const PROG={
   trap25:{n:'Trap 25',k:'TR',shells1:2,disc:'trap',seq:[]},
   dtrap:{n:'Double trap 25',k:'DT',shells1:2,disc:'trap',seq:[...Array(25)].map((_,i)=>[i%5+1,'W'])}
 };
-function trapSeq(){ if(st.trapKind==='park') return [1,2,3,4,5].flatMap(x=>[[x,'T'],[x,'T'],[x,'T'],[x,'W']]); return (st.trapKind==='ot'||st.trapKind==='ut')?[...Array(25)].map((_,i)=>[i%5+1,'T']):[1,2,3,4,5].flatMap(x=>[0,1,2,3,4].map(()=>[x,'T'])); }
+function trapSeq(){ if(st.trapKind==='lov') return [1,2,3].flatMap(x=>[[x,'W'],[x,'W'],[x,'W']]); if(st.trapKind==='park'||st.trapKind==='compak') return [1,2,3,4,5].flatMap(x=>[[x,'T'],[x,'T'],[x,'T'],[x,'W']]); return (st.trapKind==='ot'||st.trapKind==='ut')?[...Array(25)].map((_,i)=>[i%5+1,'T']):[1,2,3,4,5].flatMap(x=>[0,1,2,3,4].map(()=>[x,'T'])); }
 function progApply(){ const P=PROG[st.prog], s=P&&P.seq[st.progI]; if(!s) return;
   st._prog=true; setDisc(P.disc||'skeet'); if(st.mode!==s[1]) setMode(s[1]); if(st.station!==s[0]-1) setStation(s[0]-1); st._prog=false;
   say(`${P.k} ${st.progI+1}/${P.seq.length} · st. ${s[0]} · ${MODE[s[1]]}${s[1]!=='D'&&s[1]!=='W'&&P.shells1===2?' · 2 rány':''}`);
   const prev=st.progI>0?P.seq[st.progI-1]:null; if(!prev||prev[0]!==s[0]) rozhodci(tr('Stanoviště')+' '+s[0]); }
-function setProg(p){ st.progDrz=0; if(p==='trap25'){ PROG.trap25.seq=trapSeq(); const pk=st.trapKind==='park'; PROG.trap25.n=pk?'Parkur 25':'Trap 25'; PROG.trap25.k=pk?'PK':'TR'; } st.pts=0; if(p!=='volny') vrrNova(); st.prog=p; st.progI=0; st.progHits=0; st.progN=0; syncProg(); if(p==='volny') say('Volný trénink'); else progApply(); }
+function setProg(p){ st.progDrz=0; if(p==='trap25'){ PROG.trap25.seq=trapSeq(); const pk=st.trapKind==='park', ck=st.trapKind==='compak', lk=st.trapKind==='lov'; PROG.trap25.n=pk?'Parkur 25':ck?'Compak 25':lk?'Hon – 9 lečí':'Trap 25'; PROG.trap25.k=pk?'PK':ck?'CS':lk?'LOV':'TR'; } st.pts=0; if(p!=='volny') vrrNova(); st.prog=p; st.progI=0; st.progHits=0; st.progN=0; syncProg(); if(p==='volny') say('Volný trénink'); else progApply(); }
 function progNext(){ const P=PROG[st.prog]; st.progI++;
   if(st.progI>=P.seq.length){ const t=`Konec položky: ${P.n} ${st.progHits}/${st.progN}`+(st.disc==='trap'&&st.trapKind==='dtl'?` · ${st.pts} b.`:''); rozhodci(tr('Konec položky')+'. '+st.progHits+' / '+st.progN); st.progDrz=0; st.progI=0; st.progHits=0; st.progN=0; setAuto(false); progApply(); say(t); }
   else progApply(); }
@@ -1802,8 +1931,8 @@ function buildPanel(){
   pBtn(586,12,102,70,(LANGS.find(l=>l[0]===LANG)||LANGS[0])[1],false,()=>{ const i=LANGS.findIndex(l=>l[0]===LANG); setLang(LANGS[(i+1)%LANGS.length][0]); });
   const isTr=st.disc==='trap';
   for(let i=0;i<nSt();i++) pBtn(24+i*122,row(0),110,84,String(i+1),st.station===i,()=>setStation(i));
-  if(isTr){ pBtn(646,row(0),220,84,TRAP_KIND[st.trapKind].n,true,()=>{const k=['at','ata','dtl','ot','ut','park']; setTrapKind(k[(k.indexOf(st.trapKind)+1)%6]);});
-    pBtn(878,row(0),122,84,st.trapKind==='at'?st.trapArc+'°':st.trapKind==='ata'?st.ataYd+' yd':'–',false,()=>{ if(st.trapKind==='at') setTrapArc(st.trapArc>=90?60:st.trapArc+15);
+  if(isTr){ pBtn(646,row(0),220,84,TRAP_KIND[st.trapKind].n,true,()=>{const k=['at','ata','dtl','ot','ut','park','compak','lov']; setTrapKind(k[(k.indexOf(st.trapKind)+1)%k.length]);});
+    pBtn(878,row(0),122,84,st.trapKind==='at'?st.trapArc+'°':st.trapKind==='ata'?st.ataYd+' yd':st.trapKind==='lov'?LOV_DRUH[st.lovDruh].k:'–',st.trapKind==='lov',()=>{ if(st.trapKind==='lov'){ const L=Object.keys(LOV_DRUH); setLovDruh(L[(L.indexOf(st.lovDruh)+1)%L.length]); return; } if(st.trapKind==='at') setTrapArc(st.trapArc>=90?60:st.trapArc+15);
       else if(st.trapKind==='ata'){ const Y=[16,18,20,22,24,27]; setAtaYd(Y[(Y.indexOf(st.ataYd)+1)%Y.length]||16); } }); }
   pBtn(24,row(1),140,84,'SKEET',!isTr,()=>setDisc('skeet')); pBtn(176,row(1),140,84,'TRAP',isTr,()=>setDisc('trap'));
   (isTr?[['T','Terč'],['W','Dvojice'],['N','Nástřel']]:[['H','Vysoká'],['L','Nízká'],['D','Dvojice'],['N','Nástřel']]).forEach(([m,t],i,a)=>{ const w=Math.floor((1000-328)/a.length); pBtn(328+i*w,row(1),w-12,84,t,st.mode===m,()=>setMode(m)); });
@@ -1863,7 +1992,7 @@ function say(m){st.lastMsg=m; $('fb').textContent=tr(m); drawHud(); if(typeof dr
 const MODE={H:'Vysoká',L:'Nízká',D:'Dvojice',N:'Nástřel',T:'Trap',W:'Double trap'};
 const MODES=()=>st.disc==='trap'?['T','W','N']:['H','L','D','N'];
 function cycleMode(d){ const m=MODES(), i=m.indexOf(st.mode); setMode(m[(i+d+m.length)%m.length]); }
-const nSt=()=>st.disc==='trap'?5:8;
+const nSt=()=>st.disc==='trap'?(jePark()?ven().st.length:5):8;
 let hBtns=[], hHover=-1;
 // zvuk vrhačky (při vypnutí střelec nereaguje na zvuk, jen na terč)
 let throwSnd=true; try{ throwSnd=localStorage.getItem('skeet-throwsnd')!=='0'; }catch(e){}
@@ -1971,7 +2100,7 @@ function setMode(m){progExit(); st.mode=m; clearField(); if(st.station===7)place
 /* ---------- Pozice střelce ---------- */
 let yaw=0,pitch=0.12;
 function placeDolly(){
-  if(st.disc==='trap'&&st.trapKind==='park'){ const S=PARK_ST[st.station]; dolly.position.set(PC.x+S.p[0],0,PC.z+S.p[2]); dolly.rotation.set(0,S.yaw,0);
+  if(jePark()){ const V0=ven(), S=V0.st[st.station]; dolly.position.set(V0.C.x+S.p[0],0,V0.C.z+S.p[2]); dolly.rotation.set(0,S.yaw,0);
     if(!st.inXR){camera.position.set(0,1.65,0); yaw=0; pitch=0.12; applyLook();} return; }
   if(st.disc==='trap'){ const p=TRAP_ST[st.station]; const z=st.trapKind==='ata'?TZ+st.ataYd*0.9144:p.z; dolly.position.set(p.x,0,z); dolly.rotation.set(0,0,0);
     if(!st.inXR){camera.position.set(0,1.65,0); yaw=0; pitch=0.02; applyLook();} return; }
@@ -2209,6 +2338,7 @@ function step(dt){
   for(const p of st.pending){p.t-=dt; if(p.t<=0)launch(p.w);} st.pending=st.pending.filter(p=>p.t>0);
   // terče
   for(const t of st.targets){if(!t.alive)continue; t.age+=dt;
+    if(t.ptak){ ptakKrok(t,dt); continue; }
     const g=0.7+0.3*Math.sin(t.age*2.3+t.ph);                 // poryvy
     const rx=t.v.x-t.wind.x*g, rz=t.v.z-t.wind.z*g, ry=t.v.y, s=Math.hypot(rx,ry,rz);
     const K=t.K||T_K, Gx=t.battue&&t.age>0.9?t.G*2.2:t.G;   // battue po ztrátě rychlosti náhle padá
@@ -2249,7 +2379,7 @@ function tick(){ if(window.POZADI) POZADI.sleduj(dolly.position);
   const dt=Math.min(clock.getDelta(),0.05)*st.speed;
   if(st.inXR)pollPads();
   const n=Math.max(1,Math.ceil(dt/0.004)); for(let i=0;i<n;i++)step(dt/n);
-  for(const t of st.targets){if(!t.alive)continue; t.m.position.copy(t.p); if(t.rabbit){ t.spin+=dt*Math.hypot(t.v.x,t.v.z)/0.054; t.m.position.y=t.p.y+0.05; t.m.rotation.set(Math.PI/2,Math.atan2(t.v.x,t.v.z),0,'YXZ'); t.m.rotateY(t.spin); continue; }
+  for(const t of st.targets){if(!t.alive)continue; t.m.position.copy(t.p); if(t.ptak){ ptakVzhled(t,dt); continue; } if(t.rabbit){ t.spin+=dt*Math.hypot(t.v.x,t.v.z)/0.054; t.m.position.y=t.p.y+0.05; t.m.rotation.set(Math.PI/2,Math.atan2(t.v.x,t.v.z),0,'YXZ'); t.m.rotateY(t.spin); continue; }
     t.spin+=dt*30; t.m.rotation.set(t.battue?0.02:0.12,t.spin,0.05);}
   vidKomp(); vrhTick(dt);
   // konec vypuštění
@@ -2290,14 +2420,15 @@ $('rozhodciBtn').onclick=()=>setRozhodci(!st.rozhodci);
 $('trenerBtn').onclick=()=>setTrener(!st.trener);
 $('lagSel').onchange=e=>setLag(+e.target.value);
 // odkazy: brokovnice.html#skeet | #trap | #parkur | #trap-olympijsky | #trap-automaticky | #trap-americky | #trap-dtl | #trap-univerzalni
-const ODKAZ={skeet:['skeet'],trap:['trap',null],parkur:['trap','park'],'trap-olympijsky':['trap','ot'],'trap-automaticky':['trap','at'],'trap-americky':['trap','ata'],'trap-dtl':['trap','dtl'],'trap-univerzalni':['trap','ut']};
-function odkaz(){ const o=ODKAZ[decodeURIComponent(location.hash.slice(1)).toLowerCase()]; if(!o) return; try{ setDisc(o[0]); if(o[0]==='trap'){ const k=o[1]||(st.trapKind==='park'?'ot':null); if(k&&st.trapKind!==k) setTrapKind(k); } }catch(e){ console.warn(e); } }
+const ODKAZ={skeet:['skeet'],trap:['trap',null],parkur:['trap','park'],compak:['trap','compak'],lov:['trap','lov'],bazanti:['trap','lov','bazant'],holubi:['trap','lov','holub'],prisery:['trap','lov','prisera'],'trap-olympijsky':['trap','ot'],'trap-automaticky':['trap','at'],'trap-americky':['trap','ata'],'trap-dtl':['trap','dtl'],'trap-univerzalni':['trap','ut']};
+function odkaz(){ const o=ODKAZ[decodeURIComponent(location.hash.slice(1)).toLowerCase()]; if(!o) return; try{ setDisc(o[0]); if(o[0]==='trap'){ const k=o[1]||(st.trapKind==='park'?'ot':null); if(k&&st.trapKind!==k) setTrapKind(k); if(o[2]&&st.lovDruh!==o[2]) setLovDruh(o[2]); } }catch(e){ console.warn(e); } }
 odkaz(); addEventListener('hashchange',odkaz); addEventListener('load',()=>setTimeout(odkaz,300));   // po načtení ještě jednou (nastavení se dotahují)
 $('tercSel').value=st.terc; $('tercSel').onchange=e=>setTerc(e.target.value);
 clayColApply(); pocasiApply(); flagPlace(); syncExtraUi();
 krajApply();
 $('discSeg').onclick=e=>{const b=e.target.closest('button'); if(b){audio(); setDisc(b.dataset.d);}};
 $('trapSeg').onclick=e=>{const b=e.target.closest('button[data-k]'); if(b) setTrapKind(b.dataset.k);};
+$('lovSeg').onclick=e=>{const b=e.target.closest('button[data-l]'); if(b) setLovDruh(b.dataset.l);};
 $('trapArc').onchange=e=>setTrapArc(+e.target.value);
 $('ataYd').onchange=e=>setAtaYd(+e.target.value);
 $('hlasBtn').onclick=()=>{ audio(); setHlas(!HLAS.on); };
