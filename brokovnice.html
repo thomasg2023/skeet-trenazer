@@ -83,7 +83,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
     <div>
       <h1>Skeet <span>trenažér</span></h1>
       <p class="small" style="margin:0"><a href="index.html">Rozcestník</a> · <a href="brokovnice.html#skeet">Skeet</a> · <a href="brokovnice.html#trap">Trap</a> · <a href="brokovnice.html#parkur">Parkur</a> · <a href="brokovnice.html#compak">Compak</a> · <a href="brokovnice.html#bazanti">Lov</a> · <a href="kulove.html#pistole">Pistole a puška →</a></p>
-      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 1.0 (2026.11.20)</p>
+      <p class="small" id="verze" style="margin:0;color:var(--muted)">verze 1.0.1 (2026.11.20)</p>
       <p class="lede">Olympijský skeet ve virtuální realitě pro Meta Quest. Rozměry střelnice podle pravidel ISSF, stanoviště 1–8, vysoká a nízká věž, dvojice. Po každé ráně uvidíte, kde byl střed hraničky vůči terči.</p>
     </div>
     <div>
@@ -127,6 +127,7 @@ tbody tr.cur{background:color-mix(in srgb,var(--clay) 10%,transparent)}
         <div class="seg" id="rozborSeg" aria-label="Rozbor rány"><button type="button" data-r="vyp">Rozbor: vyp</button><button type="button" data-r="chyba">Rozbor po chybě</button><button type="button" data-r="vzdy">Rozbor vždy</button><button type="button" id="rozborBtn">Přehrát poslední (R)</button></div>
         <div class="seg"><button type="button" id="drzBtn" aria-pressed="true">Kontrola držení (VR)</button></div>
         <div class="seg"><button type="button" id="rozhodciBtn" aria-pressed="false">Hlas rozhodčího</button><button type="button" id="trenerBtn" aria-pressed="false">Trenér (rady hlasem)</button><button type="button" id="hlasBtn" aria-pressed="false">Terč na hlas (mikrofon)</button></div>
+        <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Ostrost obrazu v brýlích <select id="ostrSel" style="flex:1"><option value="0">Normální – 1,0×, 72 Hz (nejúspornější)</option><option value="1">Vysoká – 1,25×, bez foveace, 90 Hz (doporučeno)</option><option value="2">Max – 1,5×, bez foveace, 90 Hz</option></select></label>
         <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Zpoždění Bluetooth spouště <select id="lagSel" style="flex:1"><option value="0">0 ms – bez kompenzace</option><option value="20">20 ms</option><option value="40">40 ms (doporučeno)</option><option value="60">60 ms</option><option value="80">80 ms</option></select></label>
         <p class="small" style="margin:0;width:100%;color:var(--muted)">Zpráva z Bluetooth spouště dorazí o 30–60 ms později, než stisknete. Při švihu zbraň mezitím uteče dopředu a ve VR pak stačí menší předstih než na střelnici. Kompenzace bere směr hlavně z okamžiku stisku.</p>
         <label class="small" style="display:flex;gap:8px;align-items:center;width:100%">Druh terče <select id="tercSel" style="flex:1"><option value="standard">Standard 110 mm</option><option value="midi">Midi 90 mm</option><option value="mini">Mini 60 mm</option><option value="battue">Battue (plochý, padá)</option><option value="zajic">Zajíc (běží po zemi)</option></select></label>
@@ -560,7 +561,7 @@ const st={vid:true,ukVrh:true,auto:false,autoPause:4,autoT:0,hand:'right',wind:1
   stats:[...Array(8)].map(()=>({H:[0,0],L:[0,0],D:[0,0],T:[0,0],W:[0,0],lead:[],leadT:[]})),disc:'skeet',trapKind:'at',trapArc:90,ataYd:16,terc:'standard',pts:0,noBird:false,lastMsg:'Mezerník = terč, klik = výstřel',pullHits:0,pullCount:0,pullMode:'H',prog:'volny',progI:0,progHits:0,progN:0,shotN:0,_prog:false,unlim:true};
 try{ if(localStorage.getItem('skeet-unlim')==='0') st.unlim=false; }catch(e){}
 window._dbg={st};
-const VERZE='1.0 (2026.11.20)';
+const VERZE='1.0.1 (2026.11.20)';
 // chyba v programu: ukázat i s verzí, ať jde dohledat
 window.addEventListener('error',e=>{ try{ const m='Chyba programu (verze '+VERZE+'): '+(e.message||'?'); console.error(m); const f=document.getElementById('fb'); if(f) f.textContent=m; }catch(_){} });
 st.squad=[]; st.sq=0;
@@ -572,7 +573,15 @@ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); renderer.se
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.xr.enabled=true;
 renderer.xr.setReferenceSpaceType('local-floor');
-if(renderer.xr.setFramebufferScaleFactor)renderer.xr.setFramebufferScaleFactor(1);
+// OSTROST obrazu v brýlích: rozlišení vykreslování (×), foveace (0 = celý obraz ostrý, i okraje, kde při švihu bývá terč) a obnovovací frekvence (víc Hz = rychlý terč se nerozmazává)
+const OSTR=[{n:'NORMÁLNÍ',k:1.0,fov:0.5,hz:72},{n:'VYSOKÁ',k:1.25,fov:0,hz:90},{n:'MAX',k:1.5,fov:0,hz:90}];
+st.ostrost=1; try{ const o=+localStorage.getItem('skeet-ostrost'); if(o>=0&&o<=2&&localStorage.getItem('skeet-ostrost')!==null) st.ostrost=o; }catch(e){}
+function ostrostPred(){ if(renderer.xr.setFramebufferScaleFactor) renderer.xr.setFramebufferScaleFactor(OSTR[st.ostrost].k); }
+function ostrostPo(s){ const O=OSTR[st.ostrost]; try{ if(renderer.xr.setFoveation) renderer.xr.setFoveation(O.fov); }catch(e){}
+  try{ if(s&&s.updateTargetFrameRate&&s.supportedFrameRates){ const F=[...s.supportedFrameRates]; const f=F.filter(x=>x<=O.hz).sort((a,b)=>b-a)[0]||F[0]; if(f) s.updateTargetFrameRate(f).catch(()=>{}); } }catch(e){} }
+function setOstrost(i){ st.ostrost=i; try{ localStorage.setItem('skeet-ostrost',String(i)); }catch(e){} const s=renderer.xr.getSession(); if(s) ostrostPo(s); else ostrostPred();
+  const O=OSTR[i]; say(`Ostrost ${O.n}: rozlišení ${O.k}×, ${O.fov?'foveace střední':'bez foveace'}, ${O.hz} Hz`+(s?' – rozlišení se projeví po novém vstupu do VR':'')); const e=document.getElementById('ostrSel'); if(e) e.value=String(i); if(typeof panel!=='undefined'&&panel.visible) drawPanel(); }
+ostrostPred();
 stage.insertBefore(renderer.domElement,stage.firstChild);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xc9dcea);
@@ -1956,8 +1965,9 @@ function buildPanel(){
   { const T=Object.keys(TERC); pBtn(24,row(8),400,84,TERC[st.terc].n,st.terc!=='standard',()=>setTerc(T[(T.indexOf(st.terc)+1)%T.length])); }
   pBtn(436,row(8),280,84,HLAS.on?'NA HLAS ZAP':'NA HLAS VYP',HLAS.on,()=>setHlas(!HLAS.on));
   pBtn(24,row(9),300,84,{vyp:'ROZBOR VYP',chyba:'ROZBOR PO CHYBĚ',vzdy:'ROZBOR VŽDY'}[st.rozbor],st.rozbor!=='vyp',()=>setRozbor({vyp:'chyba',chyba:'vzdy',vzdy:'vyp'}[st.rozbor]));
-  pBtn(336,row(9),300,84,'PŘEHRÁT RÁNU',false,()=>rozborStart());
-  pBtn(648,row(9),352,84,'NÍZKÉ DRŽENÍ = TEĎ',DRZ.low!=null,()=>drzKalibruj());
+  pBtn(336,row(9),210,84,'PŘEHRÁT RÁNU',false,()=>rozborStart());
+  pBtn(558,row(9),210,84,'OSTROST: '+OSTR[st.ostrost].n,st.ostrost>0,()=>setOstrost((st.ostrost+1)%3));
+  pBtn(780,row(9),220,84,'NÍZKÉ DRŽENÍ',DRZ.low!=null,()=>drzKalibruj());
   pBtn(336,row(10),380,70,OSA.p?'OKO NAD LIŠTOU ✓ (znovu)':'OKO NAD LIŠTOU',!!OSA.p,()=>osaKalibruj());
   pBtn(24,row(11),560,80,KAL.p?'KALIBRACE DOTYKEM ✓ (znovu)':'KALIBRACE DOTYKEM (2. ovladač)',!!KAL.p,()=>kalStart(false));
   pBtn(596,row(11),404,80,KAL.p?'ZRUŠIT KALIBRACI ZBRANĚ':'ZALÍCOVÁNÍ: tlačítko na stránce',false,()=>{ if(KAL.p) kalZrus(); });
@@ -2239,11 +2249,11 @@ let arSess=null;
 async function arStart(){ audio();
   try{ const cur=renderer.xr.getSession(); if(cur){ await cur.end(); await new Promise(r=>setTimeout(r,250)); }
     if(!navigator.xr){ say('Průhled tu není k dispozici'); return; }
-    let s; try{ s=await navigator.xr.requestSession('immersive-ar',{optionalFeatures:['local-floor']}); }
+    ostrostPred(); let s; try{ s=await navigator.xr.requestSession('immersive-ar',{optionalFeatures:['local-floor']}); }
     catch(e){ say('Průhled tu není k dispozici – vstupte do VR a v menu dejte KALIBRACE ZBRANĚ DRUHÝM OVLADAČEM'); return; }
     arSess=s; arRezim(true);
     s.addEventListener('end',()=>{ arSess=null; st.inXR=false; if(KALS.on){ KALS.on=false; kalZnacka(null); kalGunViditelna(true,false); } if(KALZ.on) kalZUklid(); kalZMicStop(); arRezim(false); vrBtn.textContent=tr('Vstoupit do VR'); resize(); placeDolly(); });
-    await renderer.xr.setSession(s); st.inXR=true; syncHands(); placeDolly(); vrBtn.textContent=tr('Ukončit průhled');
+    await renderer.xr.setSession(s); ostrostPo(s); st.inXR=true; syncHands(); placeDolly(); vrBtn.textContent=tr('Ukončit průhled');
     kalZMic(); setTimeout(()=>kalZStart(),900); }catch(e){ arSess=null; arRezim(false); say('Průhled se nespustil ('+(e&&e.message?e.message:'?')+')'); } }
 $('arKalBtn').onclick=()=>{ arStart(); };
 /* ---------- KALIBRACE ZALÍCOVÁNÍM V PRŮHLEDU (bez druhého ovladače) ----------
@@ -2303,9 +2313,9 @@ vrBtn.onclick=async()=>{
   const cur=renderer.xr.getSession(); if(cur&&!arSess){cur.end();return;}
   if(cur&&arSess){ try{ await cur.end(); }catch(e){} await new Promise(r=>setTimeout(r,250)); }   // z průhledu (kalibrace) rovnou do VR
   try{
-    const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    ostrostPred(); const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
     camera.position.set(0,0,0); camera.rotation.set(0,0,0);
-    await renderer.xr.setSession(s); setTimeout(panelOtevri,600); if(renderer.xr.setFoveation)renderer.xr.setFoveation(1); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent=tr('Ukončit VR');
+    await renderer.xr.setSession(s); setTimeout(panelOtevri,600); ostrostPo(s); syncHands(); st.inXR=true; hudMesh.visible=true; vrBtn.textContent=tr('Ukončit VR');
     s.addEventListener('visibilitychange',()=>{ if(s.visibilityState==='visible'){ try{ audio(); }catch(e){} syncHands(); applyCorr(); clock.getDelta(); drawHud(); } });
     s.addEventListener('inputsourceschange',()=>{ setTimeout(()=>{ syncHands(); applyCorr(); },100); });
     s.addEventListener('end',()=>{st.inXR=false; panel.visible=false; panelOpen=false; hudMesh.visible=false; vrBtn.textContent=tr('Vstoupit do VR'); resize(); placeDolly();});
@@ -2419,6 +2429,7 @@ $('clayColSel').onchange=e=>setClayCol(e.target.value);
 $('rozhodciBtn').onclick=()=>setRozhodci(!st.rozhodci);
 $('trenerBtn').onclick=()=>setTrener(!st.trener);
 $('lagSel').onchange=e=>setLag(+e.target.value);
+$('ostrSel').value=String(st.ostrost); $('ostrSel').onchange=e=>setOstrost(+e.target.value);
 // odkazy: brokovnice.html#skeet | #trap | #parkur | #trap-olympijsky | #trap-automaticky | #trap-americky | #trap-dtl | #trap-univerzalni
 const ODKAZ={skeet:['skeet'],trap:['trap',null],parkur:['trap','park'],compak:['trap','compak'],lov:['trap','lov'],bazanti:['trap','lov','bazant'],holubi:['trap','lov','holub'],prisery:['trap','lov','prisera'],'trap-olympijsky':['trap','ot'],'trap-automaticky':['trap','at'],'trap-americky':['trap','ata'],'trap-dtl':['trap','dtl'],'trap-univerzalni':['trap','ut']};
 function odkaz(){ const o=ODKAZ[decodeURIComponent(location.hash.slice(1)).toLowerCase()]; if(!o) return; try{ setDisc(o[0]); if(o[0]==='trap'){ const k=o[1]||(st.trapKind==='park'?'ot':null); if(k&&st.trapKind!==k) setTrapKind(k); if(o[2]&&st.lovDruh!==o[2]) setLovDruh(o[2]); } }catch(e){ console.warn(e); } }
