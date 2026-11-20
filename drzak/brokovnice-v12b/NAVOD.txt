@@ -1,0 +1,15 @@
+Držák ovladače Quest 3 – brokovnice (verze 12b)
+Montáž: na brokovnici (kozlici) se nejdřív na horní lištu připevní Picatinny lišta, na ni se nasune základna.
+Pravý ovladač je nad horní lištou, nakloněný dopředu.
+
+Díly (tisk PETG/PLA, 0,2 mm, 4 obvodové stěny, výplň 40 %):
+  F12_zakladna_picatinny.stl   základna na Picatinny lištu
+  F12_celist.stl                čelist (stažení na liště)
+  F12_otocny_dil_s_uchem.stl    otočný díl s uchem pro náklon
+  F12_kalisek_s_diskem.stl      kalíšek na ovladač s ozubeným diskem
+  F12_kolecko_otaceni.stl       kolečko pro otáčení (matice M4)
+  F12_kolecko_naklonu.stl       kolečko pro náklon (matice M4)
+
+Šrouby: 2× M4×16 se šestihrannou hlavou + 2× matice M4 (do koleček).
+Otáčení: šroub zespodu do desky (před nasazením na lištu), nahoře kolečko. Povolit 2 otáčky → nadzvednout → pootočit po 7,5° → utáhnout.
+Náklon: šroub v uchu, kolečko z vnější strany. Povolit → odtáhnout kalíšek 1,5 mm do strany → naklonit po 7,5° → utáhnout.
