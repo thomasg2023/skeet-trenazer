@@ -9,6 +9,8 @@
             Baterka je připájená napevno na BAT+/BAT−. VYPNUTO = deska přejde do úplného spánku (System OFF, jednotky µA),
             přepnutím na ZAPNUTO se probudí a naběhne. Bez přepínače (D3 nezapojený) běží jako dřív.
             Pípák: D1 – GND, tlačítko: D2 – GND.
+            Před spánkem se vypne napájení akcelerometru a mikrofonu, sběrnice I2C a paměť QSPI (deep power-down),
+            aby spoušť ve vypnutém stavu brala jen jednotky µA (dřív v ní zůstávaly zapnuté senzory a baterka se vybila).
   VERZE 19: MENŠÍ ZPOŽDĚNÍ – klávesa odchází hned při PRVNÍM signálu (režim 3 „rychlý“: ráz nebo cvaknutí),
             druhý signál jen potvrzuje (výpis E POTVRZENO / E NEPOTVRZENO, počet v „info“);
             Bluetooth interval 7,5–15 ms (dřív podle Questu až 30–50 ms), mikrofon po 4 ms blocích (dřív 16 ms),
@@ -129,10 +131,12 @@ uint32_t posledniPohyb = 0; uint8_t nizkeBat = 0;
 void usinNacti(){ LfsFile f(InternalFS); char b[6] = {0}; if (f.open(USIN_SOUBOR, FILE_O_READ)) { int n = f.read(b, 5); f.close(); if (n > 0) usinMin = constrain(atoi(b), 0, 240); } }
 bool usinUloz(){ InternalFS.remove(USIN_SOUBOR); LfsFile f(InternalFS); if (!f.open(USIN_SOUBOR, FILE_O_WRITE)) return false; String t = String(usinMin); f.write((const uint8_t*)t.c_str(), t.length()); f.close(); return true; }
 bool usbNapajeni(){ return (NRF_POWER->USBREGSTATUS & 1) != 0; }
+void vsechnoVypnout();   // definice je níže (u setup), potřebuje proměnné deklarované později
 void vypnoutUplne(const char* proc){
   outObe(String("E USPANI ") + proc);
   for (int i = 0; i < 3; i++) { digitalWrite(LED_RED, LOW); delay(150); digitalWrite(LED_RED, HIGH); delay(150); }
   digitalWrite(LED_BLUE, HIGH); digitalWrite(LED_GREEN, HIGH); delay(100);
+  vsechnoVypnout();
   if (vypinacVyp()) {
     // vypnuto přepínačem: probudí se, až přepínač připojí D3 na 3V3 (bez pull-upu – přepínač drží D3 na GND, nic neteče)
     nrf_gpio_cfg_sense_input(g_ADigitalPinMap[VYPINAC], NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
@@ -614,6 +618,26 @@ void ctiPrikazy(){
     if (c=='\n'||c=='\r') { prikaz(bufBle, 1); bufBle=""; } else if (bufBle.length()<60) bufBle += c; }
 }
 
+// před úplným spánkem odpojit vše, co by dál bralo proud: akcelerometr (napájený z pinu), mikrofon (napájený z pinu),
+// sběrnici I2C (přes pull-upy by akcelerometr „žil“ dál) a paměť QSPI (příkaz deep power-down). Jinak by se baterka za pár dní vybila.
+void vsechnoVypnout(){
+  PDM.end();
+#ifdef PIN_PDM_PWR
+  digitalWrite(PIN_PDM_PWR, LOW);
+#endif
+  Wire.end();
+#ifdef PIN_WIRE_SDA
+  nrf_gpio_cfg_default(g_ADigitalPinMap[PIN_WIRE_SDA]); nrf_gpio_cfg_default(g_ADigitalPinMap[PIN_WIRE_SCL]);
+#endif
+#ifdef PIN_LSM6DS3TR_C_POWER
+  { uint32_t pin = g_ADigitalPinMap[PIN_LSM6DS3TR_C_POWER]; nrf_gpio_pin_clear(pin); nrf_gpio_cfg_default(pin); }
+#endif
+#if POUZIT_QSPI
+  if (flashJedec) { flashTransport.runCommand(0xB9); delayMicroseconds(50); }
+#endif
+  digitalWrite(LED_BLUE, HIGH); digitalWrite(LED_GREEN, HIGH); digitalWrite(LED_RED, HIGH);
+  noTone(PIEP);
+}
 void setup() {
   Serial.begin(115200);
   InternalFS.begin(); cfgNacti(); cfg2Nacti(); pvNacti(); jmenoNacti(); klavesaNacti(); nabijeniNacti(); usinNacti(); poklepNacti(); posledniPohyb = millis();
