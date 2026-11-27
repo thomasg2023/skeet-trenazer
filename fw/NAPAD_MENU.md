@@ -10,4 +10,6 @@ Položky:
 4. **Trénink nahazování** – „start“, nahození, čas a klid zbraně
 5. **Trénink spouštění** – jestli netahá za spoušť (strhávání)
 
-Potřeba rozmyslet: jak položku potvrdit (dlouhý stisk?), co dělá každý režim, jaké hlášky doplnit.
+**Potvrzení položky: dvě rychlá stisknutí tlačítka.**
+
+Potřeba rozmyslet: co dělá každý režim, jaké hlášky doplnit.
